@@ -229,6 +229,18 @@ static const struct retro_core_option_definition var_fbneo_neogeo_mode = {
 	"DIPSWITCH"
 };
 
+static const struct retro_core_option_definition var_fbneo_samples_path = {
+	"fbneo-samples-path",
+	"Samples path",
+	"Load samples from specific path",
+	{
+		{ "default", "Use original samples path" },
+		{ "retrox", "Use RetroX provided samples path" },
+		{ NULL, NULL },
+	},
+	"default"
+};
+
 static const struct retro_core_option_definition var_fbneo_load_subsystem_from_parent = {
 	"fbneo-load-subsystem-from-parent",
 	"Load Subsystem from Parent Folder",
@@ -548,6 +560,8 @@ void set_environment()
 		if (allow_neogeo_mode)
 			vars_systems.push_back(&var_fbneo_neogeo_mode);
 	}
+
+	vars_systems.push_back(&var_fbneo_samples_path);
 
 	int nbr_vars = vars_systems.size();
 	int nbr_dips = dipswitch_core_options.size();
@@ -915,6 +929,19 @@ void check_variables(void)
 					g_opt_neo_geo_mode = NEO_GEO_MODE_UNIBIOS;
 				else if (strcmp(var.value, "DIPSWITCH") == 0)
 					g_opt_neo_geo_mode = NEO_GEO_MODE_DIPSWITCH;
+			}
+		}
+	}
+
+	strcpy(g_samples_dir, "");
+	var.key = var_fbneo_samples_path.key;
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var))
+	{
+		if (!strcmp(var.value, "retrox")) {
+			const char *samples_dir = NULL;
+
+			if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &samples_dir) && samples_dir) {
+				snprintf(g_samples_dir, sizeof(g_samples_dir), "%s/samples", samples_dir);
 			}
 		}
 	}

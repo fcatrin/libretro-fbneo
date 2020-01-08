@@ -147,6 +147,7 @@ void retro_set_environment(retro_environment_t cb)
 char g_driver_name[128];
 char g_rom_dir[MAX_PATH];
 char g_rom_parent_dir[MAX_PATH];
+char g_samples_dir[MAX_PATH];
 char g_save_dir[MAX_PATH];
 char g_system_dir[MAX_PATH];
 char g_autofs_path[MAX_PATH];
@@ -1143,7 +1144,11 @@ static bool retro_load_game_common()
 	snprintf (szAppHiscorePath, sizeof(szAppHiscorePath), "%s%cfbneo%c", g_system_dir, path_default_slash_c(), path_default_slash_c());
 
 	// Initialize Samples path
-	snprintf (szAppSamplesPath, sizeof(szAppSamplesPath), "%s%cfbneo%csamples%c", g_system_dir, path_default_slash_c(), path_default_slash_c(), path_default_slash_c());
+	if (strlen(g_samples_dir)>0) {
+		snprintf (szAppSamplesPath, sizeof(szAppSamplesPath), "%s%c", g_samples_dir, path_default_slash_c());
+	} else {
+		snprintf (szAppSamplesPath, sizeof(szAppSamplesPath), "%s%cfbneo%csamples%c", g_system_dir, path_default_slash_c(), path_default_slash_c(), path_default_slash_c());
+	}
 
 	// Initialize HDD path
 	snprintf (szAppHDDPath, sizeof(szAppHDDPath), "%s%c", g_rom_dir, path_default_slash_c());
