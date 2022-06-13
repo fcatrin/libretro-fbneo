@@ -105,13 +105,13 @@ static void __fastcall blstroid_main_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address & 0xfff000) == 0x805000) {
-		*((UINT16*)(DrvMobRAM + (address & 0xffe))) = data;
+		*((UINT16*)(DrvMobRAM + (address & 0xffe))) = BURN_ENDIAN_SWAP_INT16(data);
 		AtariMoWrite(0, (address / 2) & 0x7ff, data);
 		return;
 	}
 
 	if ((address & 0xfffe00) == 0x800800) {
-		*((UINT16*)(DrvPriRAM + (address & 0x1fe))) = data;
+		*((UINT16*)(DrvPriRAM + (address & 0x1fe))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 	}
 	
@@ -161,7 +161,7 @@ static void __fastcall blstroid_main_write_byte(UINT32 address, UINT8 data)
 
 	if ((address & 0xfff000) == 0x805000) {
 		DrvMobRAM[(address & 0xfff)^1] = data;
-		AtariMoWrite(0, (address / 2) & 0x7ff, *((UINT16*)(DrvMobRAM + (address & 0xffe))));
+		AtariMoWrite(0, (address / 2) & 0x7ff, BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvMobRAM + (address & 0xffe)))));
 		return;
 	}
 
@@ -289,7 +289,7 @@ static UINT8 __fastcall blstroid_main_read_byte(UINT32 address)
 
 static tilemap_callback( bg )
 {
-	UINT16 data = *((UINT16*)(DrvPfRAM + offs * 2));
+	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvPfRAM + offs * 2)));
 
 	TILE_SET_INFO(0, data, data >> 13, 0);
 }
@@ -314,6 +314,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	cpu_halted = 0;
 	TrackA = 0;
 	TrackB = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -523,7 +525,7 @@ static void copy_sprites()
 			if (mo[x] != 0xffff)
 			{
 				INT32 priaddr = ((pf[x] & 8) << 4) | (pf[x] & 0x70) | ((mo[x] & 0xf0) >> 4);
-				if (pri[priaddr] & 1)
+				if (BURN_ENDIAN_SWAP_INT16(pri[priaddr]) & 1)
 					pf[x] = mo[x];
 				mo[x] = 0xffff; // clear
 			}
@@ -600,8 +602,8 @@ static INT32 DrvFrame()
 	{
 		linecycles = SekTotalCycles();
 
-		nCyclesDone[0] += SekRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
-		nCyclesDone[1] += M6502Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		CPU_RUN(0, Sek);
+		CPU_RUN(1, M6502);
 
 		if (i == 247) {
 			vblank = 1;
@@ -713,7 +715,7 @@ struct BurnDriver BurnDrvBlstroid = {
 	"blstroid", NULL, NULL, NULL, "1987",
 	"Blasteroids (rev 4)\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, blstroidRomInfo, blstroidRomName, NULL, NULL, NULL, NULL, BlstroidInputInfo, BlstroidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	640, 240, 4, 3
@@ -760,7 +762,7 @@ struct BurnDriver BurnDrvBlstroid3 = {
 	"blstroid3", "blstroid", NULL, NULL, "1987",
 	"Blasteroids (rev 3)\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, blstroid3RomInfo, blstroid3RomName, NULL, NULL, NULL, NULL, BlstroidInputInfo, BlstroidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	640, 240, 4, 3
@@ -807,7 +809,7 @@ struct BurnDriver BurnDrvBlstroid2 = {
 	"blstroid2", "blstroid", NULL, NULL, "1987",
 	"Blasteroids (rev 2)\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, blstroid2RomInfo, blstroid2RomName, NULL, NULL, NULL, NULL, BlstroidInputInfo, BlstroidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	640, 240, 4, 3
@@ -854,7 +856,7 @@ struct BurnDriver BurnDrvBlstroidg = {
 	"blstroidg", "blstroid", NULL, NULL, "1987",
 	"Blasteroids (German, rev 2)\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, blstroidgRomInfo, blstroidgRomName, NULL, NULL, NULL, NULL, BlstroidInputInfo, BlstroidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	640, 240, 4, 3
@@ -901,7 +903,7 @@ struct BurnDriver BurnDrvBlstroidh = {
 	"blstroidh", "blstroid", NULL, NULL, "1987",
 	"Blasteroids (with heads)\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, blstroidhRomInfo, blstroidhRomName, NULL, NULL, NULL, NULL, BlstroidInputInfo, BlstroidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	640, 240, 4, 3

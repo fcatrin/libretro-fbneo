@@ -31,10 +31,16 @@ typedef struct
 	UINT8   vector;             /* vector */
 	UINT8	after_ei;			/* are we in the EI shadow? */
 	INT32   cycles_left;
+	INT32   ICount;
+	INT32   end_run;
+	UINT32  EA;
 	INT32   hold_irq;
 
 	const struct z80_irq_daisy_chain *daisy;
 	int (*irq_callback)(int irqline);
+
+	int (*spectrum_tape_cb)();
+	int spectrum_mode;
 } Z80_Regs;
 
 enum {
@@ -62,6 +68,8 @@ enum
 };
 
 void Z80Init();
+void Z80InitContention(int is_on_type, void (*rastercallback)(int));
+void Z80Contention_set_bank(int bankno);
 void Z80Reset();
 void Z80Exit();
 int  Z80Execute(int cycles);
@@ -71,7 +79,10 @@ void Z80GetContext (void *dst);
 void Z80SetContext (void *src);
 int Z80Scan(int nAction);
 INT32 z80TotalCycles();
+INT32 z80TstateCounter();
 void Z80StopExecute();
+void z80_set_spectrum_tape_callback(int (*tape_cb)());
+void z80_set_cycle_tables_msx();
 
 extern unsigned char Z80Vector;
 extern void (*z80edfe_callback)(Z80_Regs *Regs);
@@ -92,17 +103,132 @@ void Z80SetProgramWriteHandler(Z80WriteProgHandler handler);
 void Z80SetCPUOpReadHandler(Z80ReadOpHandler handler);
 void Z80SetCPUOpArgReadHandler(Z80ReadOpArgHandler handler);
 
+void ActiveZ80SetPC(int pc);
 int ActiveZ80GetPC();
+int ActiveZ80GetAF();
+int ActiveZ80GetAF2();
+void ActiveZ80SetAF2(int af2);
 int ActiveZ80GetBC();
 int ActiveZ80GetDE();
 int ActiveZ80GetHL();
 int ActiveZ80GetI();
+int ActiveZ80GetIX();
 int ActiveZ80GetIM();
 int ActiveZ80GetSP();
 int ActiveZ80GetPrevPC();
+void ActiveZ80SetCarry(int carry);
+int ActiveZ80GetCarry();
+int ActiveZ80GetCarry2();
+void ActiveZ80EXAF();
+int ActiveZ80GetPOP();
+int ActiveZ80GetA();
+void ActiveZ80SetA(int a);
+int ActiveZ80GetF();
+void ActiveZ80SetF(int f);
+int ActiveZ80GetIFF1();
+int ActiveZ80GetIFF2();
+void ActiveZ80SetDE(int de);
+void ActiveZ80SetHL(int hl);
+void ActiveZ80SetIX(int ix);
+void ActiveZ80SetSP(int sp);
+
 void ActiveZ80SetIRQHold();
 int ActiveZ80GetVector();
 void ActiveZ80SetVector(INT32 vector);
+
+#define MAX_CMSE	9	//Maximum contended memory script elements
+#define MAX_RWINFO	6	//Maximum reads/writes per opcode
+#define MAX_CM_SCRIPTS 37
+
+enum CMSE_TYPES
+{
+	CMSE_TYPE_MEMORY,
+	CMSE_TYPE_IO_PORT,
+	CMSE_TYPE_IR_REGISTER,
+	CMSE_TYPE_BC_REGISTER,
+	CMSE_TYPE_UNCONTENDED
+};
+
+enum ULA_VARIANT_TYPES
+{
+	ULA_VARIANT_NONE,
+	ULA_VARIANT_SINCLAIR,
+	ULA_VARIANT_AMSTRAD
+};
+
+enum RWINFO_FLAGS
+{
+	RWINFO_READ      = 0x01,
+	RWINFO_WRITE     = 0x02,
+	RWINFO_IO_PORT   = 0x04,
+	RWINFO_MEMORY    = 0x08,
+	RWINFO_PROCESSED = 0x10
+};
+
+typedef struct ContendedMemoryScriptElement
+{
+	int	rw_ix;
+	int	inst_cycles;
+	int     type;
+	int	multiplier;
+	bool	is_optional;
+}CMSE;
+
+typedef struct ContendedMemoryScriptBreakdown
+{
+	CMSE elements[MAX_CMSE];
+	int  number_of_elements;
+	int  inst_cycles_mandatory;
+	int  inst_cycles_optional;
+	int  inst_cycles_total;
+}CM_SCRIPT_BREAKDOWN;
+
+typedef struct ContendedMemoryScriptDescription
+{
+	const char*		sinclair;
+	const char*		amstrad;
+}CM_SCRIPT_DESCRIPTION;
+
+typedef struct ContendedMemoryScript
+{
+	int 			id;
+	const char*		desc;
+	CM_SCRIPT_BREAKDOWN	breakdown;
+}CM_SCRIPT;
+
+typedef struct MemoryReadWriteInformation
+{
+	UINT16   addr;
+	UINT8    val;
+        UINT16   flags;
+	const char *dbg;
+} RWINFO;
+
+typedef struct OpcodeHistory
+{
+	bool     capturing;
+	RWINFO   rw[MAX_RWINFO];
+	int      rw_count;
+	int      tstate_start;
+	UINT16 register_ir;
+	UINT16 register_bc;
+
+	int 	 uncontended_cycles_predicted;
+	int      uncontended_cycles_eaten;
+	bool     do_optional;
+
+	CM_SCRIPT           *script;
+	CM_SCRIPT_BREAKDOWN *breakdown;
+	int                 element;
+}OPCODE_HISTORY;
+
+enum CYCLES_TYPE
+{
+	CYCLES_ISR,		// Cycles eaten when processing interrupts
+	CYCLES_EXEC,		// Cycles eaten when the EXEC() macro is called
+	CYCLES_CONTENDED,	// Contended cycles eaten when processing opcode history (specz80_device only)
+	CYCLES_UNCONTENDED	// Uncontended cycles eaten when processing opcode history (specz80_device only)
+};
 
 #endif
 

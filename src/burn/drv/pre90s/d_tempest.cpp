@@ -38,9 +38,8 @@ static INT16 DrvAnalogPort0 = 0;
 static INT16 DrvAnalogPort1 = 0;
 
 static UINT8 player = 0;
-static INT32 avgletsgo = 0;
 
-static UINT32 small_roms = 0;
+static UINT32 load_type = 0;
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo TempestInputList[] = {
@@ -73,90 +72,90 @@ static struct BurnInputInfo TempestInputList[] = {
 #undef A
 STDINPUTINFO(Tempest)
 
-#define DIPOFFS 0x11
-
 static struct BurnDIPInfo TempestDIPList[]=
 {
-	{DIPOFFS + 0x00, 0xff, 0xff, 0x10, NULL				    },
-	{DIPOFFS + 0x01, 0xff, 0xff, 0x07, NULL				    },
-	{DIPOFFS + 0x02, 0xff, 0xff, 0x00, NULL				    },
-	{DIPOFFS + 0x03, 0xff, 0xff, 0x00, NULL				    },
-	{DIPOFFS + 0x04, 0xff, 0xff, 0x10, NULL				    },
-	{DIPOFFS + 0x05, 0xff, 0xff, 0x00, NULL				    },
+	DIP_OFFSET(0x11)
+	{0x00, 0xff, 0xff, 0x10, NULL				    },
+	{0x01, 0xff, 0xff, 0x07, NULL				    },
+	{0x02, 0xff, 0xff, 0x00, NULL				    },
+	{0x03, 0xff, 0xff, 0x00, NULL				    },
+	{0x04, 0xff, 0xff, 0x10, NULL				    },
+	{0x05, 0xff, 0xff, 0x00, NULL				    },
 
-	{0             , 0xfe, 0   ,    2, "Cabinet"			    },
-	{DIPOFFS + 0x00, 0x01, 0x10, 0x10, "Upright"			    },
-	{DIPOFFS + 0x00, 0x01, 0x10, 0x00, "Cocktail"			    },
+	{0   , 0xfe, 0   ,    2, "Cabinet"			    },
+	{0x00, 0x01, 0x10, 0x10, "Upright"			    },
+	{0x00, 0x01, 0x10, 0x00, "Cocktail"			    },
 
-	{0             , 0xfe, 0   ,    4, "Difficulty"			},
-	{DIPOFFS + 0x01, 0x01, 0x03, 0x02, "Easy"				    },
-	{DIPOFFS + 0x01, 0x01, 0x03, 0x03, "Medium1"			    },
-	{DIPOFFS + 0x01, 0x01, 0x03, 0x00, "Medium2"			    },
-	{DIPOFFS + 0x01, 0x01, 0x03, 0x01, "Hard"				}   ,
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x01, 0x01, 0x03, 0x02, "Easy"				    },
+	{0x01, 0x01, 0x03, 0x03, "Medium1"			    },
+	{0x01, 0x01, 0x03, 0x00, "Medium2"			    },
+	{0x01, 0x01, 0x03, 0x01, "Hard"					},
 
-	{0             , 0xfe, 0   ,    2, "Rating"			    },
-	{DIPOFFS + 0x01, 0x01, 0x04, 0x04, "1, 3, 5, 7, 9"		},
-	{DIPOFFS + 0x01, 0x01, 0x04, 0x00, "tied to high score"	},
+	{0   , 0xfe, 0   ,    2, "Rating"			    },
+	{0x01, 0x01, 0x04, 0x04, "1, 3, 5, 7, 9"		},
+	{0x01, 0x01, 0x04, 0x00, "tied to high score"	},
 
-	{0             , 0xfe, 0   ,    4, "Coinage"			    },
-	{DIPOFFS + 0x02, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
-	{DIPOFFS + 0x02, 0x01, 0x03, 0x00, "1 Coin  1 Credits"	},
-	{DIPOFFS + 0x02, 0x01, 0x03, 0x03, "1 Coin  2 Credits"	},
-	{DIPOFFS + 0x02, 0x01, 0x03, 0x02, "Free Play"			},
+	{0   , 0xfe, 0   ,    4, "Coinage"			    },
+	{0x02, 0x01, 0x03, 0x01, "2 Coins 1 Credits"	},
+	{0x02, 0x01, 0x03, 0x00, "1 Coin  1 Credits"	},
+	{0x02, 0x01, 0x03, 0x03, "1 Coin  2 Credits"	},
+	{0x02, 0x01, 0x03, 0x02, "Free Play"			},
 
-	{0             , 0xfe, 0   ,    4, "Right Coin"			},
-	{DIPOFFS + 0x02, 0x01, 0x0c, 0x00, "*1"				    },
-	{DIPOFFS + 0x02, 0x01, 0x0c, 0x04, "*4"				    },
-	{DIPOFFS + 0x02, 0x01, 0x0c, 0x08, "*5"				    },
-	{DIPOFFS + 0x02, 0x01, 0x0c, 0x0c, "*6"				    },
+	{0   , 0xfe, 0   ,    4, "Right Coin"			},
+	{0x02, 0x01, 0x0c, 0x00, "*1"				    },
+	{0x02, 0x01, 0x0c, 0x04, "*4"				    },
+	{0x02, 0x01, 0x0c, 0x08, "*5"				    },
+	{0x02, 0x01, 0x0c, 0x0c, "*6"				    },
 
-	{0             , 0xfe, 0   ,    2, "Left Coin"			},
-	{DIPOFFS + 0x02, 0x01, 0x10, 0x00, "*1"				    },
-	{DIPOFFS + 0x02, 0x01, 0x10, 0x10, "*2"				    },
+	{0   , 0xfe, 0   ,    2, "Left Coin"			},
+	{0x02, 0x01, 0x10, 0x00, "*1"				    },
+	{0x02, 0x01, 0x10, 0x10, "*2"				    },
 
-	{0             , 0xfe, 0   ,    8, "Bonus Coins"			},
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0x00, "None"				    },
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0x80, "1 each 5"			    },
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0x40, "1 each 4 (+Demo)"		},
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0xa0, "1 each 3"			    },
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0x60, "2 each 4 (+Demo)"		},
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0x20, "1 each 2"			    },
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0xc0, "Freeze Mode"			},
-	{DIPOFFS + 0x02, 0x01, 0xe0, 0xe0, "Freeze Mode"			},
+	{0   , 0xfe, 0   ,    8, "Bonus Coins"			},
+	{0x02, 0x01, 0xe0, 0x00, "None"				    },
+	{0x02, 0x01, 0xe0, 0x80, "1 each 5"			    },
+	{0x02, 0x01, 0xe0, 0x40, "1 each 4 (+Demo)"		},
+	{0x02, 0x01, 0xe0, 0xa0, "1 each 3"			    },
+	{0x02, 0x01, 0xe0, 0x60, "2 each 4 (+Demo)"		},
+	{0x02, 0x01, 0xe0, 0x20, "1 each 2"			    },
+	{0x02, 0x01, 0xe0, 0xc0, "Freeze Mode"			},
+	{0x02, 0x01, 0xe0, 0xe0, "Freeze Mode"			},
 
-	{0             , 0xfe, 0   ,    2, "Minimum"			    },
-	{DIPOFFS + 0x03, 0x01, 0x01, 0x00, "1 Credit"			    },
-	{DIPOFFS + 0x03, 0x01, 0x01, 0x01, "2 Credit"			    },
+	{0   , 0xfe, 0   ,    2, "Minimum"			    },
+	{0x03, 0x01, 0x01, 0x00, "1 Credit"			    },
+	{0x03, 0x01, 0x01, 0x01, "2 Credit"			    },
 
-	{0             , 0xfe, 0   ,    4, "Language"			    },
-	{DIPOFFS + 0x03, 0x01, 0x06, 0x00, "English"			    },
-	{DIPOFFS + 0x03, 0x01, 0x06, 0x02, "French"			    },
-	{DIPOFFS + 0x03, 0x01, 0x06, 0x04, "German"			    },
-	{DIPOFFS + 0x03, 0x01, 0x06, 0x06, "Spanish"			    },
+	{0   , 0xfe, 0   ,    4, "Language"			    },
+	{0x03, 0x01, 0x06, 0x00, "English"			    },
+	{0x03, 0x01, 0x06, 0x02, "French"			    },
+	{0x03, 0x01, 0x06, 0x04, "German"			    },
+	{0x03, 0x01, 0x06, 0x06, "Spanish"			    },
 
-	{0             , 0xfe, 0   ,    8, "Bonus Life"			},
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x08, "10000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x00, "20000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x10, "30000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x18, "40000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x20, "50000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x28, "60000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x30, "70000"			    },
-	{DIPOFFS + 0x03, 0x01, 0x38, 0x38, "None"				    },
+	{0   , 0xfe, 0   ,    8, "Bonus Life"			},
+	{0x03, 0x01, 0x38, 0x08, "10000"			    },
+	{0x03, 0x01, 0x38, 0x00, "20000"			    },
+	{0x03, 0x01, 0x38, 0x10, "30000"			    },
+	{0x03, 0x01, 0x38, 0x18, "40000"			    },
+	{0x03, 0x01, 0x38, 0x20, "50000"			    },
+	{0x03, 0x01, 0x38, 0x28, "60000"			    },
+	{0x03, 0x01, 0x38, 0x30, "70000"			    },
+	{0x03, 0x01, 0x38, 0x38, "None"				    },
 
-	{0             , 0xfe, 0   ,    4, "Lives"			    },
-	{DIPOFFS + 0x03, 0x01, 0xc0, 0xc0, "2"				    },
-	{DIPOFFS + 0x03, 0x01, 0xc0, 0x00, "3"				    },
-	{DIPOFFS + 0x03, 0x01, 0xc0, 0x40, "4"				    },
-	{DIPOFFS + 0x03, 0x01, 0xc0, 0x80, "5"				    },
+	{0   , 0xfe, 0   ,    4, "Lives"			    },
+	{0x03, 0x01, 0xc0, 0xc0, "2"				    },
+	{0x03, 0x01, 0xc0, 0x00, "3"				    },
+	{0x03, 0x01, 0xc0, 0x40, "4"				    },
+	{0x03, 0x01, 0xc0, 0x80, "5"				    },
 
-	{0             , 0xfe, 0   ,    2, "Service Mode"			},
-	{DIPOFFS + 0x04, 0x01, 0x10, 0x10, "Off"  		        },
-	{DIPOFFS + 0x04, 0x01, 0x10, 0x00, "On"   	            },
+	{0   , 0xfe, 0   ,    2, "Service Mode"			},
+	{0x04, 0x01, 0x10, 0x10, "Off"  		        },
+	{0x04, 0x01, 0x10, 0x00, "On"   	            },
 
-	{0             , 0xfe, 0   ,    2, "Hires Mode"			},
-	{DIPOFFS + 0x05, 0x01, 0x01, 0x00, "No"  		        },
-	{DIPOFFS + 0x05, 0x01, 0x01, 0x01, "Yes"   	            },
+	{0   , 0xfe, 0   ,    3, "Hires Mode"			},
+	{0x05, 0x01, 0x03, 0x00, "No"  		        	},
+	{0x05, 0x01, 0x03, 0x01, "Yes (1024)"			},
+	{0x05, 0x01, 0x03, 0x02, "Yes (1080)"			},
 };
 
 STDDIPINFO(Tempest)
@@ -238,7 +237,6 @@ static void tempest_write(UINT16 address, UINT8 data)
 
 		case 0x4800:
 			avgdvg_go();
-			avgletsgo = 1;
 		return;
 
 		case 0x5000:
@@ -262,23 +260,16 @@ static void tempest_write(UINT16 address, UINT8 data)
 
 static INT32 res_check()
 {
-	if (DrvDips[5] & 1) {
-		INT32 Width, Height;
-		BurnDrvGetVisibleSize(&Width, &Height);
-
-		if (Width != 900) {
-			vector_rescale(1080, 900);
-			return 1;
-		}
-	} else {
-		INT32 Width, Height;
-		BurnDrvGetVisibleSize(&Width, &Height);
-
-		if (Width != 500) {
-			vector_rescale(600, 500);
-			return 1;
-		}
+	const INT32 reso_list[3] = { 640, 1024, 1080 };
+	INT32 Width, Height;
+	INT32 Selected = reso_list[DrvDips[5] & 3];
+	BurnDrvGetVisibleSize(&Width, &Height);
+//	bprintf(0, _T("now:  %d   Selected (dip):  %d\n"), Height, Selected);
+	if (Height != Selected) {
+		vector_rescale((Selected * 480 / 640), Selected);
+		return 1;
 	}
+
 	return 0;
 }
 
@@ -300,8 +291,6 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	avgdvg_reset();
 
 	earom_reset();
-
-	avgletsgo = 0;
 
 	nExtraCycles = 0;
 
@@ -347,15 +336,24 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
-		if (small_roms) {
+		if (load_type == 0)
+		{
+			if (BurnLoadRom(DrvM6502ROM + 0x9000,  0, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xa000,  1, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xb000,  2, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xc000,  3, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xd000,  4, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xf000,  4, 1)) return 1;
+
+			if (BurnLoadRom(DrvVecROM   + 0x0000,  5, 1)) return 1;
+
+			if (BurnLoadRom(DrvAVGPROM  + 0x0000,  6, 1)) return 1;
+		}
+		else if (load_type == 1)
+		{
 			if (BurnLoadRom(DrvM6502ROM + 0x9000,  0, 1)) return 1;
 			if (BurnLoadRom(DrvM6502ROM + 0x9800,  1, 1)) return 1;
 			if (BurnLoadRom(DrvM6502ROM + 0xa000,  2, 1)) return 1;
@@ -372,17 +370,20 @@ static INT32 DrvInit()
 			if (BurnLoadRom(DrvVecROM   + 0x0800, 11, 1)) return 1;
 
 			if (BurnLoadRom(DrvAVGPROM  + 0x0000, 12, 1)) return 1;
-		} else {
+		}
+		else if (load_type == 2)
+		{
 			if (BurnLoadRom(DrvM6502ROM + 0x9000,  0, 1)) return 1;
-			if (BurnLoadRom(DrvM6502ROM + 0xa000,  1, 1)) return 1;
-			if (BurnLoadRom(DrvM6502ROM + 0xb000,  2, 1)) return 1;
-			if (BurnLoadRom(DrvM6502ROM + 0xc000,  3, 1)) return 1;
-			if (BurnLoadRom(DrvM6502ROM + 0xd000,  4, 1)) return 1;
-			if (BurnLoadRom(DrvM6502ROM + 0xf000,  4, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0x9800,  1, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xa000,  2, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xa800,  3, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xd800,  4, 1)) return 1;
+			if (BurnLoadRom(DrvM6502ROM + 0xf800,  4, 1)) return 1;
 
 			if (BurnLoadRom(DrvVecROM   + 0x0000,  5, 1)) return 1;
+			if (BurnLoadRom(DrvVecROM   + 0x0800,  6, 1)) return 1;
 
-			if (BurnLoadRom(DrvAVGPROM  + 0x0000,  6, 1)) return 1;
+			if (BurnLoadRom(DrvAVGPROM  + 0x0000,  7, 1)) return 1;
 		}
 	}
 
@@ -398,7 +399,7 @@ static INT32 DrvInit()
 
 	BurnWatchdogInit(DrvDoReset, 180);
 
-	PokeyInit(12096000/8, 2, 2.40, 0);
+	PokeyInit(12096000/8, 2, 1.40, 0);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 	PokeyPotCallback(0, 0, port1_read);
 	PokeyPotCallback(0, 1, port1_read);
@@ -436,13 +437,13 @@ static INT32 DrvExit()
 	PokeyExit();
 	M6502Exit();
 
-	small_roms = 0;
+	load_type = 0;
 
 	BurnTrackballExit();
-
+	// mathboxexit() ?
 	earom_exit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -518,16 +519,16 @@ static INT32 DrvFrame()
 		DrvInputs[2] = (DrvInputs[2] & 0xf8) | (DrvDips[1] & 0x07);
 	}
 
-	INT32 nCyclesTotal = 1512000 / 60;
 	INT32 nInterleave = 20;
-	INT32 nCyclesDone = nExtraCycles;
+	INT32 nCyclesTotal[1] = { 1512000 / 60 };
+	INT32 nCyclesDone[1] = { nExtraCycles };
 	INT32 nSoundBufferPos = 0;
 
 	M6502Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone += M6502Run((nCyclesTotal * (i + 1) / nInterleave) - nCyclesDone);
+		CPU_RUN(0, M6502);
 		if (i == 9) update_dial();
 		if ((i % 5) == 4) M6502SetIRQLine(0, CPU_IRQSTATUS_ACK);
 
@@ -577,6 +578,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		M6502Scan(nAction);
 
 		avgdvg_scan(nAction, pnMin);
+		mathbox_scan(nAction, pnMin);
+
 		BurnWatchdogScan(nAction);
 
 		pokey_scan(nAction, pnMin);
@@ -604,14 +607,14 @@ static struct BurnRomInfo tempestRomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           //  6 avg prom
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           //  7 mathbox prom
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           //  7 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           //  8 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           //  9
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 10
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 11
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 12
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 13
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           //  8 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           //  9
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 10
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 11
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 12
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 13
 };
 
 STD_ROM_PICK(tempest)
@@ -624,7 +627,7 @@ struct BurnDriver BurnDrvTempest = {
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, tempestRomInfo, tempestRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -640,14 +643,14 @@ static struct BurnRomInfo tempest1rRomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           //  6 user1
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           //  7 user2
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           //  7 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           //  8 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           //  9
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 10
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 11
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 12
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 13
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           //  8 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           //  9
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 10
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 11
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 12
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 13
 };
 
 STD_ROM_PICK(tempest1r)
@@ -660,12 +663,12 @@ struct BurnDriver BurnDrvTempest1r = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, tempest1rRomInfo, tempest1rRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
 };
 
 static INT32 DrvInitSmall()
 {
-	small_roms = 1;
+	load_type = 1;
 
 	return DrvInit();
 }
@@ -688,14 +691,14 @@ static struct BurnRomInfo tempest3RomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 user2
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
 };
 
 STD_ROM_PICK(tempest3)
@@ -708,7 +711,7 @@ struct BurnDriver BurnDrvTempest3 = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, tempest3RomInfo, tempest3RomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -730,14 +733,14 @@ static struct BurnRomInfo tempest2RomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 user2
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
 };
 
 STD_ROM_PICK(tempest2)
@@ -750,7 +753,7 @@ struct BurnDriver BurnDrvTempest2 = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, tempest2RomInfo, tempest2RomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -772,14 +775,14 @@ static struct BurnRomInfo tempest1RomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 user2
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
 };
 
 STD_ROM_PICK(tempest1)
@@ -792,7 +795,7 @@ struct BurnDriver BurnDrvTempest1 = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, tempest1RomInfo, tempest1RomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -814,14 +817,14 @@ static struct BurnRomInfo temptubeRomDesc[] = {
 
 	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
 
-	{ "136002.126",		0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 user2
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
 
-	{ "136002.132",		0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
-	{ "136002.131",		0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
-	{ "136002.130",		0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
-	{ "136002.129",		0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
-	{ "136002.128",		0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
-	{ "136002.127",		0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
 };
 
 STD_ROM_PICK(temptube)
@@ -834,5 +837,175 @@ struct BurnDriver BurnDrvTemptube = {
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
 	NULL, temptubeRomInfo, temptubeRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
 	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
-	500, 600, 3, 4
+	480, 640, 3, 4
+};
+
+
+// TempEd
+
+static struct BurnRomInfo tempedRomDesc[] = {
+	{ "136002-113.d1",	0x0800, 0x65d61fe7, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "136002-114.e1",	0x0800, 0x11077375, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "136002-115.f1",	0x0800, 0xf3e2827a, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "136002-316.h1",	0x0800, 0xaeb0f7e9, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "136002-217.j1",	0x0800, 0xef2eb645, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "temped.118",		0x0800, 0x4825ee42, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "136002-119.lm1",	0x0800, 0xa4de050f, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "136002-120.mn1",	0x0800, 0x35619648, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "136002-121.p1",	0x0800, 0x73d38e47, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "136002-222.r1",	0x0800, 0x707bd5c3, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "136002-123.np3",	0x0800, 0x29f7e937, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "136002-124.r3",	0x0800, 0xc16ec351, 1 | BRF_PRG | BRF_ESS }, // 11
+
+	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
+
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
+
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+};
+
+STD_ROM_PICK(temped)
+STD_ROM_FN(temped)
+
+struct BurnDriver BurnDrvTemped = {
+	"temped", "tempest", NULL, NULL, "2000",
+	"TempEd\0", NULL, "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HACK, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
+	NULL, tempedRomInfo, tempedRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
+	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
+	480, 640, 3, 4
+};
+
+
+// Tempest All Levels
+
+static struct BurnRomInfo tempallRomDesc[] = {
+	{ "tempall.113",	0x0800, 0xa9000137, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "136002-114.e1",	0x0800, 0x11077375, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "136002-115.f1",	0x0800, 0xf3e2827a, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "136002-316.h1",	0x0800, 0xaeb0f7e9, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "136002-217.j1",	0x0800, 0xef2eb645, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "136002.118.k1",	0x0800, 0xbeb352ab, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "136002-119.lm1",	0x0800, 0xa4de050f, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "136002-120.mn1",	0x0800, 0x35619648, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "136002-121.p1",	0x0800, 0x73d38e47, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "136002-222.r1",	0x0800, 0x707bd5c3, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "136002-123.np3",	0x0800, 0x29f7e937, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "136002-124.r3",	0x0800, 0xc16ec351, 1 | BRF_PRG | BRF_ESS }, // 11
+
+	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
+
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
+
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+};
+
+STD_ROM_PICK(tempall)
+STD_ROM_FN(tempall)
+
+struct BurnDriver BurnDrvTempall = {
+	"tempall", "tempest", NULL, NULL, "2000",
+	"Tempest All Levels\0", NULL, "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HACK, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
+	NULL, tempallRomInfo, tempallRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
+	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
+	480, 640, 3, 4
+};
+
+
+// Tempest Twisted
+
+static struct BurnRomInfo temptwstRomDesc[] = {
+	{ "tempall.113",	0x0800, 0xa9000137, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "136002-114.e1",	0x0800, 0x11077375, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "136002-115.f1",	0x0800, 0xf3e2827a, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "136002-316.h1",	0x0800, 0xaeb0f7e9, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "136002-217.j1",	0x0800, 0xef2eb645, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "temptwst.118",	0x0800, 0xf30afe2d, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "temptwst.119",	0x0800, 0x571b1799, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "136002-120.mn1",	0x0800, 0x35619648, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "temptwst.121",	0x0800, 0x67619e6e, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "136002-222.r1",	0x0800, 0x707bd5c3, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "136002-123.np3",	0x0800, 0x29f7e937, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "136002-124.r3",	0x0800, 0xc16ec351, 1 | BRF_PRG | BRF_ESS }, // 11
+
+	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           // 12 user1
+
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           // 13 mathbox prom
+
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           // 14 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 15
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 16
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 17
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 18
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 19
+};
+
+STD_ROM_PICK(temptwst)
+STD_ROM_FN(temptwst)
+
+struct BurnDriver BurnDrvTemptwst = {
+	"temptwst", "tempest", NULL, NULL, "2000",
+	"Tempest Twisted\0", NULL, "Twisty", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HACK, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_ACTION | GBF_VECTOR, 0,
+	NULL, temptwstRomInfo, temptwstRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
+	DrvInitSmall, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
+	480, 640, 3, 4
+};
+
+
+// Vector Breakout [h]
+
+static struct BurnRomInfo vbrakoutRomDesc[] = {
+	{ "vbrakout.113",	0x0800, 0x6fd3efe5, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "vbrakout.114",	0x0800, 0x9974b9a5, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "vbrakout.115",	0x0800, 0x44d611d8, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "vbrakout.116",	0x0800, 0xcd58fc11, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "vbrakout.122",	0x0800, 0x1ae2dd53, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "136002-123.np3",	0x0800, 0x29f7e937, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "136002-124.r3",	0x0800, 0xc16ec351, 1 | BRF_PRG | BRF_ESS }, //  6
+
+	{ "136002-125.d7",	0x0100, 0x5903af03, 2 | BRF_GRA },           //  7 user1
+
+	{ "136002-126.a1",	0x0020, 0x8b04f921, 3 | BRF_GRA },           //  8 mathbox prom
+
+	{ "136002-132.l1",	0x0100, 0x2af82e87, 4 | BRF_GRA },           //  9 user3
+	{ "136002-131.k1",	0x0100, 0xb31f6e24, 4 | BRF_GRA },           // 10
+	{ "136002-130.j1",	0x0100, 0x8119b847, 4 | BRF_GRA },           // 11
+	{ "136002-129.h1",	0x0100, 0x09f5a4d5, 4 | BRF_GRA },           // 12
+	{ "136002-128.f1",	0x0100, 0x823b61ae, 4 | BRF_GRA },           // 13
+	{ "136002-127.e1",	0x0100, 0x276eadd5, 4 | BRF_GRA },           // 14
+};
+
+STD_ROM_PICK(vbrakout)
+STD_ROM_FN(vbrakout)
+
+static INT32 vbrakoutInit()
+{
+	load_type = 2;
+
+	return DrvInit();
+}
+
+struct BurnDriver BurnDrvVbrakout = {
+	"vbrakout", "tempest", NULL, NULL, "1999",
+	"Vector Breakout [h]\0", NULL, "Clay Cowgill", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HACK, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT | GBF_VECTOR, 0,
+	NULL, vbrakoutRomInfo, vbrakoutRomName, NULL, NULL, NULL, NULL, TempestInputInfo, TempestDIPInfo,
+	vbrakoutInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40 * 256,
+	480, 640, 3, 4
 };

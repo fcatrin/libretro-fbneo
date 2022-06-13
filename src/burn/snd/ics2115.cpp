@@ -39,7 +39,7 @@
 
 
 static UINT8* m_rom = NULL;			// ics2115 rom
-static INT32 m_rom_len;
+static INT32 m_rom_mask;
 static void (*m_irq_cb)(INT32) = NULL;// cpu irq callback
 
 struct ics2115_voice {
@@ -61,6 +61,7 @@ struct ics2115_voice {
 	} vol;
 
 	union {
+#ifdef LSB_FIRST
 		struct {
 			UINT8 ulaw       : 1;
 			UINT8 stop       : 1;   // stops wave + vol envelope
@@ -72,9 +73,23 @@ struct ics2115_voice {
 			UINT8 irq_pending: 1;   // writable on ultrasound/interwave; writing 1 triggers IRQ, 0 clears
 		} bitflags;
 		UINT8 value;
+#else
+		UINT8 value;
+		struct {
+			UINT8 irq_pending: 1;   // writable on ultrasound/interwave; writing 1 triggers IRQ, 0 clears
+			UINT8 invert     : 1;
+			UINT8 irq        : 1;   // enable IRQ generation
+			UINT8 loop_bidir : 1;
+			UINT8 loop       : 1;
+			UINT8 eightbit   : 1;
+			UINT8 stop       : 1;   // stops wave + vol envelope
+			UINT8 ulaw       : 1;
+		} bitflags;
+#endif
 	} osc_conf;
 
 	union {
+#ifdef LSB_FIRST
 		struct {
 			UINT8 done       : 1;   // indicates envelope status (hardware modifies this)
 			UINT8 stop       : 1;   // stops the envelope
@@ -86,6 +101,19 @@ struct ics2115_voice {
 			UINT8 irq_pending: 1;   // writable on ultrasound/interwave; writing 1 triggers IRQ, 0 clears
 		} bitflags;
 		UINT8 value;
+#else
+		UINT8 value;
+		struct {
+			UINT8 irq_pending: 1;   // writable on ultrasound/interwave; writing 1 triggers IRQ, 0 clears
+			UINT8 invert     : 1;
+			UINT8 irq        : 1;   // enable IRQ generation
+			UINT8 loop_bidir : 1;
+			UINT8 loop       : 1;
+			UINT8 rollover   : 1;
+			UINT8 stop       : 1;   // stops wave + vol envelope
+			UINT8 done       : 1;
+		} bitflags;
+#endif
 	} vol_ctrl;
 
 	// variables used by the interpolator
@@ -177,7 +205,7 @@ void ics2115_init(void (*cpu_irq_cb)(INT32), UINT8 *sample_rom, INT32 sample_rom
 
 	m_irq_cb = cpu_irq_cb;
 	m_rom = sample_rom;
-	m_rom_len = sample_rom_size;
+	m_rom_mask = sample_rom_size - 1;
 
 	// compute volume table
 	for (INT32 i = 0; i < 4096; i++)
@@ -239,7 +267,7 @@ void ics2115_exit()
 	if (!DebugSnd_ICS2115Initted) return;
 
 	m_rom = NULL;
-	m_rom_len = 0;
+	m_rom_mask = 0;
 	m_irq_cb = NULL;
 
 	BurnFree(buffer);
@@ -415,12 +443,12 @@ static inline INT32 read_wavetable(ics2115_voice& voice, const UINT32 curr_addr)
 	if (voice.osc_conf.bitflags.ulaw || voice.osc_conf.bitflags.eightbit)
 	{
 		if (voice.osc_conf.bitflags.ulaw)
-			return m_ulaw[m_rom[curr_addr]];
+			return m_ulaw[m_rom[curr_addr & m_rom_mask]];
 
-		return ((INT8)(m_rom[curr_addr]) << 8) | ((m_rom[curr_addr] & 0x7F) << 1);
+		return ((INT8)(m_rom[curr_addr & m_rom_mask]) << 8) | ((m_rom[curr_addr & m_rom_mask] & 0x7F) << 1);
 	}
 
-	return ((INT8)(m_rom[curr_addr + 1]) << 8) | m_rom[curr_addr + 0];
+	return ((INT8)(m_rom[(curr_addr + 1) & m_rom_mask]) << 8) | m_rom[(curr_addr + 0) & m_rom_mask];
 }
 
 #if defined INTERPOLATE_AS_HARDWARE

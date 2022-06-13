@@ -19,8 +19,6 @@ static UINT8 *Ram01, *RamPal;
 static INT32 nColCount = 0x0800;
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static struct BurnInputInfo snowbro2InputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
@@ -62,7 +60,7 @@ static struct BurnInputInfo snowbro2InputList[] = {
 	{"P4 Button 2",	BIT_DIGITAL,	DrvJoy4 + 5,	"p4 fire 2"},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"},
+	{"Service",		BIT_DIGITAL,	DrvButton + 0,	"service"},
 	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
 	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
 	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
@@ -70,114 +68,117 @@ static struct BurnInputInfo snowbro2InputList[] = {
 
 STDINPUTINFO(snowbro2)
 
-static struct BurnDIPInfo snowbro2DIPList[] = {
+static struct BurnDIPInfo snowbro2DIPList[] = 
+{
+	DIP_OFFSET(0x20)
+
 	// Defaults
-	{0x20,	0xFF, 0xFF,	0x00, NULL},
-	{0x21,	0xFF, 0xFF,	0x00, NULL},
-	{0x22,	0xFF, 0xFF,	0x00, NULL},
+	{0x00,	0xFF, 0xFF,	0x00, NULL},
+	{0x01,	0xFF, 0xFF,	0x00, NULL},
+	{0x02,	0xFF, 0xFF,	0x00, NULL},
 
 	// DIP 1
 	{0   , 0xFE, 0   , 2   , "Continue Mode"                },
-	{0x20, 0x01, 0x01, 0x00, "Normal"                       },
-	{0x20, 0x01, 0x01, 0x01, "Discount"                     },
+	{0x00, 0x01, 0x01, 0x00, "Normal"                       },
+	{0x00, 0x01, 0x01, 0x01, "Discount"                     },
 
 	{0   , 0xFE, 0   , 2   , "Flip Screen"                  },
-	{0x20, 0x01, 0x02, 0x00, "Off"                          },
-	{0x20, 0x01, 0x02, 0x02, "On"                           },
+	{0x00, 0x01, 0x02, 0x00, "Off"                          },
+	{0x00, 0x01, 0x02, 0x02, "On"                           },
 
 	{0   , 0xFE, 0   , 2   , "Service Mode"                 },
-	{0x20, 0x01, 0x04, 0x00, "Off"                          },
-	{0x20, 0x01, 0x04, 0x04, "On"                           },
+	{0x00, 0x01, 0x04, 0x00, "Off"                          },
+	{0x00, 0x01, 0x04, 0x04, "On"                           },
 
 	{0   , 0xFE, 0   , 2   , "Demo Sounds"                  },
-	{0x20, 0x01, 0x08, 0x08, "Off"                          },
-	{0x20, 0x01, 0x08, 0x00, "On"                           },
+	{0x00, 0x01, 0x08, 0x08, "Off"                          },
+	{0x00, 0x01, 0x08, 0x00, "On"                           },
 
 	// Normal coin settings
 	{0,		0xFE, 0,	4,	  "Coin A"},
-	{0x14,	0x82, 0x30,	0x00, "1 coin 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0x30,	0x10, "1 coin 2 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0x30,	0x20, "2 coins 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0x30,	0x30, "2 coins 3 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0x30,	0x00, "1 coin 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0x30,	0x10, "1 coin 2 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0x30,	0x20, "2 coins 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0x30,	0x30, "2 coins 3 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
 	{0,		0xFE, 0,	4,	  "Coin B"},
-	{0x14,	0x82, 0xC0,	0x00, "1 coin 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0xC0,	0x40, "1 coin 2 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0xC0,	0x80, "2 coins 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x82, 0xC0,	0xC0, "2 coins 3 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0xC0,	0x00, "1 coin 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0xC0,	0x40, "1 coin 2 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0xC0,	0x80, "2 coins 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x82, 0xC0,	0xC0, "2 coins 3 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
 
 	// European coin settings
 	{0,		0xFE, 0,	4,	  "Coin A"},
-	{0x14,	0x02, 0x30,	0x00, "1 coin 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0x30,	0x10, "2 coins 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0x30,	0x20, "3 coins 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0x30,	0x30, "3 coins 1 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0x30,	0x00, "1 coin 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0x30,	0x10, "2 coins 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0x30,	0x20, "3 coins 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0x30,	0x30, "4 coins 1 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
 	{0,		0xFE, 0,	4,	  "Coin B"},
-	{0x14,	0x02, 0xC0,	0x00, "1 coin 2 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0xC0,	0x40, "1 coin 3 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0xC0,	0x80, "1 coin 4 play"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
-	{0x14,	0x02, 0xC0,	0xC0, "1 coin 6 plays"},
-	{0x16,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0xC0,	0x00, "1 coin 2 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0xC0,	0x40, "1 coin 3 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0xC0,	0x80, "1 coin 4 play"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
+	{0x00,	0x02, 0xC0,	0xC0, "1 coin 6 plays"},
+	{0x02,	0x00, 0x0F, 0x08, NULL},
 
 	// DIP 2
 	{0   , 0xFE, 0   , 4   , "Difficulty"                   },
-	{0x21, 0x01, 0x03, 0x01, "Easy"                         },
-	{0x21, 0x01, 0x03, 0x00, "Normal"                       },
-	{0x21, 0x01, 0x03, 0x02, "Hard"                         },
-	{0x21, 0x01, 0x03, 0x03, "Very Hard"                    },
+	{0x01, 0x01, 0x03, 0x01, "Easy"                         },
+	{0x01, 0x01, 0x03, 0x00, "Normal"                       },
+	{0x01, 0x01, 0x03, 0x02, "Hard"                         },
+	{0x01, 0x01, 0x03, 0x03, "Very Hard"                    },
 
 	{0   , 0xFE, 0   , 4   , "Bonus Life"                   },
-	{0x21, 0x01, 0x0C, 0x04, "100000 / 500000"              },
-	{0x21, 0x01, 0x0C, 0x00, "100000 only"                  },
-	{0x21, 0x01, 0x0C, 0x08, "200000 only"                  },
-	{0x21, 0x01, 0x0C, 0x0C, "None"                         },
+	{0x01, 0x01, 0x0C, 0x04, "100000 / 500000"              },
+	{0x01, 0x01, 0x0C, 0x00, "100000 only"                  },
+	{0x01, 0x01, 0x0C, 0x08, "200000 only"                  },
+	{0x01, 0x01, 0x0C, 0x0C, "None"                         },
 
 	{0   , 0xFE, 0   , 4   , "Lives"                        },
-	{0x21, 0x01, 0x30, 0x30, "1"                            },
-	{0x21, 0x01, 0x30, 0x20, "2"                            },
-	{0x21, 0x01, 0x30, 0x00, "3"                            },
-	{0x21, 0x01, 0x30, 0x10, "4"                            },
+	{0x01, 0x01, 0x30, 0x30, "1"                            },
+	{0x01, 0x01, 0x30, 0x20, "2"                            },
+	{0x01, 0x01, 0x30, 0x00, "3"                            },
+	{0x01, 0x01, 0x30, 0x10, "4"                            },
 
 	{0   , 0xFE, 0   , 2   , "Game Type"                    },
-	{0x21, 0x01, 0x40, 0x00, "Normal"                       },
-	{0x21, 0x01, 0x40, 0x40, "No Death & Stop Mode"         },
+	{0x01, 0x01, 0x40, 0x00, "Normal"                       },
+	{0x01, 0x01, 0x40, 0x40, "No Death & Stop Mode"         },
 
 	{0   , 0xFE, 0   , 2   , "Max Players"                  },
-	{0x21, 0x01, 0x80, 0x80, "2"                            },
-	{0x21, 0x01, 0x80, 0x00, "4"                            },
+	{0x01, 0x01, 0x80, 0x80, "2"                            },
+	{0x01, 0x01, 0x80, 0x00, "4"                            },
 
 	// Dip 3
 	{0   , 0xFE, 0   , 7   , "Territory"                    },
-	{0x22, 0x01, 0x1C, 0x08, "Europe"                       },
-	{0x22, 0x01, 0x1C, 0x10, "Hong Kong"                    },
-	{0x22, 0x01, 0x1C, 0x00, "Japan"                        },
-	{0x22, 0x01, 0x1C, 0x0c, "Korea"                        },
-	{0x22, 0x01, 0x1C, 0x18, "South East Asia"              },
-	{0x22, 0x01, 0x1C, 0x14, "Taiwan"                       },
-	{0x22, 0x01, 0x1C, 0x04, "USA"                          },
+	{0x02, 0x01, 0x1C, 0x08, "Europe"                       },
+	{0x02, 0x01, 0x1C, 0x10, "Hong Kong"                    },
+	{0x02, 0x01, 0x1C, 0x00, "Japan"                        },
+	{0x02, 0x01, 0x1C, 0x0c, "Korea"                        },
+	{0x02, 0x01, 0x1C, 0x18, "South East Asia"              },
+	{0x02, 0x01, 0x1C, 0x14, "Taiwan"                       },
+	{0x02, 0x01, 0x1C, 0x04, "USA"                          },
 
 	{0   , 0xFE, 0   , 2   , "Show All Rights Reserved"     },
-	{0x22, 0x01, 0x20, 0x00, "No"                           },
-	{0x22, 0x01, 0x20, 0x20, "Yes"                          },
+	{0x02, 0x01, 0x20, 0x00, "No"                           },
+	{0x02, 0x01, 0x20, 0x20, "Yes"                          },
 };
 
 STDDIPINFO(snowbro2)
 
-UINT8 __fastcall snowbro2ReadByte(UINT32 sekAddress)
+static UINT8 __fastcall snowbro2ReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -213,7 +214,7 @@ UINT8 __fastcall snowbro2ReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall snowbro2ReadWord(UINT32 sekAddress)
+static UINT16 __fastcall snowbro2ReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 
@@ -252,7 +253,7 @@ UINT16 __fastcall snowbro2ReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall snowbro2WriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall snowbro2WriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 		case 0x600001:
@@ -272,7 +273,7 @@ void __fastcall snowbro2WriteByte(UINT32 sekAddress, UINT8 byteValue)
 	}
 }
 
-void __fastcall snowbro2WriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall snowbro2WriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 		case 0x300000:								// Set GP9001 VRAM address-pointer
@@ -346,18 +347,11 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -397,7 +391,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	INT32 nSoundBufferPos = 0;
 
@@ -425,11 +419,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		{
 			// Render sound segment
@@ -579,11 +569,9 @@ static INT32 DrvInit()
 	ToaPalInit();
 
 	BurnYM2151Init(27000000 / 8);
-	BurnYM2151SetAllRoutes(1.00, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetAllRoutes(0.35, BURN_SND_ROUTE_BOTH);
 	MSM6295Init(0, 27000000 / 10 / 132, 1);
-	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
-
-	bDrawScreen = true;
+	MSM6295SetRoute(0, 0.35, BURN_SND_ROUTE_BOTH);
 
 	DrvDoReset(); // Reset machine
 	return 0;
@@ -632,9 +620,9 @@ static struct BurnRomInfo snowbro2nyRomDesc[] = {
 
 	{ "rom4-tp-033.u33",    	0x080000, 0x638f341e, BRF_SND },		   //  5 MSM6295 ADPCM data
 	
-	{ "13_gal16v8-25lnc.u91",	0x0117, 0x00000000, BRF_OPT },     	   	   //  6 PLDs
-	{ "14_gal16v8-25lnc.u92",	0x0117, 0x00000000, BRF_OPT },     	   	   //  7
-	{ "15_gal16v8-25lnc.u93",	0x0117, 0x00000000, BRF_OPT },     	   	   //  8
+	{ "13_gal16v8-25lnc.u91",	0x0117, 0x00000000, BRF_NODUMP },     	   	   //  6 PLDs
+	{ "14_gal16v8-25lnc.u92",	0x0117, 0x00000000, BRF_NODUMP },     	   	   //  7
+	{ "15_gal16v8-25lnc.u93",	0x0117, 0x00000000, BRF_NODUMP },     	   	   //  8
 };
 
 

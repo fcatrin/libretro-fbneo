@@ -374,7 +374,7 @@ static tilemap_callback( holeland )
 
 	TILE_SET_INFO(0, code, (palette_offset << 4) | (attr >> 4), TILE_FLIPYX(attr >> 2));
 
-	*category = attr >> 7; // 0x20 in crzrally, but not used
+	sTile->category = attr >> 7; // 0x20 in crzrally, but not used
 }
 
 static INT32 DrvDoReset(INT32 clear_mem)
@@ -561,8 +561,13 @@ static INT32 DrvInit(INT32 game)
 	AY8910Init(1, 1250000, 1);
 	AY8910SetPorts(0, &ay8910_0_read_A, &ay8910_0_read_B, NULL, NULL);
 	AY8910SetPorts(1, &ay8910_1_read_A, &ay8910_1_read_B, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	if (game == 0) {
+		AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+		AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
+	} else {
+		AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
+		AY8910SetAllRoutes(1, 0.10, BURN_SND_ROUTE_BOTH);
+	}
     AY8910SetBuffered(ZetTotalCycles, (game_select ? 5000000 : 3355700));
 
 	sp0256_init(DrvSndROM, 3355700);

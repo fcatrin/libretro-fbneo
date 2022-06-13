@@ -187,6 +187,7 @@ struct BurnDIPInfo {
 	char* szText;
 };
 
+#define DIP_OFFSET(x) {x, 0xf0, 0xff, 0xff, NULL},
 
 // ---------------------------------------------------------------------------
 // Common CPU definitions
@@ -194,9 +195,14 @@ struct BurnDIPInfo {
 // sync to nCyclesDone[]
 #define CPU_RUN(num,proc) do { nCyclesDone[num] += proc ## Run(((i + 1) * nCyclesTotal[num] / nInterleave) - nCyclesDone[num]); } while (0)
 #define CPU_IDLE(num,proc) do { nCyclesDone[num] += proc ## Idle(((i + 1) * nCyclesTotal[num] / nInterleave) - nCyclesDone[num]); } while (0)
+#define CPU_IDLE_NULL(num) do { nCyclesDone[num] += ((i + 1) * nCyclesTotal[num] / nInterleave) - nCyclesDone[num]; } while (0)
 // sync to cpuTotalCycles()
 #define CPU_RUN_SYNCINT(num,proc) do { nCyclesDone[num] += proc ## Run(((i + 1) * nCyclesTotal[num] / nInterleave) - proc ## TotalCycles()); } while (0)
 #define CPU_IDLE_SYNCINT(num,proc) do { nCyclesDone[num] += proc ## Idle(((i + 1) * nCyclesTotal[num] / nInterleave) - proc ## TotalCycles()); } while (0)
+// sync to timer
+#define CPU_RUN_TIMER(num) do { BurnTimerUpdate((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrame(nCyclesTotal[num]); } while (0)
+#define CPU_RUN_TIMER_YM3812(num) do { BurnTimerUpdateYM3812((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrameYM3812(nCyclesTotal[num]); } while (0)
+#define CPU_RUN_TIMER_YM3526(num) do { BurnTimerUpdateYM3526((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrameYM3526(nCyclesTotal[num]); } while (0)
 
 #define CPU_IRQSTATUS_NONE	0
 #define CPU_IRQSTATUS_ACK	1
@@ -266,6 +272,11 @@ extern INT32 nBurnBpp;						// Bytes per pixel (2, 3, or 4)
 extern UINT8 nBurnLayer;			// Can be used externally to select which layers to show
 extern UINT8 nSpriteEnable;			// Can be used externally to select which Sprites to show
 
+extern INT32 bRunAhead;             // "Run Ahead" lag-reduction technique UI option (on/off)
+
+extern INT32 bBurnRunAheadFrame;    // for drivers, hiscore, etc, to recognize that this is the "runahead frame"
+                                    // for instance, you wouldn't want to apply hi-score data on a "runahead frame"
+
 extern INT32 nBurnSoundRate;					// Samplerate of sound
 extern INT32 nBurnSoundLen;					// Length in samples per frame
 extern INT16* pBurnSoundOut;				// Pointer to output buffer
@@ -324,10 +335,14 @@ double BurnGetTime();
 
 // Handy debug binary-file dumper
 #if defined (FBNEO_DEBUG)
-void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize);
+void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize, INT32 append);
 #define BurnDump(fn, b, bs) do { \
     bprintf(0, _T("Dumping %S (0x%x bytes) to %S\n"), #b, bs, #fn); \
-    BurnDump_(fn, b, bs); } while (0)
+    BurnDump_(fn, b, bs, 0); } while (0)
+
+#define BurnDumpAppend(fn, b, bs) do { \
+    bprintf(0, _T("Dumping %S (0x%x bytes) to %S (append)\n"), #b, bs, #fn); \
+    BurnDump_(fn, b, bs, 1); } while (0)
 
 void BurnDumpLoad_(char *filename, UINT8 *buffer, INT32 bufsize);
 #define BurnDumpLoad(fn, b, bs) do { \
@@ -381,9 +396,38 @@ INT32 BurnDrvGetHDDName(char** pszName, UINT32 i, INT32 nAka);
 
 void Reinitialise();
 
+// ---------------------------------------------------------------------------
+// IPS Control
+
+#define IPS_USE_PROTECT		(1 <<  0)	// Control protection.
+
+#define IPS_NEOP3_20000		(1 <<  1)	// Extra Rom
+#define IPS_NEOP3_40000		(1 <<  2)
+
+#define IPS_PROG_100000		(1 <<  3)
+#define IPS_PROG_200000		(1 <<  4)
+#define IPS_PROG_300000		(1 <<  5)
+#define IPS_PROG_400000		(1 <<  6)
+#define IPS_PROG_500000		(1 <<  7)
+#define IPS_PROG_600000		(1 <<  8)
+#define IPS_PROG_700000		(1 <<  9)
+#define IPS_PROG_800000		(1 << 10)
+#define IPS_PROG_900000		(1 << 11)
+
+#define INCLUDE_NEOP3(x)	((x & IPS_NEOP3_20000) || (x & IPS_NEOP3_40000))
+#define INCLUDE_PROG(x)		((x & IPS_PROG_100000) || (x & IPS_PROG_200000) || (x & IPS_PROG_300000) || (x & IPS_PROG_400000) || (x & IPS_PROG_500000) ||	\
+							 (x & IPS_PROG_600000) || (x & IPS_PROG_700000) || (x & IPS_PROG_800000) || (x & IPS_PROG_900000))
+
+#define IPS_NEOP3_VALUE(x)	((x & IPS_NEOP3_20000) ? 0x020000  : ((x & IPS_NEOP3_40000) ? 0x040000  : 0))
+#define IPS_PROG_VALUE(x)	((x & IPS_PROG_100000) ? 0x100000  : ((x & IPS_PROG_200000) ? 0x200000  : ((x & IPS_PROG_300000) ? 0x300000  : ((x & IPS_PROG_400000) ? 0x400000 : ((x & IPS_PROG_500000) ? 0x500000 :	\
+							((x & IPS_PROG_600000) ? 0x600000  : ((x & IPS_PROG_700000) ? 0x700000  : ((x & IPS_PROG_800000) ? 0x800000  : ((x & IPS_PROG_900000) ? 0x900000 : 0)))))))))
+
 extern bool bDoIpsPatch;
 extern INT32 nIpsMaxFileLen;
+
 void IpsApplyPatches(UINT8* base, char* rom_name);
+UINT32 GetIpsDrvDefine();
+INT32 GetIpsesMaxLen(char* rom_name);
 
 // ---------------------------------------------------------------------------
 // Flags used with the Burndriver structure
@@ -397,14 +441,17 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define BDF_CLONE										(1 << 4)
 #define BDF_BOOTLEG										(1 << 5)
 #define BDF_PROTOTYPE									(1 << 6)
-#define BDF_16BIT_ONLY									(1 << 7)
-#define BDF_HACK										(1 << 8)
-#define BDF_HOMEBREW									(1 << 9)
-#define BDF_DEMO										(1 << 10)
-#define BDF_HISCORE_SUPPORTED							(1 << 11)
+#define BDF_HACK										(1 << 7)
+#define BDF_HOMEBREW									(1 << 8)
+#define BDF_DEMO										(1 << 9)
+#define BDF_16BIT_ONLY									(1 << 10)
+#define BDF_32BIT_ONLY									(1 << 11)
+#define BDF_HISCORE_SUPPORTED							(1 << 12)
+#define BDF_RUNAHEAD_DRAWSYNC							(1 << 13)
+#define BDF_RUNAHEAD_DISABLED							(1 << 14)
 
 // Flags for the hardware member
-// Format: 0xDDEEFFFF, where EE: Manufacturer, DD: Hardware platform, FFFF: Flags (used by driver)
+// Format: 0xDDEEFFFF, where DD: Manufacturer, EE: Hardware platform, FFFF: Flags (used by driver)
 
 #define HARDWARE_PUBLIC_MASK							(0x7FFF0000)
 
@@ -428,7 +475,6 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PREFIX_PACMAN							(0x0f000000)
 #define HARDWARE_PREFIX_GALAXIAN						(0x10000000)
 #define HARDWARE_PREFIX_IREM							(0x11000000)
-//#define HARDWARE_PREFIX_NINTENDO_SNES					(0x12000000)
 #define HARDWARE_PREFIX_DATAEAST						(0x13000000)
 #define HARDWARE_PREFIX_CAPCOM_MISC						(0x14000000)
 #define HARDWARE_PREFIX_SETA							(0x15000000)
@@ -441,8 +487,16 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PREFIX_SEGA_GAME_GEAR					(0x12000000)
 #define HARDWARE_PREFIX_MSX                             (0x1C000000)
 #define HARDWARE_PREFIX_SPECTRUM                        (0x1D000000)
+#define HARDWARE_PREFIX_NES                             (0x1E000000)
+#define HARDWARE_PREFIX_FDS                             (0x1F000000)
+#define HARDWARE_PREFIX_NGP                             (0x20000000)
+#define HARDWARE_PREFIX_CHANNELF                        (0x21000000)
+
+#define HARDWARE_SNK_NGP								(HARDWARE_PREFIX_NGP | 0x00000000)
+#define HARDWARE_SNK_NGPC								(HARDWARE_PREFIX_NGP | 0x00000001)
 
 #define HARDWARE_MISC_PRE90S							(HARDWARE_PREFIX_MISC_PRE90S)
+#define HARDWARE_NVS									(HARDWARE_PREFIX_MISC_PRE90S | 0x00010000)
 #define HARDWARE_MISC_POST90S							(HARDWARE_PREFIX_MISC_POST90S)
 
 #define HARDWARE_CAPCOM_CPS1							(HARDWARE_PREFIX_CAPCOM | 0x00010000)
@@ -462,6 +516,8 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_SEGA_OUTRUN							(HARDWARE_PREFIX_SEGA | 0x00080000)
 #define HARDWARE_SEGA_SYSTEM1							(HARDWARE_PREFIX_SEGA | 0x00090000)
 #define HARDWARE_SEGA_MISC								(HARDWARE_PREFIX_SEGA | 0x000a0000)
+#define HARDWARE_SEGA_SYSTEM24							(HARDWARE_PREFIX_SEGA | 0x000b0000)
+#define HARDWARE_SEGA_SYSTEM32							(HARDWARE_PREFIX_SEGA | 0x000c0000)
 
 #define HARDWARE_SEGA_PCB_MASK							(0x0f)
 #define HARDWARE_SEGA_5358								(0x01)
@@ -523,6 +579,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_CAVE_68K_Z80							(HARDWARE_PREFIX_CAVE | 0x0001)
 #define HARDWARE_CAVE_M6295								(0x0002)
 #define HARDWARE_CAVE_YM2151							(0x0004)
+#define HARDWARE_CAVE_CV1000							(HARDWARE_PREFIX_CAVE | 0x00010000)
 
 #define HARDWARE_IGS_PGM								(HARDWARE_PREFIX_IGS_PGM)
 #define HARDWARE_IGS_USE_ARM_CPU						(0x0001)
@@ -565,7 +622,10 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_SEGA_MEGADRIVE							(HARDWARE_PREFIX_SEGA_MEGADRIVE)
 
 #define HARDWARE_SEGA_SG1000                            (HARDWARE_PREFIX_SEGA_SG1000)
-#define HARDWARE_SEGA_SG1000_RAMEXP                     (0x2000)
+#define HARDWARE_SEGA_SG1000_RAMEXP_A                   (0x1000)
+#define HARDWARE_SEGA_SG1000_RAMEXP_B                   (0x2000)
+#define HARDWARE_SEGA_SG1000_RAMEXP_2K                  (0x4000)
+#define HARDWARE_SEGA_SG1000_RAMEXP_8K                  (0x8000)
 #define HARDWARE_COLECO                                 (HARDWARE_PREFIX_COLECO)
 
 #define HARDWARE_MSX                                    (HARDWARE_PREFIX_MSX)
@@ -579,6 +639,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_MSX_MAPPER_DOOLY                       (0x06)
 #define HARDWARE_MSX_MAPPER_RTYPE                       (0x07)
 #define HARDWARE_MSX_MAPPER_CROSS_BLAIM                 (0x08)
+#define HARDWARE_MSX_MAPPER_48K                         (0x09)
 
 #define HARDWARE_SEGA_MEGADRIVE_PCB_SEGA_EEPROM			(1)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_SEGA_SRAM			(2)
@@ -622,9 +683,10 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_SEGA_MEGADRIVE_PCB_POKEMON				(40)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_POKEMON2			(41)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_MULAN				(42)
-#define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER              (43)
-#define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER_PORT2        (44)
-#define HARDWARE_SEGA_MEGADRIVE_FOURWAYPLAY             (45)
+#define HARDWARE_SEGA_MEGADRIVE_PCB_16ZHANG             (43)
+#define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER              (0x40)
+#define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER_PORT2        (0x80)
+#define HARDWARE_SEGA_MEGADRIVE_FOURWAYPLAY             (0xc0)
 
 #define HARDWARE_SEGA_MEGADRIVE_SRAM_00400				(0x0100)
 #define HARDWARE_SEGA_MEGADRIVE_SRAM_00800				(0x0200)
@@ -642,8 +704,6 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_PACMAN									(HARDWARE_PREFIX_PACMAN)
 
 #define HARDWARE_GALAXIAN								(HARDWARE_PREFIX_GALAXIAN)
-
-//#define HARDWARE_NINTENDO_SNES							(HARDWARE_PREFIX_NINTENDO_SNES)
 
 #define HARWARE_CAPCOM_MISC								(HARDWARE_PREFIX_CAPCOM_MISC)
 
@@ -663,7 +723,12 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define HARDWARE_MIDWAY_TUNIT							(HARDWARE_PREFIX_MIDWAY | 0x00020000)
 #define HARDWARE_MIDWAY_WUNIT							(HARDWARE_PREFIX_MIDWAY | 0x00030000)
 #define HARDWARE_MIDWAY_YUNIT							(HARDWARE_PREFIX_MIDWAY | 0x00040000)
+#define HARDWARE_MIDWAY_XUNIT							(HARDWARE_PREFIX_MIDWAY | 0x00050000)
 
+#define HARDWARE_NES									(HARDWARE_PREFIX_NES)
+#define HARDWARE_FDS									(HARDWARE_PREFIX_FDS)
+
+#define HARDWARE_CHANNELF                               (HARDWARE_PREFIX_CHANNELF)
 
 // flags for the genre member
 #define GBF_HORSHOOT									(1 << 0)
@@ -690,6 +755,9 @@ void IpsApplyPatches(UINT8* base, char* rom_name);
 #define GBF_RUNGUN  									(1 << 21)
 #define GBF_STRATEGY									(1 << 22)
 #define GBF_VECTOR                                      (1 << 23)
+#define GBF_RPG                                         (1 << 24)
+#define GBF_SIM                                         (1 << 25)
+#define GBF_ADV                                         (1 << 26)
 
 // flags for the family member
 #define FBF_MSLUG										(1 << 0)

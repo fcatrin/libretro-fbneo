@@ -8,6 +8,7 @@
 #include "burn_ym2151.h"
 #include "k007232.h"
 #include "watchdog.h"
+#include "k007452.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -23,12 +24,10 @@ static UINT8 *DrvPalRAM;
 static UINT8 *DrvVidRAM0;
 static UINT8 *DrvVidRAM1;
 static UINT8 *DrvSprRAM;
-static UINT8 *DrvSprBUF;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
-static INT32 multiply_register[2];
 static UINT8 main_bank;
 static UINT8 soundlatch;
 static UINT8 flipscreen;
@@ -227,10 +226,13 @@ static void __fastcall flkatck_sound_write(UINT16 address, UINT8 data)
 	{
 		case 0x9000:
 		case 0x9001:
-			multiply_register[address & 1] = data;
-		return;
-
+		case 0x9002:
+		case 0x9003:
+		case 0x9004:
+		case 0x9005:
 		case 0x9006:
+		case 0x9007:
+			K007452Write(address & 7, data);
 		return;
 
 		case 0xb000:
@@ -262,11 +264,14 @@ static UINT8 __fastcall flkatck_sound_read(UINT16 address)
 	switch (address)
 	{
 		case 0x9000:
-			return (multiply_register[0] * multiply_register[1]) & 0xff;
-
 		case 0x9001:
+		case 0x9002:
+		case 0x9003:
 		case 0x9004:
-			return 0;
+		case 0x9005:
+		case 0x9006:
+		case 0x9007:
+			return K007452Read(address & 7);
 
 		case 0xa000:
 			return soundlatch;
@@ -354,11 +359,10 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	k007232_set_bank(0, 0, 1);
 
 	k007121_reset();
+	K007452Reset();
 
 	BurnWatchdogReset();
 
-	multiply_register[0] = 0;
-	multiply_register[1] = 0;
 	flipscreen = 0;
 	soundlatch = 0;
 
@@ -388,8 +392,7 @@ static INT32 MemIndex()
 	DrvPalRAM		= Next; Next += 0x000400;
 	DrvVidRAM0		= Next; Next += 0x000800;
 	DrvVidRAM1		= Next; Next += 0x000800;
-	DrvSprRAM		= Next; Next += 0x000800;
-	DrvSprBUF		= Next; Next += 0x000800;
+	DrvSprRAM		= Next; Next += 0x001000;
 
 	RamEnd			= Next;
 	MemEnd			= Next;
@@ -408,12 +411,7 @@ static void graphics_expand()
 
 static INT32 DrvInit(INT32 rom_layout)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvHD6309ROM + 0x00000,  0, 1)) return 1;
@@ -441,13 +439,12 @@ static INT32 DrvInit(INT32 rom_layout)
 		graphics_expand();
 	}
 
-	HD6309Init(1);
+	HD6309Init(0);
 	HD6309Open(0);
 	HD6309MapMemory(DrvHD6309RAM,			0x0000, 0x00ff, MAP_ROM); // write through handler
 	HD6309MapMemory(DrvHD6309RAM + 0x0100,	0x0100, 0x03ff, MAP_RAM);
 	HD6309MapMemory(DrvPalRAM,				0x0800, 0x0bff, MAP_RAM);
-	HD6309MapMemory(DrvHD6309RAM + 0x1000,	0x1000, 0x17ff, MAP_RAM);
-	HD6309MapMemory(DrvSprBUF,				0x1800, 0x1fff, MAP_RAM);
+	HD6309MapMemory(DrvSprRAM,				0x1000, 0x1fff, MAP_RAM);
 	HD6309MapMemory(DrvVidRAM0,				0x2000, 0x27ff, MAP_RAM);
 	HD6309MapMemory(DrvVidRAM1,				0x2800, 0x2fff, MAP_RAM);
 	HD6309MapMemory(DrvHD6309RAM + 0x3000,	0x3000, 0x3fff, MAP_RAM);
@@ -466,9 +463,10 @@ static INT32 DrvInit(INT32 rom_layout)
 
 	BurnWatchdogInit(DrvDoReset, 180);
 
-	BurnYM2151Init(3579545);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 0);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
+	BurnTimerAttachZet(3579545);
 
 	K007232Init(0, 3579545, DrvSndROM, 0x40000);
 	K007232SetPortWriteHandler(0, DrvK007232VolCallback);
@@ -497,7 +495,7 @@ static INT32 DrvExit()
 	K007232Exit();
 	BurnYM2151Exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -533,8 +531,8 @@ static INT32 DrvDraw()
 	BurnTransferClear();
 
 	if (nBurnLayer & 1) GenericTilemapDraw(0, pTransDraw, 0);
-
-	if (nSpriteEnable & 1) k007121_draw(0, pTransDraw, DrvGfxROM, NULL, DrvSprRAM, 0, 40, 16, 0, -1, 0x0000);
+	INT32 spr_offs = (k007121_ctrl_read(0, 3) & 8) ? 0x800 : 0x000;
+	if (nSpriteEnable & 1) k007121_draw(0, pTransDraw, DrvGfxROM, NULL, &DrvSprRAM[spr_offs], 0, 40, 16, 0, -1, 0x0000);
 
 	GenericTilesSetClip(-1, 40, -1, -1);
 	if (nBurnLayer & 2) GenericTilemapDraw(1, pTransDraw, 0);
@@ -553,6 +551,8 @@ static INT32 DrvFrame()
 		DrvDoReset(1);
 	}
 
+	ZetNewFrame();
+
 	{
 		memset (DrvInputs, 0xff, 3 * sizeof(UINT8));
 
@@ -563,7 +563,6 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nSoundBufferPos = 0;
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 3000000 / 60, 3579545 / 60 };
 	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
@@ -573,7 +572,8 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += HD6309Run((nCyclesTotal[0] * (i + 1) / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, HD6309);
+
 		if (i == 240) {
 			if (k007121_ctrl_read(0, 7) & 0x02)
 				HD6309SetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -581,27 +581,14 @@ static INT32 DrvFrame()
 			if (pBurnDraw) { // missing text in service mode if drawn after vbl
 				DrvDraw();
 			}
-
-			memcpy(DrvSprRAM, DrvSprBUF, 0x800);
 		}
 
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
-
-		if (pBurnSoundOut && i&1) {
-			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		CPU_RUN_TIMER(1);
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-		}
-		K007232Update(0, pBurnSoundOut, nBurnSoundLen); // only update K007232 once per frame
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
+		K007232Update(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
@@ -636,10 +623,10 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		BurnYM2151Scan(nAction, pnMin);
 		K007232Scan(nAction, pnMin);
+		K007452Scan(nAction);
 
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(flipscreen);
-		SCAN_VAR(multiply_register);
 		SCAN_VAR(main_bank);
 		SCAN_VAR(nExtraCycles);
 	}

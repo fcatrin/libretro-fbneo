@@ -58,6 +58,10 @@ int ConfigAppLoad()
   if (szValue) x = _tcstol(szValue, NULL, 0); }
 #define VAR64(x) { TCHAR* szValue = LabelCheck(szLine,_T(#x));			\
   if (szValue) x = (long long)_tcstod(szValue, NULL); }
+
+//for INT64/UINT64 aka long long:
+#define VARI64(x) { TCHAR* szValue = LabelCheck(szLine,_T(#x));			\
+  if (szValue) x = (long long)wcstoll(szValue, NULL, 0); }
 #define FLT(x) { TCHAR* szValue = LabelCheck(szLine,_T(#x));			\
   if (szValue) x = _tcstod(szValue, NULL); }
 #define STR(x) { TCHAR* szValue = LabelCheck(szLine,_T(#x) _T(" "));	\
@@ -122,6 +126,7 @@ int ConfigAppLoad()
 		VAR(bMonitorAutoCheck);
 		VAR(bForce60Hz);
 		VAR(bAlwaysDrawFrames);
+		VAR(bRunAhead);
 
 		VAR(nVidSelect);
 		VAR(nVidBlitterOpt[0]);
@@ -152,12 +157,14 @@ int ConfigAppLoad()
 
 		// DirectX Graphics 9 Alt blitter
 		VAR(bVidDX9Bilinear);
+		VAR(nVidDX9HardFX);
 		VAR(bVidHardwareVertex);
 		VAR(bVidMotionBlur);
 		VAR(bVidForce16bitDx9Alt);
 
 		// Sound
 		VAR(nAudSelect);
+		VAR(nAudVolume);
 		VAR(nAudSegCount);
 		VAR(nInterpolation);
 		VAR(nFMInterpolation);
@@ -185,7 +192,7 @@ int ConfigAppLoad()
 #endif
 
 		VAR(bDrvSaveAll);
-		VAR(nAppThreadPriority);
+		VAR(nAppProcessPriority);
 		VAR(bAlwaysProcessKeyboardInput);
 		VAR(bAutoPause);
 		VAR(bSaveInputs);
@@ -195,7 +202,7 @@ int ConfigAppLoad()
 
 		VAR(nSelDlgWidth);
 		VAR(nSelDlgHeight);
-		VAR(nLoadMenuShowX);
+		VARI64(nLoadMenuShowX);
 		VAR(nLoadMenuShowY);
 		VAR(nLoadMenuExpand);
 		VAR(nLoadMenuBoardTypeFilter);
@@ -259,6 +266,7 @@ int ConfigAppLoad()
 		VAR(EnableHiscores);
 		VAR(bBurnUseBlend);
 		VAR(BurnShiftEnabled);
+		VAR(bBurnGunDrawReticles);
 		VAR(bSkipStartupCheck);
 
 #ifdef INCLUDE_AVI_RECORDING
@@ -309,6 +317,7 @@ int ConfigAppLoad()
 #undef FLT
 #undef VAR
 #undef VAR64
+#undef VARI64
 	}
 
 	fclose(h);
@@ -342,6 +351,7 @@ int ConfigAppSave()
 
 #define VAR(x) _ftprintf(h, _T(#x) _T(" %d\n"),  x)
 #define VAR64(x) _ftprintf(h, _T(#x) _T(" %lf\n"),  (float)x)
+#define VARI64(x) _ftprintf(h, _T(#x) _T(" %I64u\n"),  x)
 #define FLT(x) _ftprintf(h, _T(#x) _T(" %lf\n"), x)
 #define STR(x) _ftprintf(h, _T(#x) _T(" %s\n"),  x)
 #define DRV(x) _ftprintf(h, _T(#x) _T(" %s\n"),  DriverToName(x))
@@ -453,6 +463,8 @@ int ConfigAppSave()
 	VAR(bForce60Hz);
 	_ftprintf(h, _T("\n// If zero, skip frames when needed to keep the emulation running at full speed\n"));
 	VAR(bAlwaysDrawFrames);
+	_ftprintf(h, _T("\n// If non-zero, enable run-ahead mode for the reduction of input lag\n"));
+	VAR(bRunAhead);
 
 	_ftprintf(h, _T("\n"));
 	_ftprintf(h, _T("// --- DirectDraw blitter module settings -------------------------------------\n"));
@@ -487,6 +499,8 @@ int ConfigAppSave()
 	_ftprintf(h, _T("// --- DirectX Graphics 9 Alt blitter module settings -------------------------\n"));
 	_ftprintf(h, _T("\n// If non-zero, use bi-linear filtering to display the image\n"));
 	VAR(bVidDX9Bilinear);
+	_ftprintf(h, _T("\n// Active HardFX shader effect\n"));
+	VAR(nVidDX9HardFX);
 	_ftprintf(h, _T("\n// If non-zero, use hardware vertex to display the image\n"));
 	VAR(bVidHardwareVertex);
 	_ftprintf(h, _T("\n// If non-zero, use motion blur to display the image\n"));
@@ -498,6 +512,8 @@ int ConfigAppSave()
 	_ftprintf(h, _T("// --- Sound ------------------------------------------------------------------\n"));
 	_ftprintf(h, _T("\n// The selected audio plugin\n"));
 	VAR(nAudSelect);
+	_ftprintf(h, _T("\n// Audio Volume\n"));
+	VAR(nAudVolume);
 	_ftprintf(h, _T("\n// Number of frames in sound buffer (= sound lag)\n"));
 	VAR(nAudSegCount);
 	_ftprintf(h, _T("\n// The order of PCM/ADPCM interpolation\n"));
@@ -552,8 +568,8 @@ int ConfigAppSave()
 
 	_ftprintf(h, _T("\n// If non-zero, load and save all ram (the state)\n"));
 	VAR(bDrvSaveAll);
-	_ftprintf(h, _T("\n// The thread priority for the application. Do *NOT* edit this manually\n"));
-	VAR(nAppThreadPriority);
+	_ftprintf(h, _T("\n// The process priority for the application. Do *NOT* edit this manually\n"));
+	VAR(nAppProcessPriority);
 	_ftprintf(h, _T("\n// If non-zero, process keyboard input even when the application loses focus\n"));
 	VAR(bAlwaysProcessKeyboardInput);
 	_ftprintf(h, _T("\n// If non-zero, pause when the application loses focus\n"));
@@ -575,7 +591,7 @@ int ConfigAppSave()
 	VAR(nSelDlgHeight);
 
 	_ftprintf(h, _T("\n// Load game dialog options\n"));
-	VAR(nLoadMenuShowX);
+	VARI64(nLoadMenuShowX);
 	VAR(nLoadMenuShowY);
 	VAR(nLoadMenuExpand);
 
@@ -679,6 +695,9 @@ int ConfigAppSave()
 	_ftprintf(h, _T("\n// If non-zero, enable gear shifter display support.\n"));
 	VAR(BurnShiftEnabled);
 
+	_ftprintf(h, _T("\n// If non-zero, enable lightgun reticle display support.\n"));
+	VAR(bBurnGunDrawReticles);
+
 	_ftprintf(h, _T("\n// If non-zero, DISABLE start-up rom scan (if needed).\n"));
 	VAR(bSkipStartupCheck);
 
@@ -728,6 +747,7 @@ int ConfigAppSave()
 #undef FLT
 #undef VAR
 #undef VAR64
+#undef VARI64
 
 	fclose(h);
 	return 0;

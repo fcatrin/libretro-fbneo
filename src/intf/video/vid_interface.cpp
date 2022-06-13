@@ -16,6 +16,9 @@
 	extern struct VidOut VidOutMacOS;
 #elif defined (BUILD_PI)
 	extern struct VidOut VidOutPi;
+#elif defined (BUILD_SDL2)
+	extern struct VidOut VidOutSDL2;
+	extern struct VidOut VidOutSDL2Opengl;
 #elif defined (BUILD_SDL)
 	extern struct VidOut VidOutSDLOpenGL;
 	extern struct VidOut VidOutSDLFX;
@@ -36,6 +39,9 @@ static struct VidOut *pVidOut[] = {
 	&VidOutMacOS,
 #elif defined (BUILD_PI)
 	&VidOutPi,
+#elif defined (BUILD_SDL2)
+	&VidOutSDL2,
+	&VidOutSDL2Opengl,
 #elif defined (BUILD_SDL)
 	&VidOutSDLOpenGL,
 	&VidOutSDLFX,
@@ -110,6 +116,7 @@ double dVidCubicC = 0.5;						//
 INT32 bVidDX9Bilinear = 1;							// 1 = enable bi-linear filtering (D3D9 Alt blitter)
 INT32 bVidHardwareVertex = 0;			// 1 = use hardware vertex processing
 INT32 bVidMotionBlur = 0;				// 1 = motion blur
+INT32 nVidDX9HardFX = 0; 						// index of HardFX effect (0 = None)
 
 wchar_t HorScreen[32] = L"";
 wchar_t VerScreen[32] = L"";
@@ -128,7 +135,8 @@ INT32 nVidScrnDepth = 0;							// Actual screen depth
 INT32 nVidScrnAspectX = 4, nVidScrnAspectY = 3;	        // Aspect ratio of the horizontally orientated display screen
 INT32 nVidVerScrnAspectX = 4, nVidVerScrnAspectY = 3;   // Aspect ratio of the vertically orientated display screen
 
-UINT8* pVidImage = NULL;				// Memory buffer
+UINT8* pVidImage = NULL;						// Video Memory buffer
+INT32 pVidImageSize = 0;                        // Size in bytes
 INT32 nVidImageWidth = DEFAULT_IMAGE_WIDTH;		// Memory buffer size
 INT32 nVidImageHeight = DEFAULT_IMAGE_HEIGHT;		//
 INT32 nVidImageLeft = 0, nVidImageTop = 0;		// Memory buffer visible area offsets
@@ -138,11 +146,8 @@ INT32 nVidImageDepth = 0;							// Memory buffer bits per pixel
 UINT32 (__cdecl *VidHighCol) (INT32 r, INT32 g, INT32 b, INT32 i);
 static bool bVidRecalcPalette;
 												// Translation to native Bpp for games flagged with BDF_16BIT_ONLY
-static void VidDoFrameCallback();
-void (*pVidTransCallback)(void) = NULL;         // Callback for video driver, after BurnDrvFrame() / BurnDrvRedraw() (see win32/vid_d3d.cpp:vidFrame() for example)
 static UINT8* pVidTransImage = NULL;
 static UINT32* pVidTransPalette = NULL;
-static INT32 bSkipNextFrame = 0;
 
 TCHAR szPlaceHolder[MAX_PATH] = _T("");
 
@@ -197,9 +202,9 @@ INT32 VidInit()
 		} else {
 			hbitmap = (HBITMAP)LoadImage(hAppInst, MAKEINTRESOURCE(BMP_SPLASH), IMAGE_BITMAP, 304, 224, 0);
 		}
-		
+
 		if (!hbitmap) hbitmap = (HBITMAP)LoadImage(hAppInst, MAKEINTRESOURCE(BMP_SPLASH), IMAGE_BITMAP, 304, 224, 0);
-		
+
 		GetObject(hbitmap, sizeof(BITMAP), &bitmap);
 
 		nVidImageWidth = bitmap.bmWidth; nVidImageHeight = bitmap.bmHeight;
@@ -223,7 +228,8 @@ INT32 VidInit()
 
 				pVidTransPalette = (UINT32*)malloc(32768 * sizeof(UINT32));
 				pVidTransImage = (UINT8*)malloc(nVidImageWidth * nVidImageHeight * sizeof(INT16));
-				pVidTransCallback = VidDoFrameCallback;
+
+				//bprintf(0, _T("allocate pVidTransImage %d x %d\n"), nVidImageWidth, nVidImageHeight);
 
 				BurnHighCol = HighCol15;
 
@@ -250,7 +256,7 @@ INT32 VidInit()
 			bitmapinfo.bmiHeader.biPlanes = 1;
 			bitmapinfo.bmiHeader.biBitCount = 24;
 			bitmapinfo.bmiHeader.biCompression = BI_RGB;
-			
+
 			for (INT32 y = 0; y < nVidImageHeight; y++) {
 				UINT8* pd = pVidImage + y * nVidImagePitch;
 				UINT8* ps = pLineBuffer;
@@ -321,9 +327,6 @@ INT32 VidExit()
 			free(pVidTransImage);
 			pVidTransImage = NULL;
 		}
-		if (pVidTransCallback) {
-			pVidTransCallback = NULL;
-		}
 
 		return nRet;
 	} else {
@@ -331,8 +334,10 @@ INT32 VidExit()
 	}
 }
 
-static void VidDoFrameCallback()
+static void VidDoTransTopVidImage()
 {
+		if (!pVidImage) return;
+
 		UINT16* pSrc = (UINT16*)pVidTransImage;
 		UINT8* pDest = pVidImage;
 
@@ -362,7 +367,7 @@ static void VidDoFrameCallback()
 static INT32 VidDoFrame(bool bRedraw)
 {
 	INT32 nRet;
-	
+
 	if (pVidTransImage && pVidTransPalette) {
 		if (bVidRecalcPalette) {
 			for (INT32 r = 0; r < 256; r += 8) {
@@ -381,18 +386,8 @@ static INT32 VidDoFrame(bool bRedraw)
 
 		nRet = pVidOut[nVidActive]->Frame(bRedraw);
 
-		if (bSkipNextFrame) {
-			// if ReInitialise(); is called from the machine's reset function, it will crash below.  This prevents that from happening. (Megadrive)
-			bSkipNextFrame = 0;
-			return 0;
-		}
-
 		pBurnDraw = NULL;
 		nBurnPitch = 0;
-
-		if (!pVidTransCallback) {
-			VidDoFrameCallback();
-		}
 	} else {
 		pBurnDraw = pVidImage;
 		nBurnPitch = nVidImagePitch;
@@ -406,13 +401,45 @@ static INT32 VidDoFrame(bool bRedraw)
 	return nRet;
 }
 
+INT32 VidFrameCallback(bool bRedraw)        // Called from blitter  (VidFrame() -> VidDoFrame() -> Blitter -> this.)
+{
+	if (bDrvOkay) {
+		if (bRedraw) {						// Redraw current frame
+			if (BurnDrvRedraw()) {
+				BurnDrvFrame();				// No redraw function provided, advance one frame
+			}
+		} else {
+			BurnDrvFrame();					// Run one frame and draw the screen
+		}
+
+		if (BurnDrvGetFlags() & BDF_16BIT_ONLY) {
+			VidDoTransTopVidImage();
+		}
+
+#if defined (BUILD_WIN32) || defined (INCLUDE_LUA_SUPPORT)
+		FBA_LuaGui((unsigned char*)pVidImage, nVidImageWidth, nVidImageHeight, nVidImageBPP, nVidImagePitch);
+#endif
+	}
+
+	return 0;
+}
+
 INT32 VidReInitialise()
 {
+	// On Windows at least, calling ReInitialise() posts a semaphore to re-init
+	// the blitter at the end of the frame.  Then it calls this function.
+
 	if (pVidTransImage) {
+		// this will be later allocated to the correct size after the blitter re-initializes.
+
+		// Note; does this make any sense?  nVidImageWidth, nVidImageHeight is set in the blitter init.
+		// If the game's resolution changes, this will just free/malloc the old resolution.
+
 		free(pVidTransImage);
 		pVidTransImage = (UINT8*)malloc(nVidImageWidth * nVidImageHeight * sizeof(INT16));
 	}
-	bSkipNextFrame = 1;
+
+	pVidImage = NULL; // Invalidate pVidImage* until blitter is reinitted. (pBurnDraw points to it on active video-frames)
 
 	return 0;
 }

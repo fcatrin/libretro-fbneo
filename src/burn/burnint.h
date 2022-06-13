@@ -15,23 +15,25 @@
 #include "burn.h"
 #include "burn_sound.h"
 #include "joyprocess.h"
-
-#ifdef LSB_FIRST
-typedef union
-{
-	struct { UINT8 l,h,h2,h3; } b;
-	struct { UINT16 l,h; } w;
-	UINT32 d;
-} PAIR;
-
-#define BURN_ENDIAN_SWAP_INT8(x)				x
-#define BURN_ENDIAN_SWAP_INT16(x)				x
-#define BURN_ENDIAN_SWAP_INT32(x)				x
-#define BURN_ENDIAN_SWAP_INT64(x)				x
-#else
-// define the above union and BURN_ENDIAN_SWAP macros in the following platform specific header
 #include "burn_endian.h"
-#endif
+
+// macros to prevent misaligned address access
+#define BURN_UNALIGNED_READ16(x) (\
+	(UINT16) ((UINT8 *) (x))[1] << 8 | \
+	(UINT16) ((UINT8 *) (x))[0])
+#define BURN_UNALIGNED_READ32(x) (\
+	(UINT32) ((UINT8 *) (x))[3] << 24 | \
+	(UINT32) ((UINT8 *) (x))[2] << 16 | \
+	(UINT32) ((UINT8 *) (x))[1] << 8 | \
+	(UINT32) ((UINT8 *) (x))[0])
+#define BURN_UNALIGNED_WRITE16(x, y) ( \
+	((UINT8 *) (x))[0] = (UINT8) (y), \
+	((UINT8 *) (x))[1] = (UINT8) ((y) >> 8))
+#define BURN_UNALIGNED_WRITE32(x, y) ( \
+	((UINT8 *) (x))[0] = (UINT8) (y), \
+	((UINT8 *) (x))[1] = (UINT8) ((y) >> 8), \
+	((UINT8 *) (x))[2] = (UINT8) ((y) >> 16), \
+	((UINT8 *) (x))[3] = (UINT8) ((y) >> 24))
 
 // ---------------------------------------------------------------------------
 // Driver information
@@ -173,9 +175,6 @@ void _BurnFree(void *ptr); // internal use only :)
 void BurnExitMemoryManager();
 
 // ---------------------------------------------------------------------------
-// Sound clipping macro
-#define BURN_SND_CLIP(A) ((A) < -0x8000 ? -0x8000 : (A) > 0x7fff ? 0x7fff : (A))
-
 // sound routes
 #define BURN_SND_ROUTE_LEFT			1
 #define BURN_SND_ROUTE_RIGHT		2
@@ -219,6 +218,7 @@ extern UINT8 DebugSnd_YM3526Initted;
 extern UINT8 DebugSnd_YM3812Initted;
 extern UINT8 DebugSnd_YMF278BInitted;
 extern UINT8 DebugSnd_YMF262Initted;
+extern UINT8 DebugSnd_YMF271Initted;
 extern UINT8 DebugSnd_C6280Initted;
 extern UINT8 DebugSnd_DACInitted;
 extern UINT8 DebugSnd_ES5506Initted;

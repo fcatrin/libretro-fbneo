@@ -208,6 +208,10 @@
 #define IDS_SEL_MIDWAY					(IDS_STRING +  640)
 #define IDS_SEL_CAPCOM_GRP				(IDS_STRING +  642)
 #define IDS_SEL_SEGA_GRP				(IDS_STRING +  644)
+#define IDS_SEL_NES						(IDS_STRING +  646)
+#define IDS_SEL_FDS						(IDS_STRING +  648)
+#define IDS_SEL_NGP						(IDS_STRING +  556)
+#define IDS_SEL_CHANNELF				(IDS_STRING +  558)
 
 #define IDS_GENRE						(IDS_STRING +  650)
 #define IDS_GENRE_HORSHOOT				(IDS_STRING +  652)
@@ -233,6 +237,9 @@
 #define IDS_GENRE_RUNGUN                (IDS_STRING +  692)
 #define IDS_GENRE_STRATEGY              (IDS_STRING +  694)
 #define IDS_GENRE_ACTION                (IDS_STRING +  696)
+#define IDS_GENRE_RPG                   (IDS_STRING +  698)
+#define IDS_GENRE_SIM                   (IDS_STRING +  700)
+#define IDS_GENRE_ADV                   (IDS_STRING +  702)
 
 #define IDS_FAMILY						(IDS_STRING +  740)
 #define IDS_FAMILY_MSLUG				(IDS_STRING +  742)
@@ -375,6 +382,8 @@
 #define IDS_ERR_NO_DRIVER_SEL_SLOT1		(IDS_ERROR  +  114)
 #define IDS_ERR_NON_WORKING				(IDS_ERROR  +  116)
 #define IDS_ERR_CDEMU_INI_FAIL			(IDS_ERROR  +  118)
+
+#define IDS_ERR_MACRO_NOT_MAPPING		(IDS_ERROR  +  130)
 
 #define IDS_ERR_LOCAL_FAIL_CONNECT		(IDS_ERROR  +  150)
 #define IDS_ERR_LOCAL_FAIL_OPEN_URL		(IDS_ERROR  +  152)

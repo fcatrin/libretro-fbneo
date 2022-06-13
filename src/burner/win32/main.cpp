@@ -29,7 +29,7 @@ bool bDisableDebugConsole = true;
 HINSTANCE hAppInst = NULL;			// Application Instance
 HANDLE hMainThread;
 long int nMainThreadID;
-int nAppThreadPriority = THREAD_PRIORITY_NORMAL;
+int nAppProcessPriority = NORMAL_PRIORITY_CLASS;
 int nAppShowCmd;
 
 static TCHAR szCmdLine[1024] = _T("");
@@ -510,128 +510,95 @@ int OpenDebugLog()
 	return 0;
 }
 
-void GetAspectRatio (int x, int y, int *AspectX, int *AspectY)
+void GetAspectRatio(int x, int y, int *AspectX, int *AspectY)
 {
-	TCHAR szResXY[256] = _T("");
-	_stprintf(szResXY, _T("%dx%d"), x, y);
+	float aspect_ratio = (float)x / (float)y;
 
-	// Normal CRT (4:3) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("320x240"))	||
-		!_tcscmp(szResXY, _T("512x384"))	||
-		!_tcscmp(szResXY, _T("640x480"))	||
-		!_tcscmp(szResXY, _T("800x600"))	||
-		!_tcscmp(szResXY, _T("832x624"))	||
-		!_tcscmp(szResXY, _T("1024x768"))	||
-		!_tcscmp(szResXY, _T("1120x832"))	||
-		!_tcscmp(szResXY, _T("1152x864"))	||
-		!_tcscmp(szResXY, _T("1280x960"))	||
-		!_tcscmp(szResXY, _T("1280x1024"))	||
-		!_tcscmp(szResXY, _T("1400x1050"))	||
-		!_tcscmp(szResXY, _T("1600x1200"))	||
-		!_tcscmp(szResXY, _T("2048x1536"))	||
-		!_tcscmp(szResXY, _T("2800x2100"))	||
-		!_tcscmp(szResXY, _T("3200x2400"))	||
-		!_tcscmp(szResXY, _T("4096x3072"))	||
-		!_tcscmp(szResXY, _T("6400x4800")) ){
+	// Horizontal
+
+	// 4:3
+	if (fabs(aspect_ratio - 4.0f/3.0f) < 0.01f) {
 		*AspectX = 4;
 		*AspectY = 3;
 		return;
 	}
 
-	// Normal LCD (5:4) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("320x256"))	||
-		!_tcscmp(szResXY, _T("640x512"))	||
-		!_tcscmp(szResXY, _T("1280x1024"))	||
-		!_tcscmp(szResXY, _T("2560x2048"))	||
-		!_tcscmp(szResXY, _T("5120x4096")) ){
+	// 5:4
+	if (fabs(aspect_ratio - 5.0f/4.0f) < 0.01f) {
 		*AspectX = 5;
 		*AspectY = 4;
 		return;
 	}
 
-	// CRT Widescreen (16:9) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("480x270"))  ||
-		!_tcscmp(szResXY, _T("1280x720")) ||
-		!_tcscmp(szResXY, _T("1360x768")) ||
-		!_tcscmp(szResXY, _T("1366x768")) ||
-		!_tcscmp(szResXY, _T("1920x1080"))) {
+	// 16:9
+	if (fabs(aspect_ratio - 16.0f/9.0f) < 0.1f) {
 		*AspectX = 16;
 		*AspectY = 9;
 		return;
 	}
 
-	// LCD Widescreen (16:10) ( Verified at Wikipedia.Org )
-	if(	!_tcscmp(szResXY, _T("320x200"))	||
-		!_tcscmp(szResXY, _T("1280x800"))	||
-		!_tcscmp(szResXY, _T("1440x900"))	||
-		!_tcscmp(szResXY, _T("1680x1050"))	||
-		!_tcscmp(szResXY, _T("1920x1200"))	||
-		!_tcscmp(szResXY, _T("2560x1600"))	||
-		!_tcscmp(szResXY, _T("3840x2400"))	||
-		!_tcscmp(szResXY, _T("5120x3200"))	||
-		!_tcscmp(szResXY, _T("7680x4800")) ){
+	// 16:10
+	if (fabs(aspect_ratio - 16.0f/10.0f) < 0.1f) {
 		*AspectX = 16;
 		*AspectY = 10;
 		return;
 	}
 
-	// Vertically orientated Normal CRT (4:3) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("240x320"))	||
-		!_tcscmp(szResXY, _T("384x512"))	||
-		!_tcscmp(szResXY, _T("480x640"))	||
-		!_tcscmp(szResXY, _T("600x800"))	||
-		!_tcscmp(szResXY, _T("624x832"))	||
-		!_tcscmp(szResXY, _T("768x1024"))	||
-		!_tcscmp(szResXY, _T("832x1120"))	||
-		!_tcscmp(szResXY, _T("864x1152"))	||
-		!_tcscmp(szResXY, _T("960x1280"))	||
-		!_tcscmp(szResXY, _T("1024x1280"))	||
-		!_tcscmp(szResXY, _T("1050x1400"))	||
-		!_tcscmp(szResXY, _T("1200x1600"))	||
-		!_tcscmp(szResXY, _T("1536x2048"))	||
-		!_tcscmp(szResXY, _T("2100x2800"))	||
-		!_tcscmp(szResXY, _T("2400x3200"))	||
-		!_tcscmp(szResXY, _T("3072x4096"))	||
-		!_tcscmp(szResXY, _T("4800x6400")) ){
+	// 21:9
+	if (fabs(aspect_ratio - 21.0f/9.0f) < 0.1f) {
+		*AspectX = 21;
+		*AspectY = 9;
+		return;
+	}
+
+	// 32:9
+	if (fabs(aspect_ratio - 32.0f/9.0f) < 0.1f) {
+		*AspectX = 32;
+		*AspectY = 9;
+		return;
+	}
+
+	// Vertical
+
+	// 3:4
+	if (fabs(aspect_ratio - 3.0f/4.0f) < 0.01f) {
 		*AspectX = 3;
 		*AspectY = 4;
 		return;
 	}
 
-	// Vertically orientated Normal LCD (5:4) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("256x320"))	||
-		!_tcscmp(szResXY, _T("512x640"))	||
-		!_tcscmp(szResXY, _T("1024x1280"))	||
-		!_tcscmp(szResXY, _T("2048x2560"))	||
-		!_tcscmp(szResXY, _T("4096x5120")) ){
+	// 4:5
+	if (fabs(aspect_ratio - 4.0f/5.0f) < 0.01f) {
 		*AspectX = 4;
 		*AspectY = 5;
 		return;
 	}
 
-	// Vertically orientated CRT Widescreen (16:9) ( Verified at Wikipedia.Org )
-	if( !_tcscmp(szResXY, _T("270x480"))  ||
-		!_tcscmp(szResXY, _T("720x1280")) ||
-		!_tcscmp(szResXY, _T("768x1360")) ||
-		!_tcscmp(szResXY, _T("768x1366")) ||
-		!_tcscmp(szResXY, _T("1080x1920"))) {
+	// 9:16
+	if (fabs(aspect_ratio - 9.0f/16.0f) < 0.1f) {
 		*AspectX = 9;
 		*AspectY = 16;
 		return;
 	}
 
-	// Vertically orientated LCD Widescreen (10:16) ( Verified at Wikipedia.Org )
-	if(	!_tcscmp(szResXY, _T("200x320"))	||
-		!_tcscmp(szResXY, _T("800x1280"))	||
-		!_tcscmp(szResXY, _T("900x1440"))	||
-		!_tcscmp(szResXY, _T("1050x1680"))	||
-		!_tcscmp(szResXY, _T("1200x1920"))	||
-		!_tcscmp(szResXY, _T("1600x2560"))	||
-		!_tcscmp(szResXY, _T("2400x3840"))	||
-		!_tcscmp(szResXY, _T("3200x5120"))	||
-		!_tcscmp(szResXY, _T("4800x7680")) ){
+	// 10:16
+	if (fabs(aspect_ratio - 9.0f/16.0f) < 0.1f) {
 		*AspectX = 10;
 		*AspectY = 16;
+		return;
+	}
+
+	// 9:21
+	if (fabs(aspect_ratio - 9.0f/21.0f) < 0.1f) {
+		*AspectX = 9;
+		*AspectY = 21;
+		return;
+	}
+
+	// 9:32
+	if (fabs(aspect_ratio - 9.0f/32.0f) < 0.1f) {
+		*AspectX = 9;
+		*AspectY = 32;
 		return;
 	}
 }
@@ -646,6 +613,13 @@ static BOOL CALLBACK MonInfoProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcM
 
     width = iMonitor.rcMonitor.right - iMonitor.rcMonitor.left;
     height = iMonitor.rcMonitor.bottom - iMonitor.rcMonitor.top;
+
+	if (width == 1536 && height == 864) {
+		// Workaround: (1/2)
+		// Win8-10 sets Desktop Zoom to 125% by default, creating this bad/weird resolution.
+		width = 1920;
+		height = 1080;
+	}
 
 	if ((HorScreen[0] && !_wcsicmp(HorScreen, iMonitor.szDevice)) ||
 		(!HorScreen[0] && iMonitor.dwFlags & MONITORINFOF_PRIMARY)) {
@@ -680,10 +654,10 @@ static BOOL CALLBACK MonInfoProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcM
 
 void MonitorAutoCheck()
 {
-	RECT rect;
+	//RECT rect;
 	int numScreens;
 
-	SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+	//SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
 
 	numScreens = GetSystemMetrics(SM_CMONITORS);
 
@@ -693,6 +667,13 @@ void MonitorAutoCheck()
 
 		x = GetSystemMetrics(SM_CXSCREEN);
 		y = GetSystemMetrics(SM_CYSCREEN);
+
+		if (x == 1536 && y == 864) {
+			// Workaround: (2/2)
+			// Win8-10 sets Desktop Zoom to 125% by default, creating this bad/weird resolution.
+			x = 1920;
+			y = 1080;
+		}
 
 		// default full-screen resolution to this size
 		nVidHorWidth = x;
@@ -769,8 +750,22 @@ static int AppInit()
 	}
 #endif
 
-	// Set the thread priority for the main thread
-	SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+	switch (nAppProcessPriority) {
+		case HIGH_PRIORITY_CLASS:
+		case ABOVE_NORMAL_PRIORITY_CLASS:
+		case NORMAL_PRIORITY_CLASS:
+		case BELOW_NORMAL_PRIORITY_CLASS:
+		case IDLE_PRIORITY_CLASS:
+			// nothing to change, we're good.
+			break;
+		default:
+			// invalid priority class, set to normal.
+			nAppProcessPriority = NORMAL_PRIORITY_CLASS;
+			break;
+	}
+
+	// Set the process priority
+	SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 
 	bCheatsAllowed = true;
 
@@ -792,7 +787,7 @@ static int AppInit()
 
 	// Write a clrmame dat file if we are verifying roms
 #if defined (ROM_VERIFY)
-	create_datfile(_T("fba.dat"), 0);
+	create_datfile(_T("fbneo.dat"), 0);
 #endif
 
 	bNumlockStatus = SetNumLock(false);
@@ -861,6 +856,8 @@ int AppMessage(MSG *pMsg)
 
 	if (IsDialogMessage(hInpsDlg, pMsg))	 return 0;
 	if (IsDialogMessage(hInpcDlg, pMsg))	 return 0;
+
+	if (IsDialogMessage(LuaConsoleHWnd, pMsg)) return 0;
 
 	return 1; // Didn't process this message
 }
@@ -961,6 +958,26 @@ int ProcessCmdLine()
 			return 1;
 		}
 
+		if (_tcscmp(szName, _T("-listinfonesonly")) == 0) {
+			write_datfile(DAT_NES_ONLY, stdout);
+			return 1;
+		}
+
+		if (_tcscmp(szName, _T("-listinfofdsonly")) == 0) {
+			write_datfile(DAT_FDS_ONLY, stdout);
+			return 1;
+		}
+
+		if (_tcscmp(szName, _T("-listinfongponly")) == 0) {
+			write_datfile(DAT_NGP_ONLY, stdout);
+			return 1;
+		}
+
+		if (_tcscmp(szName, _T("-listinfochannelfonly")) == 0) {
+			write_datfile(DAT_CHANNELF_ONLY, stdout);
+			return 1;
+		}
+
 		if (_tcscmp(szName, _T("-listextrainfo")) == 0) {
 			int nWidth;
 			int nHeight;
@@ -990,15 +1007,11 @@ int ProcessCmdLine()
 			if (nOptD) {
 				nVidDepth = nOptD;
 			}
-		} else {
-			if (_tcscmp(szOpt2, _T("-a")) == 0) {
-				bVidArcaderes = 1;
-			} else {
-				if (_tcscmp(szOpt2, _T("-w")) == 0) {
-					nCmdOptUsed = 2;
-					bFullscreen = 0;
-				}
-			}
+		} else if (_tcscmp(szOpt2, _T("-a")) == 0) {
+			bVidArcaderes = 1;
+		} else if (_tcscmp(szOpt2, _T("-w")) == 0) {
+			nCmdOptUsed = 2;
+			bFullscreen = 0;
 		}
 
 		if (bFullscreen) {
@@ -1008,34 +1021,107 @@ int ProcessCmdLine()
 		if (_tcscmp(&szName[_tcslen(szName) - 3], _T(".fs")) == 0) {
 			if (BurnStateLoad(szName, 1, &DrvInitCallback)) {
 				return 1;
-			} else {
-//				bRunPause = 1;
 			}
-		} else {
-			if (_tcscmp(&szName[_tcslen(szName) - 3], _T(".fr")) == 0) {
-				if (StartReplay(szName)) {
-					return 1;
-				}
-			} else {
-				bQuietLoading = true;
+		} else if (_tcscmp(&szName[_tcslen(szName) - 3], _T(".fr")) == 0) {
+			if (StartReplay(szName)) {
+				return 1;
+			}
+		} else if (_tcscmp(&szName[_tcslen(szName) - 4], _T(".lua")) == 0) {
+			// Command: lua file
+			FBA_LoadLuaCode(TCHARToANSI(szName, NULL, 0));
+			//bVidAutoSwitchFullDisable = true;
+		}
+		else {
+			bQuietLoading = true;
 
-				for (i = 0; i < nBurnDrvCount; i++) {
-					nBurnDrvActive = i;
-					if ((_tcscmp(BurnDrvGetText(DRV_NAME), szName) == 0) && (!(BurnDrvGetFlags() & BDF_BOARDROM))){
-						if (DrvInit(i, true)) { // failed (bad romset, etc.)
-							nVidFullscreen = 0; // Don't get stuck in fullscreen mode
+			for (i = 0; i < nBurnDrvCount; i++) {
+				nBurnDrvActive = i;
+				if ((_tcscmp(BurnDrvGetText(DRV_NAME), szName) == 0) && (!(BurnDrvGetFlags() & BDF_BOARDROM))) {
+					TCHAR* szIps = _tcsstr(szCmdLine, _T("-ips"));  // Handling -ips additional parameters
+					if (szIps) {  // With -ips parameters
+						szIps += _tcslen(_T("-ips"));  // The parameter does not contain the identifier itself
+
+						FILE* fp = NULL;
+						int nList = 0;  // Sequence of DAT array
+						TCHAR szTmp[1024];
+						TCHAR szDat[MAX_PATH];
+						TCHAR szDatList[1024 / 2][MAX_PATH];  // Comma separated, at least 2 characters
+						TCHAR* argv = _tcstok(szIps, _T(","));
+
+						if (argv) {  // Argv may be null
+							memset(szTmp, '\0', 1024 * sizeof(TCHAR));
+							_tcscpy(szTmp, argv);
+							argv = szTmp;
 						}
-						break;
+
+						while (argv != NULL) {
+							int nIndex = 0;
+
+							while (argv[0] != '\0') {
+								if (argv[0] != '\"')
+									argv++, nIndex++;
+								else {
+									_tcstok(++argv, _T("\""));  // Remove double quotation marks
+										nIndex = 0;
+										break;
+								}
+							}
+							argv -= nIndex;  // Returns the first digit of a string
+
+							while (argv[0] != '\0') {
+								memset(szDat, '\0', MAX_PATH * sizeof(TCHAR));
+								if (_tcsstr(argv, _T(".dat")))
+									_stprintf(szDat, _T("%s%s/%s"), szAppIpsPath, BurnDrvGetText(DRV_NAME), argv);
+								else
+									_stprintf(szDat, _T("%s%s/%s.dat"), szAppIpsPath, BurnDrvGetText(DRV_NAME), argv);
+								fp = _tfopen(szDat, _T("r"));
+								if (fp) {  // ips dat exists
+									fclose(fp);
+									memset(szDatList[nList], '\0', MAX_PATH * sizeof(TCHAR));
+									if (_tcsstr(argv, _T(".dat")))
+										_stprintf(szDatList[nList++], _T("%s"), argv);
+									else
+										_stprintf(szDatList[nList++], _T("%s.dat"), argv);
+									break;
+								}
+								argv++;  // Filter out invalid spaces in parameters
+								}
+							argv = _tcstok(NULL, _T(","));
+						}
+
+						if (nList > 0) {
+							TCHAR szIni[64] = { '\0' };
+							_stprintf(szIni, _T("config\\ips\\%s.ini"), BurnDrvGetText(DRV_NAME));
+
+							fp = _tfopen(szIni, _T("w"));
+							if (fp) {  // write in
+								_ftprintf(fp, _T("// ") _T(APP_TITLE) _T(" v%s --- IPS Config File for %s (%s)\n\n"), szAppBurnVer, BurnDrvGetText(DRV_NAME), BurnDrvGetText(DRV_FULLNAME));
+								for (int x = 0; x < nList; x++)
+									_ftprintf(fp, _T("%s\n"), szDatList[x]);
+
+								fclose(fp);
+							}
+						}
 					}
-				}
 
-				bQuietLoading = false;
+					bDoIpsPatch = _tcsstr(szCmdLine, _T("-ips"));
+					if (bDoIpsPatch) LoadIpsActivePatches();
 
-				if (i == nBurnDrvCount) {
-					FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_ERR_UI_NOSUPPORT), szName, _T(APP_TITLE));
-					FBAPopupDisplay(PUF_TYPE_ERROR);
-					return 1;
+					if (DrvInit(i, true)) { // failed (bad romset, etc.)
+						nVidFullscreen = 0; // Don't get stuck in fullscreen mode
+					}
+
+					bDoIpsPatch = false;
+					break;
 				}
+			}
+
+			bQuietLoading = false;
+
+			if (i == nBurnDrvCount) {
+				FBAPopupAddText(PUF_TEXT_DEFAULT, MAKEINTRESOURCE(IDS_ERR_UI_NOSUPPORT), szName, _T(APP_TITLE));
+				FBAPopupDisplay(PUF_TYPE_ERROR);
+				return 1;
 			}
 		}
 	}
@@ -1051,7 +1137,7 @@ int ProcessCmdLine()
 
 static void CreateSupportFolders()
 {
-	TCHAR szSupportDirs[34][MAX_PATH] = {
+	TCHAR szSupportDirs[][MAX_PATH] = {
 		{_T("support/")},
 		{_T("support/previews/")},
 		{_T("support/titles/")},
@@ -1075,21 +1161,28 @@ static void CreateSupportFolders()
 		{_T("support/cabinets/")},
 		{_T("support/pcbs/")},
 		{_T("support/history/")},
+		{_T("support/lua/")},
 		{_T("neocdiso/")},
-		// the below are named after the MESS software lists
-		{_T("megadriv/")},
-		{_T("pce/")},
-		{_T("sgx/")},
-		{_T("tg16/")},
-		{_T("sg1000/")},
-		{_T("coleco/")},
-		{_T("sms/")},
-		{_T("gamegear/")},
-		{_T("msx/")},
-		{_T("spectrum/")},
+		// rom directories
+		{_T("roms/arcade/")},
+		{_T("roms/megadrive/")},
+		{_T("roms/pce/")},
+		{_T("roms/sgx/")},
+		{_T("roms/tg16/")},
+		{_T("roms/sg1000/")},
+		{_T("roms/coleco/")},
+		{_T("roms/sms/")},
+		{_T("roms/gamegear/")},
+		{_T("roms/msx/")},
+		{_T("roms/spectrum/")},
+		{_T("roms/nes/")},
+		{_T("roms/fds/")},
+		{_T("roms/ngp/")},
+		{_T("roms/channelf/")},
+		{_T("\0")} // END of list
 	};
 
-	for(int x = 0; x < 34; x++) {
+	for(int x = 0; szSupportDirs[x][0] != '\0'; x++) {
 		CreateDirectory(szSupportDirs[x], NULL);
 	}
 }
@@ -1124,13 +1217,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nShowCmd
 
 	AppDirectory();								// Set current directory to be the applications directory
 
-#ifdef INCLUDE_AVI_RECORDING
-#define DIRCNT 10
-#else
-#define DIRCNT 9
-#endif
 	// Make sure there are roms and cfg subdirectories
-	TCHAR szDirs[DIRCNT][MAX_PATH] = {
+	TCHAR szDirs[][MAX_PATH] = {
 		{_T("config")},
 		{_T("config/games")},
 		{_T("config/ips")},
@@ -1143,16 +1231,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nShowCmd
 #ifdef INCLUDE_AVI_RECORDING
 		{_T("avi")},
 #endif
+		{_T("\0")} // END of list
 	};
 
-	for(int x = 0; x < DIRCNT; x++) {
+	for(int x = 0; szDirs[x][0] != '\0'; x++) {
 		CreateDirectory(szDirs[x], NULL);
 	}
-#undef DIRCNT
 
-	//
-
-	{
+	{                                           // Init Win* Common Controls lib
 		INITCOMMONCONTROLSEX initCC = {
 			sizeof(INITCOMMONCONTROLSEX),
 			ICC_BAR_CLASSES | ICC_COOL_CLASSES | ICC_LISTVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_TREEVIEW_CLASSES,

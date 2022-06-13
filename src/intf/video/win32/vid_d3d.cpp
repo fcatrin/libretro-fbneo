@@ -7,7 +7,7 @@
 #if !defined BUILD_X64_EXE
 
 // #include "vid_directx_support.h"
-#include <InitGuid.h>
+#include <initguid.h>
 #include "vid_softfx.h"
 
 // #define ENABLE_PROFILING FBNEO_DEBUG
@@ -266,7 +266,7 @@ static void SetViewMatrix(float fNearPlane)
 static void SetProjectionMatrix(float fNearPlane)
 {
 	// Set projection matrix for perspective
-	memset(&matProjection, 0, sizeof(D3DMATRIX));
+	memset(&matProjection, 0, sizeof(matProjection));
 
 	float fFarPlane = 1000.0f;
 	float Q = fFarPlane / (fFarPlane - fNearPlane);
@@ -315,7 +315,7 @@ static int Update3DScreen()
 			double dXAngle, dYAngle;
 
 			if (bDrvOkay) {
-				if ((BurnDrvGetFlags() & (BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED)) && nVidRotationAdjust) {
+				if ((BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) && nVidRotationAdjust) {
 					BurnDrvGetAspect(&nGameAspectY, &nGameAspectX);
 				} else {
 					BurnDrvGetAspect(&nGameAspectX, &nGameAspectY);
@@ -1311,7 +1311,7 @@ static int vidInit()
 		} else {
 			nZoomlevel = nScreenSize;
 		}
-		if (VidSEnterFullscreenMode(nZoomlevel, 0)) {
+		if (VidSEnterFullscreenMode(nZoomlevel, 0)) { // FPU Precision fix in this function.
 			vidExit();
 			return 1;
 		}
@@ -1330,7 +1330,8 @@ static int vidInit()
 		nVidScrnWidth = rect.right - rect.left;
 		nVidScrnHeight = rect.bottom - rect.top;
 
-		pDD->SetCooperativeLevel(hVidWnd, DDSCL_NORMAL);
+		// don't allow d3d7 to mess with fpu precision/regs/etc (FPU Precision fix)
+		pDD->SetCooperativeLevel(NULL, DDSCL_NORMAL | DDSCL_FPUPRESERVE);
 	}
 
 #ifdef PRINT_DEBUG_INFO
@@ -2188,9 +2189,6 @@ static int vidBurnToSurf()
 	return 0;
 }
 
-INT32 VidDoFrameCallback();
-
-
 // Run one frame and render the screen
 static int vidFrame(bool bRedraw)			// bRedraw = 0
 {
@@ -2258,18 +2256,12 @@ static int vidFrame(bool bRedraw)			// bRedraw = 0
 	vidRenderImageA();
 #endif
 
-	if (bDrvOkay) {
-		if (bRedraw) {						// Redraw current frame
-			if (BurnDrvRedraw()) {
-				BurnDrvFrame();				// No redraw function provided, advance one frame
-			}
-		} else {
-			BurnDrvFrame();					// Run one frame and draw the screen
-		}
+	VidFrameCallback(bRedraw);				// Run emulation for 1 frame / render image
 
-		if ((BurnDrvGetFlags() & BDF_16BIT_ONLY) && pVidTransCallback)
-			pVidTransCallback();
+	if (pVidImage == NULL) {                // If a mode change was requested by game, pVidImage has been invalidated - time to leave.
+		return 0; 							// ret 0, because we really ran a frame here.
 	}
+
 #ifdef ENABLE_PROFILING
 	ProfileProfileEnd(0);
 	ProfileProfileStart(1);

@@ -1,4 +1,4 @@
-# Makefile for FBA, for use with GNU make & GCC (MinGW)
+# Makefile for FBNeo, for use with GNU make & GCC (MinGW)
 #
 # The first pass makes sure all intermediary targets are present. The second pass updates
 # any targets, if necessary. (Intermediary) targets which have their own unique rules
@@ -12,15 +12,17 @@ unexport
 
 # Check for changes in header files
 ifndef	SKIPDEPEND
-DEPEND = 1
+#DEPEND = 1
 endif
-
+# Note: DEPEND = 1 is a hassle and slows build time by about 500x
+# it's easier to "rm -rf obj" and rebuild than deal with DEPEND = 1
 
 #
 #	Declare variables
 #
 
 # Specify the name of the executable file, without ".exe"
+WINDRES=windres
 NAME = fbneo
 COMPILENAME = 3
 
@@ -52,7 +54,7 @@ ifndef BUILD_X86_ASM
 	COMPILENAME := $(COMPILENAME)x
 endif
 ifdef BUILD_X64_EXE
-	NAME = fba64
+	NAME = fbneo64
 	COMPILENAME = 6
 endif
 ifdef	DEBUG
@@ -280,6 +282,12 @@ CXXFLAGS = -pipe \
 	   -Wno-unused-but-set-variable -Wno-sequence-point -Wno-narrowing -Wno-extra \
 	   -Wno-pedantic \
 	   $(DEF) $(incdir)
+
+ifdef BORKYCRT
+	#return back to msvcrt-style swprintf
+	CFLAGS += -D__USE_MINGW_ANSI_STDIO=0
+	CXXFLAGS += -D__USE_MINGW_ANSI_STDIO=0
+endif
 ifdef BUILD_X64_EXE
 	CFLAGS += -m64
 	CXXFLAGS += -m64
@@ -352,7 +360,8 @@ ifdef BUILD_X86_ASM
 endif
 
 ifdef BUILD_X64_EXE
-	DEF := $(DEF) -DBUILD_X64_EXE -DXBYAK_NO_OP_NAMES -DMIPS3_X64_DRC
+	DEF := $(DEF) -DBUILD_X64_EXE
+	# -DXBYAK_NO_OP_NAMES -DMIPS3_X64_DRC
 endif
 
 ifdef	SYMBOL
@@ -379,12 +388,28 @@ ifdef BUILD_X86_ASM
 	CXXFLAGS += -mmmx
 endif
 
+ifdef BUILD_NATIVE
+	CFLAGS	 += -march=native -mtune=native
+	CXXFLAGS += -march=native -mtune=native
+endif
+
 # For zlib
 DEF := $(DEF) -DNO_VIZ -D_LARGEFILE64_SOURCE=0 -D_FILE_OFFSET_BITS=32
 
 # For lib7z
 ifdef INCLUDE_7Z_SUPPORT
-DEF := $(DEF) -D_7ZIP_PPMD_SUPPPORT
+DEF := $(DEF) -D_7ZIP_PPMD_SUPPPORT -D_7ZIP_ST
+endif
+
+# While cross-compiling, tools need to be compiled for host so that they can be executed by host.
+# if HOST_CC is not set, then we aren't cross-compiling, so we'll use target compiler as host compiler
+# Those values need to be duplicated late, so that C(XX)FLAGS modifications are accounted
+ifeq ($(HOST_CC),)
+HOST_CC       := $(CC)
+HOST_CXX      := $(CXX)
+HOST_CFLAGS   := $(CFLAGS) -mconsole
+HOST_CXXFLAGS := $(CXXFLAGS) -mconsole
+HOST_LDFLAGS  := $(LDFLAGS)
 endif
 
 #
@@ -558,7 +583,7 @@ endif
 about.o about.d: $(build_details.h)
 
 $(build_details.h):	$(srcdir)dep/scripts/build_details.cpp
-	@$(CXX) -mconsole $(CXXFLAGS) $(LDFLAGS) $< -o $(objdir)dep/generated/build_details.exe
+	@$(HOST_CXX) $(HOST_CXXFLAGS) $(HOST_LDFLAGS) $< -o $(objdir)dep/generated/build_details.exe
 	@$(objdir)dep/generated/build_details.exe >$@
 
 #
@@ -570,7 +595,7 @@ $(build_details.h):	$(srcdir)dep/scripts/build_details.cpp
 ifdef	BUILD_A68K
 $(a68k.o):	fba_make68k.c
 	@echo Compiling A68K MC68000 core...
-	@$(CC) -mconsole $(CFLAGS) $(LDFLAGS) -DWIN32 -Wno-unused -Wno-conversion -Wno-missing-prototypes \
+	@$(HOST_CC) $(HOST_CFLAGS) $(HOST_LDFLAGS) -DWIN32 -Wno-unused -Wno-conversion -Wno-missing-prototypes \
 		-s $< -o $(subst $(srcdir),$(objdir),$(<D))/$(<F:.c=.exe)
 	@$(subst $(srcdir),$(objdir),$(<D))/$(<F:.c=.exe) $(@:.o=.asm) \
 		$(@D)/a68k_tab.asm 00 $(ppro)
@@ -589,11 +614,11 @@ $(objdir)cpu/m68k/m68kops.o: $(objdir)cpu/m68k/m68kmake.exe $(objdir)dep/generat
 	@$(CC) $(CFLAGS) -c $(objdir)dep/generated/m68kops.c -o $(objdir)cpu/m68k/m68kops.o
 
 $(objdir)dep/generated/m68kops.h $(objdir)dep/generated/m68kops.c: $(objdir)cpu/m68k/m68kmake.exe $(srcdir)cpu/m68k/m68k_in.c
-	$(objdir)/cpu/m68k/m68kmake $(objdir)dep/generated/ $(srcdir)cpu/m68k/m68k_in.c
+	$(objdir)/cpu/m68k/m68kmake.exe $(objdir)dep/generated/ $(srcdir)cpu/m68k/m68k_in.c
 
 $(objdir)cpu/m68k/m68kmake.exe: $(srcdir)cpu/m68k/m68kmake.c
 	@echo Compiling Musashi MC680x0 core \(m68kmake.c\)...
-	@$(CC) $(CFLAGS) $(srcdir)cpu/m68k/m68kmake.c -o $(objdir)cpu/m68k/m68kmake.exe
+	@$(HOST_CC) $(HOST_CFLAGS) $(srcdir)cpu/m68k/m68kmake.c -o $(objdir)cpu/m68k/m68kmake.exe
 
 
 #
@@ -604,7 +629,7 @@ ctv.d ctv.o:	$(ctv.h)
 
 $(ctv.h):	ctv_make.cpp
 	@echo Generating $(srcdir)dep/generated/$(@F)...
-	@$(CC) -mconsole $(CXXFLAGS) $(LDFLAGS) $< \
+	@$(HOST_CC) $(HOST_CXXFLAGS) $(HOST_LDFLAGS) $< \
 		-o $(subst $(srcdir),$(objdir),$(<D))/$(<F:.cpp=.exe)
 	@$(subst $(srcdir),$(objdir),$(<D))/$(<F:.cpp=.exe) >$@
 
@@ -661,7 +686,7 @@ pgm_draw.d pgm_draw.o:	$(pgm_sprite.h)
 
 $(pgm_sprite.h):	pgm_sprite_create.cpp
 	@echo Generating $(srcdir)dep/generated/$(@F)...
-	@$(CC) -mconsole $(CXXFLAGS) $(LDFLAGS) $< \
+	@$(HOST_CC) $(HOST_CXXFLAGS) $(HOST_LDFLAGS) $< \
 		-o $(subst $(srcdir),$(objdir),$(<D))/$(<F:.cpp=.exe)
 	@$(subst $(srcdir),$(objdir),$(<D))/$(<F:.cpp=.exe) >$@
 
@@ -681,23 +706,23 @@ endif
 %.o:	%.rc
 	@echo Compiling resource file $(<F)...
 ifdef GCC345
-	@windres $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
+	@$(WINDRES) $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 endif
 ifdef GCC452
 	@windres $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 endif
 ifdef GCC471
 ifdef BUILD_X64_EXE
-	@windres -F pe-x86-64 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
+	@$(WINDRES) -F pe-x86-64 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 else
-	@windres -F pe-i386 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
+	@$(WINDRES) -F pe-i386 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 endif
 endif
 ifdef GCC510
 ifdef BUILD_X64_EXE
-	@windres -F pe-x86-64 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
+	@$(WINDRES) -F pe-x86-64 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 else
-	@windres -F pe-i386 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
+	@$(WINDRES) -F pe-i386 $(DEF) $< -o $(subst $(srcdir),$(objdir),$(<D))/$(@F) $(foreach dir,$(alldir),--include-dir $(srcdir)$(dir))
 endif
 endif
 

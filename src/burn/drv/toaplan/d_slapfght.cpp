@@ -894,8 +894,8 @@ static void sound_init(INT32 sound_clock)
 	AY8910Init(1, sound_clock, 0);
 	AY8910SetPorts(0, &read_input0, &read_input1, NULL, NULL);
 	AY8910SetPorts(1, &read_dip0, &read_dip1, NULL, NULL);
-	AY8910SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
 	AY8910SetBuffered(ZetTotalCycles, cpu_clock / 2);
 }
 
@@ -1483,7 +1483,7 @@ static INT32 Tigerhb1Init()
 		pMCURead = tigerhb1_prot_read;
 	}
 
-	return 0;
+	return nRet;
 }
 
 struct BurnDriver BurnDrvTigerhb1 = {
@@ -1500,9 +1500,9 @@ struct BurnDriver BurnDrvTigerhb1 = {
 // Tiger Heli (bootleg set 2)
 
 static struct BurnRomInfo tigerhb2RomDesc[] = {
-	{ "rom00_09.bin",		0x4000, 0xef738c68, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "a47_01.8n",			0x4000, 0x65df2152, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "rom02_07.bin",		0x4000, 0x36e250b9, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "rom00_09",			0x4000, 0xef738c68, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "rom01_08",			0x4000, 0x65df2152, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "rom02_07",			0x4000, 0x36e250b9, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "a47_03.12d",			0x2000, 0xd105260f, 2 | BRF_PRG | BRF_ESS }, //  3 Z80 #1 Code
 
@@ -1543,7 +1543,7 @@ struct BurnDriver BurnDrvTigerhb2 = {
 static struct BurnRomInfo tigerhb3RomDesc[] = {
 	{ "14",					0x4000, 0xca59dd73, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "13",					0x4000, 0x38bd54db, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "a47_02.8k",			0x4000, 0x633d324b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "12",					0x4000, 0x633d324b, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "a47_03.12d",			0x2000, 0xd105260f, 2 | BRF_PRG | BRF_ESS }, //  3 Z80 #1 Code
 
@@ -1605,6 +1605,11 @@ static struct BurnRomInfo alconRomDesc[] = {
 	{ "21_82s129.12q",		0x0100, 0xa0efaf99, 7 | BRF_GRA },           // 14 Color Data
 	{ "20_82s129.12m",		0x0100, 0xa56d57e5, 7 | BRF_GRA },           // 15
 	{ "19_82s129.12n",		0x0100, 0x5cbf9fbf, 7 | BRF_GRA },           // 16
+	{ "14_82s129.2c",		0x0100, 0x4dc04453, 7 | BRF_GRA },           // 17
+	{ "15_82s129.8b",		0x0100, 0x48ac3db4, 7 | BRF_GRA },           // 18
+	{ "16_82s129.1e",		0x0100, 0x59490887, 7 | BRF_GRA },           // 19
+	{ "17_82s129.1c",		0x0100, 0xd492e6c2, 7 | BRF_GRA },           // 20
+	{ "18_82s123.2b",		0x0020, 0xaa0ca5a5, 7 | BRF_GRA },           // 21
 };
 
 STD_ROM_PICK(alcon)
@@ -1647,6 +1652,11 @@ static struct BurnRomInfo slapfighRomDesc[] = {
 	{ "21_82s129.12q",		0x0100, 0xa0efaf99, 7 | BRF_GRA },           // 14 Color Data
 	{ "20_82s129.12m",		0x0100, 0xa56d57e5, 7 | BRF_GRA },           // 15
 	{ "19_82s129.12n",		0x0100, 0x5cbf9fbf, 7 | BRF_GRA },           // 16
+	{ "14_82s129.2c",		0x0100, 0x4dc04453, 7 | BRF_GRA },           // 17
+	{ "15_82s129.8b",		0x0100, 0x48ac3db4, 7 | BRF_GRA },           // 18
+	{ "16_82s129.1e",		0x0100, 0x59490887, 7 | BRF_GRA },           // 19
+	{ "17_82s129.1c",		0x0100, 0xd492e6c2, 7 | BRF_GRA },           // 20
+	{ "18_82s123.2b",		0x0020, 0xaa0ca5a5, 7 | BRF_GRA },           // 21
 };
 
 STD_ROM_PICK(slapfigh)
@@ -1690,6 +1700,11 @@ static struct BurnRomInfo slapfighaRomDesc[] = {
 	{ "a76-17.12q",			0x0100, 0xa0efaf99, 7 | BRF_GRA },           // 15 Color Data
 	{ "a76-15.12m",			0x0100, 0xa56d57e5, 7 | BRF_GRA },           // 16
 	{ "a76-16.12n",			0x0100, 0x5cbf9fbf, 7 | BRF_GRA },           // 17
+	{ "14_82s129.2c",		0x0100, 0x4dc04453, 7 | BRF_GRA },           // 17
+	{ "15_82s129.8b",		0x0100, 0x48ac3db4, 7 | BRF_GRA },           // 18
+	{ "16_82s129.1e",		0x0100, 0x59490887, 7 | BRF_GRA },           // 19
+	{ "17_82s129.1c",		0x0100, 0xd492e6c2, 7 | BRF_GRA },           // 20
+	{ "18_82s123.2b",		0x0020, 0xaa0ca5a5, 7 | BRF_GRA },           // 21
 };
 
 STD_ROM_PICK(slapfigha)

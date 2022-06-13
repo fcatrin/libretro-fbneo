@@ -481,7 +481,7 @@ static struct BurnDIPInfo spinlbrkDIPList[] = {
 static struct BurnDIPInfo spinlbrk_DIPList[] = {
 
 	{0,		0xFE, 0,	2,	  "Coin Slot"},	
-	{0x14,	0x01, 0x04, 0x00, "Individuala"},
+	{0x14,	0x01, 0x04, 0x00, "Individual"},
 	{0x14,	0x01, 0x04, 0x04, "Same"},
 	{0,		0xFE, 0,	2,	  "Flip Screen"},
 	{0x14,	0x01, 0x08, 0x00, "Off"},
@@ -506,7 +506,7 @@ STDDIPINFOEXT(spinlbrk, spinlbrk, spinlbrk_)
 static struct BurnDIPInfo spinlbru_DIPList[] = {
 
 	{0,		0xFE, 0,	2,	  "Coin Slot"},	
-	{0x14,	0x01, 0x04, 0x00, "Individuala"},
+	{0x14,	0x01, 0x04, 0x00, "Individual"},
 	{0x14,	0x01, 0x04, 0x04, "Same"},
 	{0,		0xFE, 0,	2,	  "Flip Screen"},
 	{0x14,	0x01, 0x08, 0x00, "Off"},
@@ -2756,15 +2756,10 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 	if (nAction & ACB_MEMORY_RAM) {
 		memset(&ba, 0, sizeof(ba));
-    		ba.Data	  = RamStart;
+		ba.Data	  = RamStart;
 		ba.nLen	  = RamEnd-RamStart;
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
-		
-		if (nAction & ACB_WRITE) {
-			// update palette while loaded
-			DrvRecalc = 1;
-		}
 	}
 
 	if (nAction & ACB_DRIVER_DATA)
@@ -2772,24 +2767,27 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SekScan(nAction);
 		ZetScan(nAction);
 
-		SCAN_VAR(RamGfxBank);
-		SCAN_VAR(DrvInput);
-
-		ZetOpen(0);
 		BurnYM2610Scan(nAction, pnMin);
-		ZetClose();
+
+		SCAN_VAR(RamGfxBank);
+		SCAN_VAR(bg1scrollx);
+		SCAN_VAR(bg2scrollx);
+		SCAN_VAR(bg1scrolly);
+		SCAN_VAR(bg2scrolly);
+
 		SCAN_VAR(nSoundlatch);
 		SCAN_VAR(nAerofgtZ80Bank);
+		SCAN_VAR(pending_command);
 
 		SCAN_VAR(spritepalettebank);
 		SCAN_VAR(charpalettebank);
 
 		if (nAction & ACB_WRITE) {
 			INT32 nBank = nAerofgtZ80Bank;
-                        nAerofgtZ80Bank = -1;
-                        ZetOpen(0);
-                        aerofgtSndBankSwitch(nBank);
-                        ZetClose();
+			nAerofgtZ80Bank = -1;
+			ZetOpen(0);
+			aerofgtSndBankSwitch(nBank);
+			ZetClose();
 		}
 	}
 
@@ -3419,6 +3417,61 @@ struct BurnDriver BurnDrvSpinlbrj = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, spinlbrjRomInfo, spinlbrjRomName, NULL, NULL, NULL, NULL, spinlbrkInputInfo, spinlbrjDIPInfo,
+	spinlbrkInit,DrvExit,DrvFrame,spinlbrkDraw,DrvScan,&DrvRecalc,0x400,
+	352,240,4,3
+};
+
+
+// Spinal Breakers (US, prototype)
+// the labels are official Video System without numbering and handwritten on top
+
+static struct BurnRomInfo spinlbrupRomDesc[] = {
+	{ "spb0-e.ic98",  				0x010000, 0x421eaff2, BRF_ESS | BRF_PRG }, // 68000 code swapped
+	{ "spb0-o.ic104",  				0x010000, 0x9576d508, BRF_ESS | BRF_PRG },
+	{ "sbp1-e.ic93",  				0x010000, 0xd6444d1e, BRF_ESS | BRF_PRG },
+	{ "sbp1-o.ic94", 				0x010000, 0xa3f7bd8e, BRF_ESS | BRF_PRG },
+
+	{ "ic15",         				0x080000, 0xe318cf3a, BRF_GRA },		   // gfx 1
+	{ "ic9",          				0x080000, 0xe071f674, BRF_GRA },
+
+	{ "ic17",         				0x080000, 0xa63d5a55, BRF_GRA },		   // gfx 2
+	{ "ic11",         				0x080000, 0x7dcc913d, BRF_GRA },
+	{ "ic16",         				0x080000, 0x0d84af7f, BRF_GRA },
+
+	{ "ic12",         				0x080000, 0xd63fac4e, BRF_GRA },		   // gfx 3
+	{ "ic18",         				0x080000, 0x5a60444b, BRF_GRA },
+
+	{ "ic14",         				0x080000, 0x1befd0f3, BRF_GRA },		   // gfx 4
+	{ "ic20",         				0x080000, 0xc2f84a61, BRF_GRA },
+	{ "ic35",         				0x080000, 0xeba8e1a3, BRF_GRA },
+	{ "ic40",         				0x080000, 0x5ef5aa7e, BRF_GRA },
+
+	{ "sbm-1-18.ic19",				0x010000, 0xe155357f, BRF_GRA },		   // gfx 5, hardcoded sprite maps
+	{ "sbm-0-18.ic13",  			0x010000, 0x16b79e45, BRF_GRA },
+
+	{ "11-14-15.00.music.ic117",  	0x008000, 0x6b8c8f09, BRF_ESS | BRF_PRG }, // Sound CPU
+	{ "11-14.m.bank.ic118",			0x010000, 0xa1ed270b, BRF_ESS | BRF_PRG },
+
+	{ "ic166",	      				0x080000, 0x6e0d063a, BRF_SND },		   // samples
+	{ "ic163",   	  				0x080000, 0xe6621dfb, BRF_SND },
+
+	{ "epl16p8bp.ic100",   			263, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "epl16p8bp.ic127",   			263, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "epl16p8bp.ic133",   			263, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "epl16p8bp.ic99",    			263, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "gal16v8a.ic114",    			279, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "gal16v8a.ic95",     			279, 0x00000000, BRF_OPT | BRF_NODUMP },
+};
+
+STD_ROM_PICK(spinlbrup)
+STD_ROM_FN(spinlbrup)
+
+struct BurnDriver BurnDrvSpinlbrup = {
+	"spinlbrkup", "spinlbrk", NULL, NULL, "1990",
+	"Spinal Breakers (US, prototype)\0", NULL, "V-System Co.", "V-System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	NULL, spinlbrupRomInfo, spinlbrupRomName, NULL, NULL, NULL, NULL, spinlbrkInputInfo, spinlbrkDIPInfo,
 	spinlbrkInit,DrvExit,DrvFrame,spinlbrkDraw,DrvScan,&DrvRecalc,0x400,
 	352,240,4,3
 };

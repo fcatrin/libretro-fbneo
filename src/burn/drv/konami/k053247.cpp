@@ -32,8 +32,8 @@ void (*K053247Callback)(INT32 *code, INT32 *color, INT32 *priority);
 void K053247Reset()
 {
 	memset (K053247Ram,  0, 0x1000);
-	memset (K053247Regs, 0, 16 * sizeof (UINT16));
-	memset (K053246Regs, 0, 8);
+	memset (K053247Regs, 0, sizeof(K053247Regs));
+	memset (K053246Regs, 0, sizeof(K053246Regs));
 
 	K053246_OBJCHA_line = 0; // clear
 }
@@ -50,12 +50,12 @@ void K053247Scan(INT32 nAction)
 		BurnAcb(&ba);
 
 		ba.Data	  = K053247Regs;
-		ba.nLen	  = 0x0010 * sizeof(UINT16);
+		ba.nLen	  = sizeof(K053247Regs);
 		ba.szName = "K053247 Regs";
 		BurnAcb(&ba);
 
 		ba.Data	  = K053246Regs;
-		ba.nLen	  = 0x0008;
+		ba.nLen	  = sizeof(K053246Regs);
 		ba.szName = "K053246 Regs";
 		BurnAcb(&ba);
 
@@ -100,7 +100,8 @@ void K053247Exit()
 
 	K053247Flags = 0;
 
-	memset (K053247Regs, 0, 16 * sizeof(UINT16));
+	memset (K053247Regs, 0, sizeof(K053247Regs));
+	memset (K053246Regs, 0, sizeof(K053246Regs));
 }
 
 void K053247Export(UINT8 **ram, UINT8 **gfx, void (**callback)(INT32 *, INT32 *, INT32 *), INT32 *dx, INT32 *dy)
@@ -217,6 +218,16 @@ INT32 K053246_is_IRQ_enabled()
 	return K053246Regs[5] & 0x10;
 }
 
+static INT32 frac_up(INT32 ff) // to next whole pixel
+{
+	if (ff & 0xfff) {
+		ff &= ~0xfff;
+		ff += 0x1000;
+	}
+
+	return ff;
+}
+
 void K053247SpritesRender()
 {
 #define NUM_SPRITES 256
@@ -279,6 +290,7 @@ void K053247SpritesRender()
 	count--;
 	h = count;
 
+	
 	if (!(K053247Regs[0xc/2] & 0x10))
 	{
 		// sort objects in decending order(smaller z closer) when OPSET PRI is clear
@@ -362,6 +374,8 @@ void K053247SpritesRender()
 		}
 		else { zoomx = zoomy; x = y; }
 
+		//bprintf(0, _T("%x  -  %x %x   %x %x\n"), code, zoomx, x, zoomy, y);
+
 		if ( K053246Regs[5] & 0x08 ) // Check only "Bit #3 is '1'?" (NOTE: good guess)
 		{
 			zoomx >>= 1;		// Fix sprite width to HALF size
@@ -434,25 +448,30 @@ void K053247SpritesRender()
 
 		// apply global and display window offsets
 
+		// move ox, oy from int to the 20.12 frac realm
+		ox <<= 12;
+		oy <<= 12;
+
 		/* the coordinates given are for the *center* of the sprite */
-		ox -= (zoomx * w) >> 13;
-		oy -= (zoomy * h) >> 13;
+		ox -= (zoomx * w) >> 1;
+		oy -= (zoomy * h) >> 1;
 
 		dtable[15] = shadow ? 2 : 1;
 
 		for (y = 0;y < h;y++)
 		{
-			INT32 sx,sy,zw,zh;
+			INT32 sx,sy,zw,zh; // 20.12 fractional
 
-			sy = oy + ((zoomy * y + (1<<11)) >> 12);
-			zh = (oy + ((zoomy * (y+1) + (1<<11)) >> 12)) - sy;
+			sy = oy + frac_up(zoomy * y);
+			zh = (oy + frac_up(zoomy * (y+1))) - sy;
 
 			for (x = 0;x < w;x++)
 			{
 				INT32 c,fx,fy;
 
-				sx = ox + ((zoomx * x + (1<<11)) >> 12);
-				zw = (ox + ((zoomx * (x+1) + (1<<11)) >> 12)) - sx;
+				sx = ox + frac_up(zoomx * x);
+				zw = (ox + frac_up(zoomx * (x+1))) - sx;
+
 				c = code;
 				if (mirrorx)
 				{
@@ -500,25 +519,25 @@ void K053247SpritesRender()
 
 				if (shadow || wtable == stable) {
 					if (mirrory && h == 1)
-						konami_render_zoom_shadow_tile(gfxbase, c, nBpp, color, sx, sy, fx, !fy, 16, 16, zw << 12, zh << 12, primask, highlight);
+						konami_render_zoom_shadow_sprite(gfxbase, c, nBpp, color, sx>>12, sy>>12, fx, !fy, 16, 16, zw, zh, primask, highlight);
 
-					konami_render_zoom_shadow_tile(gfxbase, c, nBpp, color, sx, sy, fx, fy, 16, 16, zw << 12, zh << 12, primask, highlight);
+					konami_render_zoom_shadow_sprite(gfxbase, c, nBpp, color, sx>>12, sy>>12, fx, fy, 16, 16, zw, zh, primask, highlight);
 					continue;
 				}
 
 				if (mirrory && h == 1)
 				{
 					if (nozoom) {
-						konami_draw_16x16_prio_tile(gfxbase, c, nBpp, color, sx, sy, fx, !fy, primask);
+						konami_draw_16x16_prio_sprite(gfxbase, c, nBpp, color, sx>>12, sy>>12, fx, !fy, primask);
 					} else {
-						konami_draw_16x16_priozoom_tile(gfxbase, c, nBpp, color, 0, sx, sy, fx, !fy, 16, 16, zw<<12, zh<<12, primask);
+						konami_draw_16x16_priozoom_sprite(gfxbase, c, nBpp, color, 0, sx>>12, sy>>12, fx, !fy, 16, 16, zw, zh, primask);
 					}
 				}
 
 				if (nozoom) {
-					konami_draw_16x16_prio_tile(gfxbase, c, nBpp, color, sx, sy, fx, fy, primask);
+					konami_draw_16x16_prio_sprite(gfxbase, c, nBpp, color, sx>>12, sy>>12, fx, fy, primask);
 				} else {
-					konami_draw_16x16_priozoom_tile(gfxbase, c, nBpp, color, 0, sx, sy, fx, fy, 16, 16, zw<<12, zh<<12, primask);
+					konami_draw_16x16_priozoom_sprite(gfxbase, c, nBpp, color, 0, sx>>12, sy>>12, fx, fy, 16, 16, zw, zh, primask);
 				}
 			} // end of X loop
 		} // end of Y loop
@@ -1149,18 +1168,18 @@ void k053247_draw_single_sprite_gxcore(UINT8 *gx_objzbuf, UINT8 *gx_shdzbuf, INT
 		if (code & 0x20) ya += 4;
 		code &= ~0x3f;
 
-		temp4 = gx_spriteram[offs];
+		temp4 = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs]);
 
 		// mask off the upper 6 bits of coordinate and zoom registers
-		oy = gx_spriteram[offs+2] & 0x3ff;
-		ox = gx_spriteram[offs+3] & 0x3ff;
+		oy = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+2]) & 0x3ff;
+		ox = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+3]) & 0x3ff;
 
-		scaley = zoomy = gx_spriteram[offs+4] & 0x3ff;
+		scaley = zoomy = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+4]) & 0x3ff;
 		if (zoomy) zoomy = (0x400000+(zoomy>>1)) / zoomy;
 		else zoomy = 0x800000;
 		if (!(temp4 & 0x4000))
 		{
-			scalex = zoomx = gx_spriteram[offs+5] & 0x3ff;
+			scalex = zoomx = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+5]) & 0x3ff;
 			if (zoomx) zoomx = (0x400000+(zoomx>>1)) / zoomx;
 			else zoomx = 0x800000;
 		}
@@ -1171,7 +1190,7 @@ void k053247_draw_single_sprite_gxcore(UINT8 *gx_objzbuf, UINT8 *gx_shdzbuf, INT
 		flipx = temp4 & 0x1000;
 		flipy = temp4 & 0x2000;
 
-		temp = gx_spriteram[offs+6];
+		temp = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+6]);
 		mirrorx = temp & 0x4000;
 		if (mirrorx) flipx = 0; // only applies to x mirror, proven
 		mirrory = temp & 0x8000;

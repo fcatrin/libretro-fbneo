@@ -77,96 +77,97 @@ static INT32 usemcu = 0;
 static INT32 Terrafjb = 0;
 static INT32 Kozuremode = 0;
 static INT32 Skyrobo = 0;
-static INT32 fiftysevenhertz = 0;
 
 static struct BurnInputInfo ArmedfInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Armedf)
 
 static struct BurnInputInfo Cclimbr2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
-	{"P1 Up 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Up 1",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
 	{"P1 Down 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
 	{"P1 Left 1",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
-	{"P1 Up 2",		BIT_DIGITAL,	DrvJoy1 + 4,	"p3 up"		},
+	{"P1 Up 2",			BIT_DIGITAL,	DrvJoy1 + 4,	"p3 up"		},
 	{"P1 Down 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p3 down"	},
 	{"P1 Left 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p3 left"	},
 	{"P1 Right 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p3 right"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
-	{"P2 Up 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Up 1",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
 	{"P2 Down 1",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
 	{"P2 Left 1",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
-	{"P2 Up 2",		BIT_DIGITAL,	DrvJoy2 + 4,	"p4 up"		},
+	{"P2 Up 2",			BIT_DIGITAL,	DrvJoy2 + 4,	"p4 up"		},
 	{"P2 Down 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p4 down"	},
 	{"P2 Left 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p4 left"	},
 	{"P2 Right 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p4 right"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 10,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Cclimbr2)
 
 static struct BurnInputInfo BigfghtrInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 10,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 11,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 8,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",       BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 8,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",       	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Bigfghtr)
@@ -243,6 +244,7 @@ static struct BurnDIPInfo ArmedfDIPList[]=
 {
 	{0x15, 0xff, 0xff, 0xdf, NULL					},
 	{0x16, 0xff, 0xff, 0xcf, NULL					},
+	{0x17, 0xff, 0xff, 0x02, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
 	{0x15, 0x01, 0x03, 0x03, "3"					},
@@ -299,14 +301,19 @@ static struct BurnDIPInfo ArmedfDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
 	{0x16, 0x01, 0x40, 0x40, "Off"					},
 	{0x16, 0x01, 0x40, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x17, 0x01, 0x02, 0x02, "Off"		},
+	{0x17, 0x01, 0x02, 0x00, "On"		},
 };
 
 STDDIPINFO(Armedf)
 
 static struct BurnDIPInfo KozureDIPList[]=
 {
-	{0x15, 0xff, 0xff, 0xcf, NULL					},
+	{0x15, 0xff, 0xff, 0x4f, NULL					},
 	{0x16, 0xff, 0xff, 0xcf, NULL					},
+	{0x17, 0xff, 0xff, 0x02, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
 	{0x15, 0x01, 0x03, 0x03, "3"					},
@@ -314,45 +321,59 @@ static struct BurnDIPInfo KozureDIPList[]=
 	{0x15, 0x01, 0x03, 0x01, "5"					},
 	{0x15, 0x01, 0x03, 0x00, "6"					},
 
-	{0   , 0xfe, 0   ,    2, "1st Bonus Life"			},
-	{0x15, 0x01, 0x04, 0x04, "None"					},
-	{0x15, 0x01, 0x04, 0x00, "50k"					},
+	{0   , 0xfe, 0   ,    4, "Bonus Life"			},
+	{0x15, 0x01, 0x0c, 0x08, "50k then every 60k"	},
+	{0x15, 0x01, 0x0c, 0x00, "50k then every 90k"	},
+	{0x15, 0x01, 0x0c, 0x0c, "Every 60k"			},
+	{0x15, 0x01, 0x0c, 0x04, "Every 90k"			},
 
-	{0   , 0xfe, 0   ,    2, "2nd Bonus Life"			},
-	{0x15, 0x01, 0x08, 0x08, "60k"					},
-	{0x15, 0x01, 0x08, 0x00, "90k"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x15, 0x01, 0x10, 0x10, "Off"					},
+	{0x15, 0x01, 0x10, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    4, "Bonus Life"				},
-	{0x15, 0x01, 0x0c, 0x08, "50k then every 60k"			},
-	{0x15, 0x01, 0x0c, 0x00, "50k then every 90k"			},
-	{0x15, 0x01, 0x0c, 0x0c, "Every 60k"				},
-	{0x15, 0x01, 0x0c, 0x04, "Every 90k"				},
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x15, 0x01, 0x20, 0x00, "Upright"				},
+	{0x15, 0x01, 0x20, 0x20, "Cocktail"				},
 
-	{0   , 0xfe, 0   ,    2, "Difficulty"				},
+	{0   , 0xfe, 0   ,    2, "Difficulty"			},
 	{0x15, 0x01, 0x40, 0x40, "Easy"					},
 	{0x15, 0x01, 0x40, 0x00, "Hard"					},
 
+	{0   , 0xfe, 0   ,    2, "Unknown"				},
+	{0x15, 0x01, 0x80, 0x00, "Off"					},
+	{0x15, 0x01, 0x80, 0x80, "On"					},
+
 	{0   , 0xfe, 0   ,    4, "Coin A"				},
-	{0x16, 0x01, 0x03, 0x01, "2 Coins 1 Credit"			},
-	{0x16, 0x01, 0x03, 0x03, "1 Coin  1 Credits"			},
-	{0x16, 0x01, 0x03, 0x02, "1 Coin  2 Credits"			},
-	{0x16, 0x01, 0x03, 0x00, "Free Play"				},
+	{0x16, 0x01, 0x03, 0x01, "2 Coins 1 Credit"		},
+	{0x16, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x16, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x16, 0x01, 0x03, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"				},
-	{0x16, 0x01, 0x0c, 0x00, "3 Coins 1 Credit"			},
-	{0x16, 0x01, 0x0c, 0x04, "2 Coins 3 Credits"			},
-	{0x16, 0x01, 0x0c, 0x0c, "1 Coin  3 Credits"			},
-	{0x16, 0x01, 0x0c, 0x08, "1 Coin  6 Credits"			},
+	{0x16, 0x01, 0x0c, 0x00, "3 Coins 1 Credit"		},
+	{0x16, 0x01, 0x0c, 0x04, "2 Coins 3 Credits"	},
+	{0x16, 0x01, 0x0c, 0x0c, "1 Coin  3 Credits"	},
+	{0x16, 0x01, 0x0c, 0x08, "1 Coin  6 Credits"	},
 
-	{0   , 0xfe, 0   ,    4, "Allow Continue"			},
-	{0x16, 0x01, 0x30, 0x30, "No"					},
-	{0x16, 0x01, 0x30, 0x20, "3 Times"				},
-	{0x16, 0x01, 0x30, 0x10, "5 Times"				},
-	{0x16, 0x01, 0x30, 0x00, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Unknown"				},
+	{0x16, 0x01, 0x10, 0x00, "Off"					},
+	{0x16, 0x01, 0x10, 0x10, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
+	{0x16, 0x01, 0x20, 0x00, "Off"					},
+	{0x16, 0x01, 0x20, 0x20, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
 	{0x16, 0x01, 0x40, 0x00, "No"					},
 	{0x16, 0x01, 0x40, 0x40, "Yes"					},
+
+	{0   , 0xfe, 0   ,    2, "Infinite Timer (Cheat)" },
+	{0x16, 0x01, 0x80, 0x80, "No"					},
+	{0x16, 0x01, 0x80, 0x00, "Yes"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"			},
+	{0x17, 0x01, 0x02, 0x02, "Off"					},
+	{0x17, 0x01, 0x02, 0x00, "On"					},
 };
 
 STDDIPINFO(Kozure)
@@ -361,6 +382,7 @@ static struct BurnDIPInfo Cclimbr2DIPList[]=
 {
 	{0x17, 0xff, 0xff, 0xcf, NULL					},
 	{0x18, 0xff, 0xff, 0xff, NULL					},
+	{0x19, 0xff, 0xff, 0x02, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
 	{0x17, 0x01, 0x03, 0x03, "3"					},
@@ -409,6 +431,10 @@ static struct BurnDIPInfo Cclimbr2DIPList[]=
 	{0   , 0xfe, 0   ,    2, "Partial Invulnerability (Cheat)"	},
 	{0x18, 0x01, 0x40, 0x40, "Off"					},
 	{0x18, 0x01, 0x40, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x19, 0x01, 0x02, 0x02, "Off"		},
+	{0x19, 0x01, 0x02, 0x00, "On"		},
 };
 
 STDDIPINFO(Cclimbr2)
@@ -417,6 +443,7 @@ static struct BurnDIPInfo LegionDIPList[]=
 {
 	{0x15, 0xff, 0xff, 0xf7, NULL					},
 	{0x16, 0xff, 0xff, 0xff, NULL					},
+	{0x17, 0xff, 0xff, 0xff, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
 	{0x15, 0x01, 0x03, 0x03, "3"					},
@@ -467,28 +494,25 @@ static struct BurnDIPInfo LegionDIPList[]=
 	{0   , 0xfe, 0   ,    2, "P2 Invulnerability (Cheat)"		},
 	{0x16, 0x01, 0x80, 0x80, "Off"					},
 	{0x16, 0x01, 0x80, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x17, 0x01, 0x02, 0x02, "Off"		},
+	{0x17, 0x01, 0x02, 0x00, "On"		},
 };
 
 STDDIPINFO(Legion)
 
 static struct BurnDIPInfo TerrafDIPList[]=
 {
-	{0x15, 0xff, 0xff, 0x0f, NULL					},
+	{0x15, 0xff, 0xff, 0xcf, NULL					},
 	{0x16, 0xff, 0xff, 0x3f, NULL					},
+	{0x17, 0xff, 0xff, 0xff, NULL					},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
 	{0x15, 0x01, 0x03, 0x03, "3"					},
 	{0x15, 0x01, 0x03, 0x02, "4"					},
 	{0x15, 0x01, 0x03, 0x01, "5"					},
 	{0x15, 0x01, 0x03, 0x00, "6"					},
-
-	{0   , 0xfe, 0   ,    2, "1st Bonus Life"			},
-	{0x15, 0x01, 0x04, 0x04, "20k"					},
-	{0x15, 0x01, 0x04, 0x00, "50k"					},
-
-	{0   , 0xfe, 0   ,    2, "2nd Bonus Life"			},
-	{0x15, 0x01, 0x08, 0x08, "60k"					},
-	{0x15, 0x01, 0x08, 0x00, "90k"					},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"				},
 	{0x15, 0x01, 0x0c, 0x0c, "20k then every 60k"			},
@@ -499,6 +523,16 @@ static struct BurnDIPInfo TerrafDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
 	{0x15, 0x01, 0x10, 0x10, "Off"					},
 	{0x15, 0x01, 0x10, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"				},
+	{0x15, 0x01, 0x20, 0x00, "Upright"				},
+	{0x15, 0x01, 0x20, 0x20, "Cocktail"				},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x15, 0x01, 0xc0, 0xc0, "Easy"					},
+	{0x15, 0x01, 0xc0, 0x80, "Normal"				},
+	{0x15, 0x01, 0xc0, 0x40, "Hard"					},
+	{0x15, 0x01, 0xc0, 0x00, "Hardest"				},
 
 	{0   , 0xfe, 0   ,    4, "Coin A"				},
 	{0x16, 0x01, 0x03, 0x01, "2 Coins 1 Credits"			},
@@ -521,6 +555,10 @@ static struct BurnDIPInfo TerrafDIPList[]=
 	{0x16, 0x01, 0xc0, 0x80, "Only 3 Times"				},
 	{0x16, 0x01, 0xc0, 0x40, "Only 5 Times"				},
 	{0x16, 0x01, 0xc0, 0x00, "Yes"					},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x17, 0x01, 0x02, 0x02, "Off"		},
+	{0x17, 0x01, 0x02, 0x00, "On"		},
 };
 
 STDDIPINFO(Terraf)
@@ -668,7 +706,7 @@ static void __fastcall cclimbr2_write_word(UINT32 address, UINT16 data)
 				if (nb1414_blit_data) {
 					if(data & 0x4000 && ((*DrvVidRegs & 0x40) == 0)) { //0 -> 1 transition
 						UINT16 *ram = (UINT16*)DrvTxRAM;
-						nb_1414m4_exec((ram[0] << 8) | (ram[1] & 0xff),(UINT16*)DrvTxRAM,&DrvScroll[2],&DrvScroll[3]);
+						nb_1414m4_exec(BURN_ENDIAN_SWAP_INT16((ram[0] << 8) | (ram[1] & 0xff)),(UINT16*)DrvTxRAM,&DrvScroll[2],&DrvScroll[3]);
 					}
 				}
 
@@ -739,7 +777,7 @@ static UINT16 __fastcall cclimbr2_read_word(UINT32 address)
 			return DrvInputs[0];
 
 		case 0x78002:
-			return DrvInputs[1];
+			return (DrvInputs[1] & ~0x0200) | ((DrvDips[2] << 8) & 0x0200);
 
 		case 0x78004:
 			return DrvInputs[2];
@@ -846,6 +884,8 @@ static INT32 DrvDoReset()
 	fg_scrollx = 0;
 	waiting_msb = 0;
 	scroll_msb = 0;
+
+	nb_1414m4_init();
 
 	return 0;
 }
@@ -984,8 +1024,8 @@ static void Bigfghtr68KInit()
 	SekSetReadWordHandler(0,	bigfghtr_read_word);
 
 	usemcu = 1;
-	mcs51_program_data = DrvZ80ROM2;
 	mcs51_init ();
+	mcs51_set_program_data(DrvZ80ROM2);
 	mcs51_set_write_handler(mcu_write_data);
 	mcs51_set_read_handler(mcu_read_data);
 
@@ -1056,8 +1096,9 @@ static INT32 DrvInit(INT32 (*pLoadRoms)(), void (*p68KInit)(), INT32 zLen)
 
 	DACInit(0, 0, 1, DrvSyncDAC);
 	DACInit(1, 0, 1, DrvSyncDAC);
-	DACSetRoute(0, 0.40, BURN_SND_ROUTE_BOTH);
-	DACSetRoute(1, 0.40, BURN_SND_ROUTE_BOTH);
+	DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
+	DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
+	DACDCBlock(1);
 
 	GenericTilesInit();
 
@@ -1093,9 +1134,8 @@ static INT32 DrvExit()
 	Terrafjb = 0;
 	Kozuremode = 0;
 	Skyrobo = 0;
-	fiftysevenhertz = 0;
 
-	BurnSetRefreshRate(60.00);
+	BurnSetRefreshRate(59.08);
 
 	return 0;
 }
@@ -1105,7 +1145,7 @@ static inline void DrvPaletteRecalc()
 	UINT8 r,g,b;
 	UINT16 *pal = (UINT16*)DrvPalRAM;
 	for (INT32 i = 0; i < 0x1000 / 2; i++) {
-		INT32 d = pal[i];
+		INT32 d = BURN_ENDIAN_SWAP_INT16(pal[i]);
 
 		r = (d >> 4) & 0xf0;
 		g = (d & 0xf0);
@@ -1134,10 +1174,10 @@ static inline void AssembleInputs()
 
 	if (scroll_type == 1) {
 		UINT16 *ptr = (UINT16*)Drv68KRAM2;
-		ptr[0] = DrvInputs[0];
-		ptr[1] = DrvInputs[1];
-		ptr[2] = DrvInputs[2];
-		ptr[3] = DrvInputs[3];
+		ptr[0] = BURN_ENDIAN_SWAP_INT16(DrvInputs[0]);
+		ptr[1] = BURN_ENDIAN_SWAP_INT16((DrvInputs[1] & ~0x0200) | ((DrvDips[2] << 8) & 0x0200));
+		ptr[2] = BURN_ENDIAN_SWAP_INT16(DrvInputs[2]);
+		ptr[3] = BURN_ENDIAN_SWAP_INT16(DrvInputs[3]);
 	}
 }
 
@@ -1156,8 +1196,8 @@ static void draw_layer(UINT8 *ram, UINT8 *gfxbase, INT32 scrollx, INT32 scrolly,
 
 		if (sy >= nScreenHeight || sx >= nScreenWidth) continue;
 
-		INT32 code = vram[offs] & code_and;
-		INT32 color = vram[offs] >> 11;
+		INT32 code = BURN_ENDIAN_SWAP_INT16(vram[offs]) & code_and;
+		INT32 color = BURN_ENDIAN_SWAP_INT16(vram[offs]) >> 11;
 
 		if (*flipscreen) {
 			Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, (nScreenWidth - 16) - sx, (nScreenHeight - 16) - sy, color, 4, 15, coloff, gfxbase);
@@ -1196,9 +1236,9 @@ static void draw_txt_layer(INT32 transp, INT32 priority)
 
 		if (sx < -7 || sy < -7 || sx >= nScreenWidth || sy >= nScreenHeight) continue;
 
-		INT32 attr = vram[ofst+ofsta] & 0xff;
+		INT32 attr = BURN_ENDIAN_SWAP_INT16(vram[ofst+ofsta]) & 0xff;
 		INT32 category = (attr & 0x8) >> 3;
-		INT32 code = (vram[ofst] & 0xff) | ((attr & 3) << 8);
+		INT32 code = (BURN_ENDIAN_SWAP_INT16(vram[ofst]) & 0xff) | ((attr & 3) << 8);
 		if (scroll_type == 3 && ofst < 0x12) continue; // ignore nb1414m4 params/fix text-garbage at the bottom of legion
 		if (category != priority) continue;
 
@@ -1228,17 +1268,17 @@ static void draw_sprites(INT32 priority)
 
 	for (INT32 offs = 0; offs < sprlen / 2; offs+=4)
 	{
-		INT32 attr  = spr[offs + 0];
+		INT32 attr  = BURN_ENDIAN_SWAP_INT16(spr[offs + 0]);
 		if (((attr & 0x3000) >> 12) != priority) continue;
 
-		INT32 code  = spr[offs + 1];
+		INT32 code  = BURN_ENDIAN_SWAP_INT16(spr[offs + 1]);
 		INT32 flipx = code & 0x2000;
 		INT32 flipy = code & 0x1000;
-		INT32 color =(spr[offs + 2] >> 8) & 0x1f;
-		INT32 clut  = spr[offs + 2] & 0x7f;
-		INT32 sx    = spr[offs + 3];
+		INT32 color =(BURN_ENDIAN_SWAP_INT16(spr[offs + 2]) >> 8) & 0x1f;
+		INT32 clut  = BURN_ENDIAN_SWAP_INT16(spr[offs + 2]) & 0x7f;
+		INT32 sx    = BURN_ENDIAN_SWAP_INT16(spr[offs + 3]);
 		INT32 sy    = sprite_offy + 240 - (attr & 0x1ff);
-		code       &= 0xfff;
+		code       &= 0x7ff;
 
 		if (*flipscreen) {
 			sx = 320 - sx + 176;
@@ -1269,7 +1309,7 @@ static void draw_sprites(INT32 priority)
 				//INT32 pxl = src[((y^flipy << 4) | x^flipx)]; <- neat mosaic effect, save/use for tshingen & p-47 (dink)
 				INT32 pxl = src[(((y^flipy) << 4) | (x^flipx))];
 				UINT32 nColor = (color << 4) | 0x200;
-				UINT32 clutpxl = (pxl & ~0xf) | ((DrvSprClut[clut*0x10+(pxl & 0xf)]) & 0xf);
+				UINT32 clutpxl = (pxl & ~0xf) | ((BURN_ENDIAN_SWAP_INT16(DrvSprClut[clut*0x10+(pxl & 0xf)])) & 0xf);
 				if (mask == clutpxl) continue;
 				dst[sx] = clutpxl | nColor;
 			}
@@ -1298,8 +1338,8 @@ static INT32 DrvDraw()
 		UINT16 *ram = (UINT16*)DrvTxRAM;
 		if (scroll_type == 0 || scroll_type == 6) ram = DrvMcuCmd;
 
-		DrvScroll[2] = (ram[13] & 0xff) | ((ram[14] & 3) << 8);
-		DrvScroll[3] = (ram[11] & 0xff) | ((ram[12] & 1) << 8);
+		DrvScroll[2] = (BURN_ENDIAN_SWAP_INT16(ram[13]) & 0xff) | ((BURN_ENDIAN_SWAP_INT16(ram[14]) & 3) << 8);
+		DrvScroll[3] = (BURN_ENDIAN_SWAP_INT16(ram[11]) & 0xff) | ((BURN_ENDIAN_SWAP_INT16(ram[12]) & 1) << 8);
 	}
 
 	if (scroll_type == 0) { // terraf
@@ -1307,17 +1347,15 @@ static INT32 DrvDraw()
 		DrvScroll[3] = fg_scrolly;
 	}
 
-	if ((*DrvMcuCmd & 0x30) == 0x30 && *DrvVidRegs & 0x01) draw_txt_layer(txt_transp, 1);
+	if (*DrvVidRegs & 0x01 && (scroll_type != 3 || (*DrvVidRegs & 0x0f) == 0x0f)) draw_txt_layer(txt_transp, 1);
 	if (*DrvVidRegs & 0x08) draw_layer(DrvBgRAM, DrvGfxROM2, DrvScroll[0], DrvScroll[1], 0x600, 0x3ff);
 	if (*DrvVidRegs & 0x02) draw_sprites(2);
 	if (*DrvVidRegs & 0x04) draw_layer(DrvFgRAM, DrvGfxROM1, DrvScroll[2], DrvScroll[3], 0x400, 0x7ff);
 	if (*DrvVidRegs & 0x02) draw_sprites(1);
-	if ((*DrvMcuCmd & 0x30) == 0x00 && *DrvVidRegs & 0x01) draw_txt_layer(txt_transp, 0);
+	if (*DrvVidRegs & 0x01) draw_txt_layer(txt_transp, 0);
 	if (*DrvVidRegs & 0x02) draw_sprites(0);
 
 	BurnTransferCopy(DrvPalette);
-
-	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 
 	return 0;
 }
@@ -1333,43 +1371,37 @@ static INT32 DrvFrame()
 
 	AssembleInputs();
 
-	INT32 nSegment;
 	INT32 nInterleave = 262;
-	INT32 nTotalCycles[3] = { 8000000 / ((fiftysevenhertz) ? 57 : 60), 6000000 / ((fiftysevenhertz) ? 57 : 60), 4000000 / ((fiftysevenhertz) ? 57 : 60) };
+	INT32 nCyclesTotal[3] = { 8000000 / (nBurnFPS / 100), 6000000 / (nBurnFPS / 100), 4000000 / (nBurnFPS / 100) };
 	INT32 nCyclesDone[3] = { 0, 0, 0 };
 
-	if (usemcu) nTotalCycles[2] /= 12; // i8751 internal divider (12)
+	if (usemcu) nCyclesTotal[2] /= 12; // i8751 internal divider (12)
 
 	SekOpen(0);
 	ZetOpen(0);
-	nb1414_frame++;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nNext = (i + 1) * nTotalCycles[0] / nInterleave;
-		nSegment = nNext - nCyclesDone[0];
-		nCyclesDone[0] += SekRun(nSegment);
+		CPU_RUN(0, Sek);
 
-		BurnTimerUpdateYM3812((i + 1) * (nTotalCycles[1] / nInterleave));
+		BurnTimerUpdateYM3812((i + 1) * (nCyclesTotal[1] / nInterleave));
 
 		if (i & 1) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO); // 130 per frame (based on nInterleave = 262)
 
 		if (usemcu) {
-			mcs51Run((nTotalCycles[2] / nInterleave));
+			CPU_RUN(2, mcs51);
 		}
 
 		if (Terrafjb) {
 			ZetClose();
 			ZetOpen(1);
-			nNext = (i + 1) * nTotalCycles[2] / nInterleave;
-			nSegment = nNext - nCyclesDone[2];
-			nCyclesDone[2] += ZetRun(nSegment);
+			CPU_RUN(2, Zet);
 			ZetClose();
 			ZetOpen(0);
 		}
 	}
 
-	BurnTimerEndFrameYM3812(nTotalCycles[1]);
+	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 
 	SekSetIRQLine(irqline, (usemcu) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_AUTO);
 
@@ -1384,6 +1416,8 @@ static INT32 DrvFrame()
 	if (pBurnDraw) {
 		DrvDraw();
 	}
+
+	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 
 	return 0;
 }
@@ -1418,6 +1452,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(fg_scrollx);
 		SCAN_VAR(waiting_msb);
 		SCAN_VAR(scroll_msb);
+
+		nb_1414m4_scan();
 	}
 
 	return 0;
@@ -1508,13 +1544,6 @@ static INT32 ArmedfInit()
 	irqline = 1;
 
 	INT32 nRet = DrvInit(ArmedfLoadRoms, Armedf68KInit, 0xf800);
-
-	if (nRet == 0) {
-		DACSetRoute(0, 0.40, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.40, BURN_SND_ROUTE_BOTH);
-		BurnSetRefreshRate(57.00);
-		fiftysevenhertz = 1;
-	}
 
 	return nRet;
 }
@@ -1727,11 +1756,8 @@ static INT32 KozureInit()
 	INT32 nRet = DrvInit(KozureLoadRoms, Cclimbr268KInit, 0xf800);
 
 	if (nRet == 0) {
-		*((UINT16*)(Drv68KROM + 0x1016c)) = 0x4e71; // patch "time over" bug.
-		*((UINT16*)(Drv68KROM + 0x04fc6)) = 0x4e71; // ROM check at POST.
-
-		DACSetRoute(0, 0.20, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.20, BURN_SND_ROUTE_BOTH);
+		*((UINT16*)(Drv68KROM + 0x1016c)) = BURN_ENDIAN_SWAP_INT16(0x4e71); // patch "time over" bug.
+		*((UINT16*)(Drv68KROM + 0x04fc6)) = BURN_ENDIAN_SWAP_INT16(0x4e71); // ROM check at POST.
 	}
 
 	return nRet;
@@ -1809,8 +1835,8 @@ static INT32 LegionInit()
 
 	if (nRet == 0) { // hack
 		if (BurnLoadRom(nb1414_blit_data,	11, 1)) return 1;
-		*((UINT16*)(Drv68KROM + 0x001d6)) = 0x0001;
-		*((UINT16*)(Drv68KROM + 0x00488)) = 0x4e71;
+		*((UINT16*)(Drv68KROM + 0x001d6)) = BURN_ENDIAN_SWAP_INT16(0x0001);
+		*((UINT16*)(Drv68KROM + 0x00488)) = BURN_ENDIAN_SWAP_INT16(0x4e71);
 	}
 
 	return nRet;
@@ -1827,7 +1853,8 @@ struct BurnDriver BurnDrvLegion = {
 };
 
 
-// Chouji Meikyuu Legion (Japan ver 1.05)
+// Chouji Meikyuu Legion (Japan ver 1.05, set 1)
+// this has the ROM checksum test circumvented like the bootlegs? Or maybe just a bug that was later fixed?
 
 static struct BurnRomInfo legionjRomDesc[] = {
 	{ "legion.e5",	0x10000, 0x49e8e1b7, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code1
@@ -1857,10 +1884,50 @@ STD_ROM_FN(legionj)
 
 struct BurnDriver BurnDrvLegionj = {
 	"legionj", "legion", NULL, NULL, "1987",
-	"Chouji Meikyuu Legion (Japan ver 1.05)\0", NULL, "Nichibutsu", "Miscellaneous",
+	"Chouji Meikyuu Legion (Japan ver 1.05, set 1)\0", NULL, "Nichibutsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, legionjRomInfo, legionjRomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
+	LegionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	224, 288, 3, 4
+};
+
+
+// Chouji Meikyuu Legion (Japan ver 1.05, set 2)
+// this has the ROM checksum test working
+
+static struct BurnRomInfo legionj2RomDesc[] = {
+	{ "legion.e5",	0x10000, 0xd7efe310, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code1
+	{ "legion.e1",	0x10000, 0xb890da35, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "legion.1d",	0x10000, 0xc2e45e1e, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "legion.1b",	0x10000, 0xc306660a, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "legion.1h",	0x04000, 0x2ca4f7f0, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 code
+
+	{ "legion.1g",	0x08000, 0xc50b0125, 3 | BRF_GRA },           //  5 Characters
+
+	{ "legion.1e",	0x10000, 0xa9d70faf, 4 | BRF_GRA },           //  6 Foreground Tiles
+	{ "legion.1f",	0x08000, 0xf018313b, 4 | BRF_GRA },           //  7
+
+	{ "legion.1l",	0x10000, 0x29b8adaa, 5 | BRF_GRA },           //  8 Background Tiles
+
+	{ "legion.1k",	0x10000, 0xff5a0db9, 6 | BRF_GRA },           //  9 Sprites
+	{ "legion.1j",	0x10000, 0xbae220c8, 6 | BRF_GRA },           // 10
+
+	{ "lg7.bin",	0x04000, 0x533e2b58, 7 | BRF_GRA },           // 11 MCU data
+
+	{ "legion.1i",	0x08000, 0x79f4a827, 2 | BRF_OPT },           // 12 Unknown
+};
+
+STD_ROM_PICK(legionj2)
+STD_ROM_FN(legionj2)
+
+struct BurnDriver BurnDrvLegionj2 = {
+	"legionj2", "legion", NULL, NULL, "1987",
+	"Chouji Meikyuu Legion (Japan ver 1.05, set 2)\0", "fail ROM checksum test", "Nichibutsu", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, legionj2RomInfo, legionj2RomName, NULL, NULL, NULL, NULL, ArmedfInputInfo, LegionDIPInfo,
 	LegionInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	224, 288, 3, 4
 };
@@ -1925,7 +1992,7 @@ static INT32 LegionjbInit()
 	INT32 nRet = DrvInit(LegionjbLoadRoms, Cclimbr268KInit, 0xc000);
 
 	if (nRet == 0) { // hack
-		*((UINT16*)(Drv68KROM + 0x001d6)) = 0x0001;
+		*((UINT16*)(Drv68KROM + 0x001d6)) = BURN_ENDIAN_SWAP_INT16(0x0001);
 	}
 
 	return nRet;
@@ -1983,11 +2050,6 @@ static INT32 TerrafInit()
 
 	if (nRet == 0) {
 		if (BurnLoadRom(nb1414_blit_data,	14, 1)) return 1;
-
-		DACSetRoute(0, 0.30, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.30, BURN_SND_ROUTE_BOTH);
-		BurnSetRefreshRate(57.00);
-		fiftysevenhertz = 1;
 	}
 
 	return nRet;
@@ -2042,11 +2104,6 @@ static INT32 TerrafbInit()
 	irqline = 1;
 
 	INT32 nRet = DrvInit(ArmedfLoadRoms, Cclimbr268KInit, 0xf800);
-
-	if (nRet == 0) {
-		DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
-	}
 
 	return nRet;
 }
@@ -2172,11 +2229,6 @@ static INT32 TerrafjbInit()
 
 	INT32 nRet = DrvInit(TerrafjbLoadRoms, Cclimbr268KInit, 0xf800);
 
-	if (nRet == 0) {
-		DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
-	}
-
 	return nRet;
 }
 
@@ -2262,11 +2314,6 @@ static INT32 SkyRoboInit()
 	Skyrobo = 1;
 
 	INT32 nRet = DrvInit(SkyroboLoadRoms, Bigfghtr68KInit, 0xf800);
-
-	if (nRet == 0) {
-		DACSetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
-		DACSetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
-	}
 
 	return nRet;
 }

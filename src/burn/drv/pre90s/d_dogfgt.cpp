@@ -143,11 +143,7 @@ static void dogfgt_main_write(UINT16 address, UINT8 data)
 
 		case 0x1810:
 			if (data & 0x04) {
-				M6502Close();
-				M6502Open(1);
-				M6502SetIRQLine(0, CPU_IRQSTATUS_ACK);
-				M6502Close();
-				M6502Open(0);
+				M6502SetIRQLine(1, 0, CPU_IRQSTATUS_ACK);
 			}
 		return;
 
@@ -537,14 +533,12 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6502Open(0);
-		INT32 nSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += M6502Run(nSegment);
+		CPU_RUN(0, M6502);
 		if ((i & 7) == 7) M6502SetIRQLine(0, CPU_IRQSTATUS_AUTO); // 16x per frame
-		nSegment = M6502TotalCycles();
 		M6502Close();
 
 		M6502Open(1);
-		nCyclesDone[1] += M6502Run(nSegment - M6502TotalCycles());
+		CPU_RUN(1, M6502);
 		M6502Close();
 
 		if (i == 119) vblank = 1; // (240 / 256) * 128
@@ -688,7 +682,8 @@ struct BurnDriver BurnDrvDogfgtu = {
 };
 
 
-// Dog-Fight (Japan)
+// But-ten Ohara's Suit-Cha Luck-a Dog-Fight (Japan)
+// 『バッテン・オハラのスチャラカ空中戦』//
 
 static struct BurnRomInfo dogfgtjRomDesc[] = {
 	{ "bx00.52",	0x2000, 0xe602a21c, 1 | BRF_PRG | BRF_ESS }, //  0 M6502 #0 Code
@@ -724,7 +719,7 @@ STD_ROM_FN(dogfgtj)
 
 struct BurnDriver BurnDrvDogfgtj = {
 	"dogfgtj", "dogfgt", NULL, NULL, "1984",
-	"Dog-Fight (Japan)\0", NULL, "Technos Japan", "Miscellaneous",
+	"But-ten Ohara's Suit-Cha Luck-a Dog-Fight (Japan)\0", NULL, "Technos Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, dogfgtjRomInfo, dogfgtjRomName, NULL, NULL, NULL, NULL, DogfgtInputInfo, DogfgtDIPInfo,

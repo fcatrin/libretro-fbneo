@@ -39,35 +39,37 @@ static UINT8 DrvJoy3[8];
 static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
+static INT16 AnalogPort0 = 0;
+static INT16 AnalogPort1 = 0;
+
 static INT32 nNmiEnable;
 static INT32 nDrvRomBank;
 static INT32 nDrvRamBank;
 static INT32 nBackgroundBrightness;
+static INT32 nContrast;
 static INT32 k051316_readroms;
 static INT32 analog_ctrl;
-static INT16 AnalogPort0 = 0;
-static INT16 AnalogPort1 = 0;
 static UINT8 accelerator;
 static UINT8 steeringwheel;
-
 static INT32 watchdog;
+static INT32 muteaudio;
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo ChqflagInputList[] = {
-	{"P1 Coin",     BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
-	{"P1 Start",    BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
+	{"P1 Coin",     	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",    	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
 
-	A("P1 Wheel",       BIT_ANALOG_REL, &AnalogPort0, "p1 x-axis"),
-	A("P1 Accelerator", BIT_ANALOG_REL, &AnalogPort1, "p1 fire 1"),
+	A("P1 Wheel",       BIT_ANALOG_REL, &AnalogPort0,	"p1 x-axis"),
+	A("P1 Accelerator", BIT_ANALOG_REL, &AnalogPort1,	"p1 fire 1"),
 
-	{"P1 Button 1", BIT_DIGITAL,	DrvJoy2 + 1,	"p1 fire 2"	},
-	{"P1 Button 2", BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 3"	},
+	{"P1 Brake", 		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 fire 2"	},
+	{"P1 Shift", 		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Chqflag)
@@ -75,11 +77,11 @@ STDINPUTINFO(Chqflag)
 
 static struct BurnDIPInfo ChqflagDIPList[]=
 {
-	{0x08, 0xff, 0xff, 0xff, NULL			},
-	{0x09, 0xff, 0xff, 0x5f, NULL			},
-	{0x0a, 0xff, 0xff, 0xe0, NULL			},
+	{0x08, 0xff, 0xff, 0xff, NULL					},
+	{0x09, 0xff, 0xff, 0x5f, NULL					},
+	{0x0a, 0xff, 0xff, 0xe0, NULL					},
 
-	{0   , 0xfe, 0   ,    16, "Coin A"		},
+	{0   , 0xfe, 0   ,    16, "Coin A"				},
 	{0x08, 0x01, 0x0f, 0x02, "4 Coins 1 Credits"	},
 	{0x08, 0x01, 0x0f, 0x05, "3 Coins 1 Credits"	},
 	{0x08, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"	},
@@ -95,9 +97,9 @@ static struct BurnDIPInfo ChqflagDIPList[]=
 	{0x08, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits"	},
 	{0x08, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits"	},
 	{0x08, 0x01, 0x0f, 0x09, "1 Coin  7 Credits"	},
-	{0x08, 0x01, 0x0f, 0x00, "Free Play"		},
+	{0x08, 0x01, 0x0f, 0x00, "Free Play"			},
 
-	{0   , 0xfe, 0   ,    16, "Coin B"		},
+	{0   , 0xfe, 0   ,    16, "Coin B"				},
 	{0x08, 0x01, 0xf0, 0x20, "4 Coins 1 Credits"	},
 	{0x08, 0x01, 0xf0, 0x50, "3 Coins 1 Credits"	},
 	{0x08, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"	},
@@ -113,25 +115,25 @@ static struct BurnDIPInfo ChqflagDIPList[]=
 	{0x08, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits"	},
 	{0x08, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits"	},
 	{0x08, 0x01, 0xf0, 0x90, "1 Coin  7 Credits"	},
-	{0x08, 0x01, 0xf0, 0x00, "Invalid"		},
+	{0x08, 0x01, 0xf0, 0x00, "Invalid"				},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x09, 0x01, 0x60, 0x60, "Easy"			},
-	{0x09, 0x01, 0x60, 0x40, "Normal"		},
-	{0x09, 0x01, 0x60, 0x20, "Difficult"		},
-	{0x09, 0x01, 0x60, 0x00, "Very Difficult"	},
+	{0   , 0xfe, 0   ,    4, "Difficulty"			},
+	{0x09, 0x01, 0x60, 0x60, "Easy"					},
+	{0x09, 0x01, 0x60, 0x40, "Normal"				},
+	{0x09, 0x01, 0x60, 0x20, "Difficult"			},
+	{0x09, 0x01, 0x60, 0x00, "Very Difficult"		},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x09, 0x01, 0x80, 0x80, "Off"			},
-	{0x09, 0x01, 0x80, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
+	{0x09, 0x01, 0x80, 0x80, "Off"					},
+	{0x09, 0x01, 0x80, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Title"		},
-	{0x0a, 0x01, 0x40, 0x40, "Chequered Flag"	},
-	{0x0a, 0x01, 0x40, 0x00, "Checkered Flag"	},
+	{0   , 0xfe, 0   ,    2, "Title"				},
+	{0x0a, 0x01, 0x40, 0x40, "Chequered Flag"		},
+	{0x0a, 0x01, 0x40, 0x00, "Checkered Flag"		},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x0a, 0x01, 0x80, 0x80, "Off"			},
-	{0x0a, 0x01, 0x80, 0x00, "On"			},
+	{0   , 0xfe, 0   ,    2, "Service Mode"			},
+	{0x0a, 0x01, 0x80, 0x80, "Off"					},
+	{0x0a, 0x01, 0x80, 0x00, "On"					},
 };
 
 STDDIPINFO(Chqflag)
@@ -169,6 +171,10 @@ static void chqflag_main_write(UINT16 address, UINT8 data)
 		}
 
 		K051937Write(address & 7, data);
+		if ((address & 7) == 1) {
+			nContrast = data & 1;
+			nBackgroundBrightness = (data & 1) ? 80 : 100;
+		}
 		return;
 	}
 
@@ -215,9 +221,20 @@ static void chqflag_main_write(UINT16 address, UINT8 data)
 
 		case 0x3003:
 		{
-			nBackgroundBrightness = (data & 0x80) ? 60 : 100;
+			INT32 highlight[4] = { 0x00, 0x22, 0x32, 0x42 };
+			INT32 shadow[4] = { 0x9d, 0x53, 0xa7, 0xfd };
 
-			konami_set_highlight_mode((data & 0x08) ? 1 : 0);
+			INT32 select = ((data & 0x80) >> 6) | ((data & 0x08) >> 3);
+
+			if (nContrast) {
+				konami_set_highlight_intensity(highlight[select]);
+			} else {
+				konami_set_shadow_intensity(shadow[select]);
+			}
+
+			//bprintf(0, _T("background brightness %d    select %x   nContrast %x\n"), nBackgroundBrightness, select, nContrast);
+
+			konami_set_highlight_mode(nContrast);
 
 			k051316_readroms = data & 0x10;
 		}
@@ -239,7 +256,7 @@ static inline UINT8 analog_port_read()
 	switch (analog_ctrl)
 	{
 		case 0x00: {
-			accelerator = ProcessAnalog(AnalogPort1, 0, INPUT_DEADZONE | INPUT_MIGHTBEDIGITAL | INPUT_LINEAR, 0x01, 0xff);
+			accelerator = ProcessAnalog(AnalogPort1, 0, INPUT_DEADZONE | INPUT_MIGHTBEDIGITAL | INPUT_LINEAR, 0x00, 0xff);
 			return accelerator;
 		}
 		case 0x01: {
@@ -315,6 +332,13 @@ static UINT8 chqflag_main_read(UINT16 address)
 	return 0;
 }
 
+static void DrvK007232SetVolume(INT32 chip, INT32 channel, INT32 vola, INT32 volb)
+{
+	if (vola < 37) vola = 0;
+	if (volb < 37) volb = 0;
+	K007232SetVolume(chip, channel, vola, volb);
+}
+
 static void __fastcall chqflag_sound_write(UINT16 address, UINT8 data)
 {
 	if ((address & 0xfff0) == 0xa000) {
@@ -335,7 +359,7 @@ static void __fastcall chqflag_sound_write(UINT16 address, UINT8 data)
 		return;
 
 		case 0xa01c:
-			K007232SetVolume(0, 1, (data & 0x0f) * 0x11/2, (data >> 4) * 0x11/2);
+			DrvK007232SetVolume(0, 1, (data & 0x0f) * 0x11/2, (data >> 4) * 0x11/2);
 		return;
 
 		case 0xc000:
@@ -385,13 +409,13 @@ static void DrvYM2151IrqHandler(INT32 state)
 
 static void DrvK007232VolCallback0(INT32 v)
 {
-	K007232SetVolume(0, 0, (v & 0x0f) * 0x11/2, (v & 0x0f) * 0x11/2);
+	DrvK007232SetVolume(0, 0, (v & 0x0f) * 0x11/2, (v & 0x0f) * 0x11/2);
 }
 
 static void DrvK007232VolCallback1(INT32 v)
 {
-	K007232SetVolume(1, 0, (v >> 0x4) * 0x11, 0);
-	K007232SetVolume(1, 1, 0, (v & 0x0f) * 0x11);
+	DrvK007232SetVolume(1, 0, (v >> 0x4) * 0x11, 0);
+	DrvK007232SetVolume(1, 1, 0, (v & 0x0f) * 0x11);
 }
 
 static void K051316Callback0(INT32 *code,INT32 *color,INT32 *)
@@ -440,6 +464,11 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	analog_ctrl = 0;
 	nNmiEnable = 0;
 
+	nBackgroundBrightness = 100;
+	nContrast = 0;
+
+	muteaudio = 320;
+
 	watchdog = 0;
 	BurnShiftReset();
 
@@ -458,8 +487,8 @@ static INT32 MemIndex()
 	DrvGfxROM0		= Next; Next += 0x100000;
 	DrvGfxROM1		= Next; Next += 0x020000;
 	DrvGfxROM2		= Next; Next += 0x100000;
-	DrvGfxROMExp0		= Next; Next += 0x200000;
-	DrvGfxROMExp1		= Next; Next += 0x040000;
+	DrvGfxROMExp0	= Next; Next += 0x200000;
+	DrvGfxROMExp1	= Next; Next += 0x040000;
 
 	DrvSndROM0		= Next; Next += 0x080000;
 	DrvSndROM1		= Next; Next += 0x080000;
@@ -486,12 +515,7 @@ static INT32 DrvInit()
 {
 	GenericTilesInit();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvKonROM  + 0x000000,  0, 1)) return 1;
@@ -533,14 +557,16 @@ static INT32 DrvInit()
 	ZetSetReadHandler(chqflag_sound_read);
 	ZetClose();
 
-	BurnYM2151Init(3579545);
+	BurnYM2151InitBuffered(3579545, 1, NULL, 1);
+	BurnTimerAttachZet(3579545);
 	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
 	K007232Init(0, 3579545, DrvSndROM0, 0x80000);
 	K007232SetPortWriteHandler(0, DrvK007232VolCallback0);
-	K007232PCMSetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
+	K007232SetRoute(0, BURN_SND_K007232_ROUTE_1, 0.20, BURN_SND_ROUTE_LEFT);
+	K007232SetRoute(0, BURN_SND_K007232_ROUTE_2, 0.20, BURN_SND_ROUTE_RIGHT);
 
 	K007232Init(1, 3579545, DrvSndROM1, 0x80000);
 	K007232SetPortWriteHandler(1, DrvK007232VolCallback1);
@@ -579,7 +605,7 @@ static INT32 DrvExit()
 
 	BurnShiftExit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -619,7 +645,7 @@ static INT32 DrvDraw()
 	BurnTransferClear();
 	KonamiClearBitmaps(0);
 
-	if (nBurnLayer & 1) K051316_zoom_draw(1, 0 | 0x200);
+	if (nBurnLayer & 1) K051316_zoom_draw(1, 0 | K051316_OPAQUE);
 
 	if (nBurnLayer & 2) K051316_zoom_draw(1, 1);
 
@@ -645,6 +671,8 @@ static INT32 DrvFrame()
 		DrvDoReset(1);
 	}
 
+	ZetNewFrame();
+
 	{
 		memset (DrvInputs, 0xff, 3);
 		for (INT32 i = 0; i < 8; i++) {
@@ -661,8 +689,7 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nSoundBufferPos = 0;
-	INT32 nInterleave = 256/2;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 3000000 / 60, 3579545 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -671,41 +698,31 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = (nCyclesTotal[0] / nInterleave) * (i + 1);
-		nCyclesDone[0] += konamiRun(nSegment - nCyclesDone[0]);
+		CPU_RUN(0, konami);
+		CPU_RUN_TIMER(1);
 
-		nSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		nCyclesDone[1] += ZetRun(nSegment - nCyclesDone[1]);
-
-		if ((i&0xf)==0 && nNmiEnable) konamiSetIrqLine(0x20, CPU_IRQSTATUS_ACK); // iq_132 fix me!
-		if (i == 120 && K051960_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, CPU_IRQSTATUS_ACK);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K007232Update(0, pSoundBuf, nSegmentLength);
-			K007232Update(1, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
+		if ((i&0x1f)==0 && nNmiEnable) konamiSetIrqLine(0x20, CPU_IRQSTATUS_ACK); // iq_132 fix me!
+		if (i == 240) {
+			if (K051960_irq_enabled) konamiSetIrqLine(KONAMI_IRQ_LINE, CPU_IRQSTATUS_ACK);
+			if (pBurnDraw) {
+				DrvDraw();
+			}
 		}
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2151Render(pSoundBuf, nSegmentLength);
-			K007232Update(0, pSoundBuf, nSegmentLength);
-			K007232Update(1, pSoundBuf, nSegmentLength);
+		BurnSoundClear(); // K007232 is only a slave sound chip, if we want it first, we must clear.
+		K007232Update(0, pBurnSoundOut, nBurnSoundLen);
+		K007232Update(1, pBurnSoundOut, nBurnSoundLen);
+		if (muteaudio) {
+			BurnSoundClear();
+			muteaudio--;
 		}
+		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	konamiClose();
 	ZetClose();
-
-	if (pBurnDraw) {
-		DrvDraw();
-	}
 
 	return 0;
 }
@@ -736,21 +753,23 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		BurnShiftScan(nAction);
 
+		SCAN_VAR(nNmiEnable);
 		SCAN_VAR(nDrvRomBank);
 		SCAN_VAR(nDrvRamBank);
 		SCAN_VAR(k051316_readroms);
 		SCAN_VAR(analog_ctrl);
-		SCAN_VAR(nNmiEnable);
-		SCAN_VAR(nBackgroundBrightness);
 		SCAN_VAR(accelerator);
 		SCAN_VAR(steeringwheel);
+		SCAN_VAR(nBackgroundBrightness);
+		SCAN_VAR(nContrast);
+		SCAN_VAR(watchdog);
+		SCAN_VAR(muteaudio);
 	}
 
 	if (nAction & ACB_WRITE) {
 		konamiOpen(0);
 		bankswitch(nDrvRomBank);
 		konamiClose();
-
 	}
 
 	return 0;
@@ -787,7 +806,7 @@ struct BurnDriver BurnDrvChqflag = {
 	"chqflag", NULL, NULL, NULL, "1988",
 	"Chequered Flag\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 1, HARDWARE_PREFIX_KONAMI, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 1, HARDWARE_PREFIX_KONAMI, GBF_RACING, 0,
 	NULL, chqflagRomInfo, chqflagRomName, NULL, NULL, NULL, NULL, ChqflagInputInfo, ChqflagDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 304, 3, 4
@@ -824,7 +843,7 @@ struct BurnDriver BurnDrvChqflagj = {
 	"chqflagj", "chqflag", NULL, NULL, "1988",
 	"Chequered Flag (Japan)\0", NULL, "Konami", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 1, HARDWARE_PREFIX_KONAMI, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 1, HARDWARE_PREFIX_KONAMI, GBF_RACING, 0,
 	NULL, chqflagjRomInfo, chqflagjRomName, NULL, NULL, NULL, NULL, ChqflagInputInfo, ChqflagDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 304, 3, 4

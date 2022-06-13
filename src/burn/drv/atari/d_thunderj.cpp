@@ -46,9 +46,7 @@ static UINT8 DrvDips[1];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo ThunderjInputList[] = {
-	{"Coin 1",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
-	{"Coin 2",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
-
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 coin"	},
 	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 15,	"p1 up"		},
 	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 14,	"p1 down"	},
 	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 13,	"p1 left"	},
@@ -56,6 +54,7 @@ static struct BurnInputInfo ThunderjInputList[] = {
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 9,	"p1 fire 2"	},
 
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 15,	"p2 up"		},
 	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 14,	"p2 down"	},
 	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 13,	"p2 left"	},
@@ -88,11 +87,7 @@ static void latch_write(UINT16 data)
 	{
 		INT32 active = SekGetActive();
 		if (active == 0) {
-			SekClose();
-			SekOpen(1);
-			SekReset();
-			SekClose();
-			SekOpen(0);
+			SekReset(1);
 		} else {
 			SekRunEnd();
 			SekReset();
@@ -105,7 +100,7 @@ static void latch_write(UINT16 data)
 static void __fastcall thunderj_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xffe000) == 0x3f6000) {
-		*((UINT16*)(DrvMobRAM + (address & 0x1ffe))) = data;
+		*((UINT16*)(DrvMobRAM + (address & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(data);
 		AtariMoWrite(0, (address / 2) & 0xfff, data);
 		return;
 	}
@@ -140,7 +135,7 @@ static void __fastcall thunderj_main_write_byte(UINT32 address, UINT8 data)
 
 	if ((address & 0xffe000) == 0x3f6000) {
 		DrvMobRAM[(address & 0x1fff)^1] = data;
-		AtariMoWrite(0, (address / 2) & 0xfff, *((UINT16*)(DrvMobRAM + (address & 0x1ffe))));
+		AtariMoWrite(0, (address / 2) & 0xfff, BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvMobRAM + (address & 0x1ffe)))));
 		return;
 	}
 
@@ -237,7 +232,7 @@ static UINT8 __fastcall thunderj_main_read_byte(UINT32 address)
 
 static tilemap_callback( alpha )
 {
-	UINT16 data = *((UINT16*)(DrvAlphaRAM + offs * 2));
+	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvAlphaRAM + offs * 2)));
 	INT32 code = (data & 0x1ff);
 	if (data & 0x200) code += alpha_tile_bank * 0x200;
 	INT32 color = ((data >> 10) & 0xf) | ((data >> 9) & 0x20);
@@ -438,12 +433,7 @@ static INT32 DrvInit()
 		NULL				/* callback routine for special entries */
 	};
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		INT32 k = 0;
@@ -566,7 +556,7 @@ static INT32 DrvExit()
 	AtariJSAExit();
 	AtariMoExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -624,12 +614,9 @@ static void copy_sprites_step2()
 		{
 			if (mo[x] != 0xffff)
 			{
-				INT32 mopriority = mo[x] >> 12;
-
-				if (mopriority & 4)
+				if ((mo[x] & 0x4002) == 0x4002)
 				{
-					if (mo[x] & 2)
-						atarimo_apply_stain(pf, mo, x, y, maxx);
+					atarimo_apply_stain(pf, mo, x, y, maxx);
 				}
 
 				mo[x] = 0xffff; // clean!
@@ -703,20 +690,16 @@ static INT32 DrvFrame()
 		if (i == 261) AtariVADEOFUpdate(DrvEOFData);
 
 		SekOpen(0);
-		if (atarivad_scanline_timer_enabled) {
-			if (atarivad_scanline_timer == atarivad_scanline) {
-				scanline_timer(CPU_IRQSTATUS_ACK);
-			}
-		}
-		nCyclesDone[0] += SekRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
-		nCyclesDone[2] += M6502Run(((i + 1) * nCyclesTotal[2] / nInterleave) - nCyclesDone[2]);
+		AtariVADTimerUpdate();
+		CPU_RUN(0, Sek);
+		CPU_RUN(2, M6502);
 		SekClose();
 
 		SekOpen(1);
 		if (subcpu_halted == 0) {
-			nCyclesDone[1] += SekRun(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+			CPU_RUN(1, Sek);
 		} else {
-			nCyclesDone[1] += SekIdle(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+			CPU_IDLE(1, Sek);
 		}
 		SekClose();
 
@@ -788,6 +771,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(subcpu_halted);
 		SCAN_VAR(alpha_tile_bank);
 		SCAN_VAR(scanline_int_state);
+
 		SCAN_VAR(nExtraCycles);
 	}
 

@@ -58,12 +58,16 @@ static struct BurnInputInfo DrvInputList[] =
 	{"Left"              , BIT_DIGITAL  , DrvInputPort0 + 5, "p1 left"   },
 	{"Right"             , BIT_DIGITAL  , DrvInputPort0 + 4, "p1 right"  },
 	{"Fire 1"            , BIT_DIGITAL  , DrvInputPort0 + 3, "p1 fire 1" },
+	{"Fire 2"            , BIT_DIGITAL  , DrvInputPort0 + 2, "p1 fire 2" },
+	{"Fire 3"            , BIT_DIGITAL  , DrvInputPort0 + 1, "p1 fire 3" },
 
 	{"Up (Cocktail)"     , BIT_DIGITAL  , DrvInputPort1 + 7, "p2 up"     },
 	{"Down (Cocktail)"   , BIT_DIGITAL  , DrvInputPort1 + 6, "p2 down"   },
 	{"Left (Cocktail)"   , BIT_DIGITAL  , DrvInputPort1 + 5, "p2 left"   },
 	{"Right (Cocktail)"  , BIT_DIGITAL  , DrvInputPort1 + 4, "p2 right"  },
 	{"Fire 1 (Cocktail)" , BIT_DIGITAL  , DrvInputPort1 + 3, "p2 fire 1" },
+	{"Fire 2 (Cocktail)" , BIT_DIGITAL  , DrvInputPort1 + 2, "p2 fire 2" },
+	{"Fire 3 (Cocktail)" , BIT_DIGITAL  , DrvInputPort1 + 1, "p2 fire 3" },
 
 	{"Reset"             , BIT_DIGITAL  , &DrvReset        , "reset"     },
 	{"Service"           , BIT_DIGITAL  , DrvInputPort2 + 7, "service"   },
@@ -134,146 +138,150 @@ static inline void DrvMakeInputs()
 
 static struct BurnDIPInfo DrvDIPList[]=
 {
+	DIP_OFFSET(0x14)
+
 	// Default Values
-	{0x10, 0xff, 0xff, 0xff, NULL                     },
-	{0x11, 0xff, 0xff, 0xff, NULL                     },
-	{0x12, 0xff, 0xff, 0xff, NULL                     },
+	{0x00, 0xff, 0xff, 0xff, NULL                     },
+	{0x01, 0xff, 0xff, 0xff, NULL                     },
+	{0x02, 0xff, 0xff, 0xff, NULL                     },
 
 	// Dip 1
 	{0   , 0xfe, 0   , 2   , "Service Mode"           },
-	{0x10, 0x01, 0x80, 0x80, "Off"                    },
-	{0x10, 0x01, 0x80, 0x00, "On"                     },
+	{0x00, 0x01, 0x80, 0x80, "Off"                    },
+	{0x00, 0x01, 0x80, 0x00, "On"                     },
 
 	// Dip 2
 	{0   , 0xfe, 0   , 2   , "Allow continue"         },
-	{0x11, 0x01, 0x01, 0x00, "No"                     },
-	{0x11, 0x01, 0x01, 0x01, "Yes"                    },
+	{0x01, 0x01, 0x01, 0x00, "No"                     },
+	{0x01, 0x01, 0x01, 0x01, "Yes"                    },
 
 	{0   , 0xfe, 0   , 2   , "Flip Screen"            },
-	{0x11, 0x01, 0x02, 0x02, "Off"                    },
-	{0x11, 0x01, 0x02, 0x00, "On"                     },
+	{0x01, 0x01, 0x02, 0x02, "Off"                    },
+	{0x01, 0x01, 0x02, 0x00, "On"                     },
 
 	{0   , 0xfe, 0   , 4   , "Difficulty"             },
-	{0x11, 0x01, 0x0c, 0x08, "Easy"                   },
-	{0x11, 0x01, 0x0c, 0x0c, "Normal"                 },
-	{0x11, 0x01, 0x0c, 0x04, "Difficult"              },
-	{0x11, 0x01, 0x0c, 0x00, "Very Difficult"         },
+	{0x01, 0x01, 0x0c, 0x08, "Easy"                   },
+	{0x01, 0x01, 0x0c, 0x0c, "Normal"                 },
+	{0x01, 0x01, 0x0c, 0x04, "Difficult"              },
+	{0x01, 0x01, 0x0c, 0x00, "Very Difficult"         },
 
 	{0   , 0xfe, 0   , 3   , "Cabinet"                },
-	{0x11, 0x01, 0x30, 0x30, "Upright (One Player)"   },
-	{0x11, 0x01, 0x30, 0x00, "Upright (Two Players)"  },
-	{0x11, 0x01, 0x30, 0x10, "Cocktail"               },
+	{0x01, 0x01, 0x30, 0x30, "Upright (One Player)"   },
+	{0x01, 0x01, 0x30, 0x00, "Upright (Two Players)"  },
+	{0x01, 0x01, 0x30, 0x10, "Cocktail"               },
 
 	{0   , 0xfe, 0   , 2   , "Demo Sounds"            },
-	{0x11, 0x01, 0x40, 0x00, "Off"                    },
-	{0x11, 0x01, 0x40, 0x40, "On"                     },
+	{0x01, 0x01, 0x40, 0x00, "Off"                    },
+	{0x01, 0x01, 0x40, 0x40, "On"                     },
 
 	{0   , 0xfe, 0   , 2   , "Background Music"       },
-	{0x11, 0x01, 0x80, 0x00, "Off"                    },
-	{0x11, 0x01, 0x80, 0x80, "On"                     },
+	{0x01, 0x01, 0x80, 0x00, "Off"                    },
+	{0x01, 0x01, 0x80, 0x80, "On"                     },
 
 	// Dip3
 	{0   , 0xfe, 0   , 16  , "Coin A"                 },
-	{0x12, 0x01, 0xf0, 0x20, "6 Coins 1 Play"         },
-	{0x12, 0x01, 0xf0, 0x40, "5 Coins 1 Play"         },
-	{0x12, 0x01, 0xf0, 0x50, "4 Coins 1 Play"         },
-	{0x12, 0x01, 0xf0, 0x70, "3 Coins 1 Play"         },
-	{0x12, 0x01, 0xf0, 0x10, "8 Coins 3 Plays"        },
-	{0x12, 0x01, 0xf0, 0x90, "2 Coins 1 Play"         },
-	{0x12, 0x01, 0xf0, 0x30, "5 Coins 3 Plays"        },
-	{0x12, 0x01, 0xf0, 0x60, "3 Coins 2 Plays"        },
-	{0x12, 0x01, 0xf0, 0xf0, "1 Coin  1 Play"         },
-	{0x12, 0x01, 0xf0, 0x80, "2 Coins 3 Plays"        },
-	{0x12, 0x01, 0xf0, 0xe0, "1 Coin  2 Plays"        },
-	{0x12, 0x01, 0xf0, 0xd0, "1 Coin  3 Plays"        },
-	{0x12, 0x01, 0xf0, 0xc0, "1 Coin  4 Plays"        },
-	{0x12, 0x01, 0xf0, 0xb0, "1 Coin  5 Plays"        },
-	{0x12, 0x01, 0xf0, 0xa0, "1 Coin  6 Plays"        },
-	{0x12, 0x01, 0xf0, 0x00, "Freeplay"               },
+	{0x02, 0x01, 0xf0, 0x20, "6 Coins 1 Play"         },
+	{0x02, 0x01, 0xf0, 0x40, "5 Coins 1 Play"         },
+	{0x02, 0x01, 0xf0, 0x50, "4 Coins 1 Play"         },
+	{0x02, 0x01, 0xf0, 0x70, "3 Coins 1 Play"         },
+	{0x02, 0x01, 0xf0, 0x10, "8 Coins 3 Plays"        },
+	{0x02, 0x01, 0xf0, 0x90, "2 Coins 1 Play"         },
+	{0x02, 0x01, 0xf0, 0x30, "5 Coins 3 Plays"        },
+	{0x02, 0x01, 0xf0, 0x60, "3 Coins 2 Plays"        },
+	{0x02, 0x01, 0xf0, 0xf0, "1 Coin  1 Play"         },
+	{0x02, 0x01, 0xf0, 0x80, "2 Coins 3 Plays"        },
+	{0x02, 0x01, 0xf0, 0xe0, "1 Coin  2 Plays"        },
+	{0x02, 0x01, 0xf0, 0xd0, "1 Coin  3 Plays"        },
+	{0x02, 0x01, 0xf0, 0xc0, "1 Coin  4 Plays"        },
+	{0x02, 0x01, 0xf0, 0xb0, "1 Coin  5 Plays"        },
+	{0x02, 0x01, 0xf0, 0xa0, "1 Coin  6 Plays"        },
+	{0x02, 0x01, 0xf0, 0x00, "Freeplay"               },
 
 	{0   , 0xfe, 0   , 15  , "Coin B"                 },
-	{0x12, 0x01, 0x0f, 0x02, "6 Coins 1 Play"         },
-	{0x12, 0x01, 0x0f, 0x04, "5 Coins 1 Play"         },
-	{0x12, 0x01, 0x0f, 0x05, "4 Coins 1 Play"         },
-	{0x12, 0x01, 0x0f, 0x07, "3 Coins 1 Play"         },
-	{0x12, 0x01, 0x0f, 0x01, "8 Coins 3 Plays"        },
-	{0x12, 0x01, 0x0f, 0x09, "2 Coins 1 Play"         },
-	{0x12, 0x01, 0x0f, 0x03, "5 Coins 3 Plays"        },
-	{0x12, 0x01, 0x0f, 0x06, "3 Coins 2 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0f, "1 Coin  1 Play"         },
-	{0x12, 0x01, 0x0f, 0x08, "2 Coins 3 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0e, "1 Coin  2 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0d, "1 Coin  3 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0c, "1 Coin  4 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0b, "1 Coin  5 Plays"        },
-	{0x12, 0x01, 0x0f, 0x0a, "1 Coin  6 Plays"        },
+	{0x02, 0x01, 0x0f, 0x02, "6 Coins 1 Play"         },
+	{0x02, 0x01, 0x0f, 0x04, "5 Coins 1 Play"         },
+	{0x02, 0x01, 0x0f, 0x05, "4 Coins 1 Play"         },
+	{0x02, 0x01, 0x0f, 0x07, "3 Coins 1 Play"         },
+	{0x02, 0x01, 0x0f, 0x01, "8 Coins 3 Plays"        },
+	{0x02, 0x01, 0x0f, 0x09, "2 Coins 1 Play"         },
+	{0x02, 0x01, 0x0f, 0x03, "5 Coins 3 Plays"        },
+	{0x02, 0x01, 0x0f, 0x06, "3 Coins 2 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0f, "1 Coin  1 Play"         },
+	{0x02, 0x01, 0x0f, 0x08, "2 Coins 3 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0e, "1 Coin  2 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0d, "1 Coin  3 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0c, "1 Coin  4 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0b, "1 Coin  5 Plays"        },
+	{0x02, 0x01, 0x0f, 0x0a, "1 Coin  6 Plays"        },
 };
 
 STDDIPINFO(Drv)
 
 static struct BurnDIPInfo LastduelDIPList[]=
 {
+	DIP_OFFSET(0x13)
+
 	// Default Values
-	{0x13, 0xff, 0xff, 0xff, NULL                     },
-	{0x14, 0xff, 0xff, 0xff, NULL                     },
-	{0x15, 0xff, 0xff, 0xff, NULL                     },
+	{0x00, 0xff, 0xff, 0xff, NULL                     },
+	{0x01, 0xff, 0xff, 0xff, NULL                     },
+	{0x02, 0xff, 0xff, 0xff, NULL                     },
 
 	// Dip 1
 	{0   , 0xfe, 0   , 8   , "Coin A"                 },
-	{0x13, 0x01, 0x07, 0x00, "4 Coins 1 Play"         },
-	{0x13, 0x01, 0x07, 0x01, "3 Coins 1 Play"         },
-	{0x13, 0x01, 0x07, 0x02, "2 Coins 1 Play"         },
-	{0x13, 0x01, 0x07, 0x07, "1 Coin  1 Play"         },
-	{0x13, 0x01, 0x07, 0x06, "1 Coin  2 Plays"        },
-	{0x13, 0x01, 0x07, 0x05, "1 Coin  3 Plays"        },
-	{0x13, 0x01, 0x07, 0x04, "1 Coin  4 Plays"        },
-	{0x13, 0x01, 0x07, 0x03, "1 Coin  6 Plays"        },
+	{0x00, 0x01, 0x07, 0x00, "4 Coins 1 Play"         },
+	{0x00, 0x01, 0x07, 0x01, "3 Coins 1 Play"         },
+	{0x00, 0x01, 0x07, 0x02, "2 Coins 1 Play"         },
+	{0x00, 0x01, 0x07, 0x07, "1 Coin  1 Play"         },
+	{0x00, 0x01, 0x07, 0x06, "1 Coin  2 Plays"        },
+	{0x00, 0x01, 0x07, 0x05, "1 Coin  3 Plays"        },
+	{0x00, 0x01, 0x07, 0x04, "1 Coin  4 Plays"        },
+	{0x00, 0x01, 0x07, 0x03, "1 Coin  6 Plays"        },
 
 	{0   , 0xfe, 0   , 8   , "Coin B"                 },
-	{0x13, 0x01, 0x38, 0x00, "4 Coins 1 Play"         },
-	{0x13, 0x01, 0x38, 0x08, "3 Coins 1 Play"         },
-	{0x13, 0x01, 0x38, 0x10, "2 Coins 1 Play"         },
-	{0x13, 0x01, 0x38, 0x38, "1 Coin  1 Play"         },
-	{0x13, 0x01, 0x38, 0x30, "1 Coin  2 Plays"        },
-	{0x13, 0x01, 0x38, 0x28, "1 Coin  3 Plays"        },
-	{0x13, 0x01, 0x38, 0x20, "1 Coin  4 Plays"        },
-	{0x13, 0x01, 0x38, 0x18, "1 Coin  6 Plays"        },
+	{0x00, 0x01, 0x38, 0x00, "4 Coins 1 Play"         },
+	{0x00, 0x01, 0x38, 0x08, "3 Coins 1 Play"         },
+	{0x00, 0x01, 0x38, 0x10, "2 Coins 1 Play"         },
+	{0x00, 0x01, 0x38, 0x38, "1 Coin  1 Play"         },
+	{0x00, 0x01, 0x38, 0x30, "1 Coin  2 Plays"        },
+	{0x00, 0x01, 0x38, 0x28, "1 Coin  3 Plays"        },
+	{0x00, 0x01, 0x38, 0x20, "1 Coin  4 Plays"        },
+	{0x00, 0x01, 0x38, 0x18, "1 Coin  6 Plays"        },
 
 	// Dip 2
 	{0   , 0xfe, 0   , 4   , "Difficulty"             },
-	{0x14, 0x01, 0x03, 0x02, "Easy"                   },
-	{0x14, 0x01, 0x03, 0x03, "Normal"                 },
-	{0x14, 0x01, 0x03, 0x01, "Difficult"              },
-	{0x14, 0x01, 0x03, 0x00, "Very Difficult"         },
+	{0x01, 0x01, 0x03, 0x02, "Easy"                   },
+	{0x01, 0x01, 0x03, 0x03, "Normal"                 },
+	{0x01, 0x01, 0x03, 0x01, "Difficult"              },
+	{0x01, 0x01, 0x03, 0x00, "Very Difficult"         },
 
 	{0   , 0xfe, 0   , 4   , "Bonus Life"             },
-	{0x14, 0x01, 0x30, 0x20, "20000, 60000, 80000"    },
-	{0x14, 0x01, 0x30, 0x30, "30000, 80000, 80000"    },
-	{0x14, 0x01, 0x30, 0x10, "40000, 80000, 80000"    },
-	{0x14, 0x01, 0x30, 0x00, "40000, 80000, 100000"   },
+	{0x01, 0x01, 0x30, 0x20, "20000, 60000, 80000"    },
+	{0x01, 0x01, 0x30, 0x30, "30000, 80000, 80000"    },
+	{0x01, 0x01, 0x30, 0x10, "40000, 80000, 80000"    },
+	{0x01, 0x01, 0x30, 0x00, "40000, 80000, 100000"   },
 
 	// Dip3
 	{0   , 0xfe, 0   , 4   , "Lives"                  },
-	{0x15, 0x01, 0x03, 0x03, "3"                      },
-	{0x15, 0x01, 0x03, 0x02, "4"                      },
-	{0x15, 0x01, 0x03, 0x01, "6"                      },
-	{0x15, 0x01, 0x03, 0x00, "8"                      },
+	{0x02, 0x01, 0x03, 0x03, "3"                      },
+	{0x02, 0x01, 0x03, 0x02, "4"                      },
+	{0x02, 0x01, 0x03, 0x01, "6"                      },
+	{0x02, 0x01, 0x03, 0x00, "8"                      },
 
 	{0   , 0xfe, 0   , 2   , "Type"                   },
-	{0x15, 0x01, 0x04, 0x04, "Car"                    },
-	{0x15, 0x01, 0x04, 0x00, "Plane"                  },
+	{0x02, 0x01, 0x04, 0x04, "Car"                    },
+	{0x02, 0x01, 0x04, 0x00, "Plane"                  },
 
 	{0   , 0xfe, 0   , 2   , "Demo Sounds"            },
-	{0x15, 0x01, 0x20, 0x00, "Off"                    },
-	{0x15, 0x01, 0x20, 0x20, "On"                     },
+	{0x02, 0x01, 0x20, 0x00, "Off"                    },
+	{0x02, 0x01, 0x20, 0x20, "On"                     },
 
 	{0   , 0xfe, 0   , 2   , "Allow continue"         },
-	{0x15, 0x01, 0x40, 0x00, "No"                     },
-	{0x15, 0x01, 0x40, 0x40, "Yes"                    },
+	{0x02, 0x01, 0x40, 0x00, "No"                     },
+	{0x02, 0x01, 0x40, 0x40, "Yes"                    },
 
 	{0   , 0xfe, 0   , 2   , "Flip Screen"            },
-	{0x15, 0x01, 0x80, 0x80, "Off"                    },
-	{0x15, 0x01, 0x80, 0x00, "On"                     },
+	{0x02, 0x01, 0x80, 0x80, "Off"                    },
+	{0x02, 0x01, 0x80, 0x00, "On"                     },
 
 };
 
@@ -1351,7 +1359,7 @@ static void DrvCalcPalette()
 	UINT32* pd;
 
 	for (i = 0, ps = (UINT16*)DrvPaletteRam, pd = DrvPalette; i < 0x800; i++, ps++, pd++) {
-		*pd = CalcCol(*ps);
+		*pd = CalcCol(BURN_ENDIAN_SWAP_INT16(*ps));
 	}
 }
 
@@ -1430,8 +1438,8 @@ static void DrvRenderBgLayer(INT32 nTransparent)
 	for (mx = 0; mx < 32; mx++) {
 		for (my = 0; my < 64; my++) {
 			TileIndex = (my * 32) + mx;
-			Code = VideoRam[TileIndex] & 0x1fff;
-			Colour = VideoRam[TileIndex + 0x800];
+			Code = BURN_ENDIAN_SWAP_INT16(VideoRam[TileIndex]) & 0x1fff;
+			Colour = BURN_ENDIAN_SWAP_INT16(VideoRam[TileIndex + 0x800]);
 			Flip = (Colour & 0x60) >> 5;
 			xFlip = (Flip >> 0) & 0x01;
 			yFlip = (Flip >> 1) & 0x01;
@@ -1458,8 +1466,8 @@ static void LastduelRenderBgLayer(INT32 nTransparent)
 
 	for (my = 0; my < 64; my++) {
 		for (mx = 0; mx < 64; mx++) {
-			Code = VideoRam[2 * TileIndex] & 0x1fff;
-			Colour = VideoRam[2 * TileIndex + 1];
+			Code = BURN_ENDIAN_SWAP_INT16(VideoRam[2 * TileIndex]) & 0x1fff;
+			Colour = BURN_ENDIAN_SWAP_INT16(VideoRam[2 * TileIndex + 1]);
 			Flip = (Colour & 0x60) >> 5;
 			xFlip = (Flip >> 0) & 0x01;
 			yFlip = (Flip >> 1) & 0x01;
@@ -1488,15 +1496,15 @@ static void DrvRenderSprites(INT32 Priority)
 	for (Offset = 0x400 - 4; Offset >= 0; Offset -= 4) {
 		INT32 Attr, sy, sx, xFlip, yFlip, Code, Colour;
 
-		Attr = SpriteRam[Offset + 1];
+		Attr = BURN_ENDIAN_SWAP_INT16(SpriteRam[Offset + 1]);
 		if (DrvSpritePriMask) {
 			if (Priority == 1 && (Attr & DrvSpritePriMask)) continue;
 			if (Priority == 0 && !(Attr & DrvSpritePriMask)) continue;
 		}
 
-		Code = SpriteRam[Offset] & 0xfff;
-		sx = SpriteRam[Offset + 3] & 0x1ff;
-		sy = SpriteRam[Offset + 2] & 0x1ff;
+		Code = BURN_ENDIAN_SWAP_INT16(SpriteRam[Offset]) & 0xfff;
+		sx = BURN_ENDIAN_SWAP_INT16(SpriteRam[Offset + 3]) & 0x1ff;
+		sy = BURN_ENDIAN_SWAP_INT16(SpriteRam[Offset + 2]) & 0x1ff;
 		if (sy > 0x100) sy -= 0x200;
 
 		xFlip = Attr & 0x20;
@@ -1516,7 +1524,7 @@ static void DrvRenderCharLayer()
 	for (my = 0; my < 32; my++) {
 		for (mx = 0; mx < 64; mx++) {
 			yFlip = 0;
-			Code = VideoRam[TileIndex];
+			Code = BURN_ENDIAN_SWAP_INT16(VideoRam[TileIndex]);
 			Colour = Code >> 12;
 			if (Code & 0x800) yFlip = 1;
 			Code &= 0x7ff;
@@ -1556,8 +1564,8 @@ static void LastduelRenderFgLayer(INT32 BackLayer)
 
 	for (mx = 0; mx < 64; mx++) {
 		for (my = 0; my < 64; my++) {
-			INT32 code = VideoRam[2 * TileIndex] & 0xfff;
-			INT32 color = VideoRam[2 * TileIndex + 1];
+			INT32 code = BURN_ENDIAN_SWAP_INT16(VideoRam[2 * TileIndex]) & 0xfff;
+			INT32 color = BURN_ENDIAN_SWAP_INT16(VideoRam[2 * TileIndex + 1]);
 			INT32 flip = ((color & 0x40) ? 0xf0 : 0) + ((color & 0x20) ? 0x0f : 0);
 			INT32 group = (color & 0x80) >> 7;
 			color &= 0x0f;
@@ -1613,8 +1621,8 @@ static void DrvRenderFgLayer(INT32 BackLayer)
 	for (mx = 0; mx < 32; mx++) {
 		for (my = 0; my < 64; my++) {
 			TileIndex = (my * 32) + mx;
-			INT32 code = VideoRam[TileIndex] & 0x1fff;
-			INT32 color = VideoRam[TileIndex + 0x800];
+			INT32 code = BURN_ENDIAN_SWAP_INT16(VideoRam[TileIndex]) & 0x1fff;
+			INT32 color = BURN_ENDIAN_SWAP_INT16(VideoRam[TileIndex + 0x800]);
 			INT32 flip = ((color & 0x40) ? 0xf0 : 0) + ((color & 0x20) ? 0x0f : 0);
 			INT32 group = (color & 0x10) >> 4;
 			color &= 0x0f;

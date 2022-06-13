@@ -10,6 +10,7 @@ struct BurnDialINF {
 };
 
 extern INT32 nBurnGunNumPlayers;
+extern bool bBurnGunHide[MAX_GUNS];
 extern bool bBurnGunAutoHide;
 
 extern INT32 BurnGunX[MAX_GUNS];
@@ -31,6 +32,7 @@ void BurnGunSetCoords(INT32 player, INT32 x, INT32 y); // manually set the gun c
 // Using BurnPaddle gives you 2 paddles (A & B) per player initted.
 // BurnPaddleReturn[A/B] returns Velocity and directional data.
 void BurnPaddleReturn(BurnDialINF &dial, INT32 num, INT32 isB);
+void BurnPaddleGetDial(BurnDialINF &dial, INT32 num, INT32 isB);
 void BurnPaddleSetWrap(INT32 num, INT32 xmin, INT32 xmax, INT32 ymin, INT32 ymax);
 void BurnPaddleMakeInputs(INT32 num, BurnDialINF &dial, INT16 x, INT16 y);
 #define BurnPaddleInit BurnTrackballInit
@@ -50,21 +52,35 @@ void BurnTrackballFrame(INT32 dev, INT16 PortA, INT16 PortB, INT32 VelocityStart
 
 // BurnTrackballUpdate() is called once per frame, sometimes more to translate the velocity to movement (Tempest uses this)
 void BurnTrackballUpdate(INT32 dev);
-// slither (taito/d_qix.cpp) needs a weird divider circuit on down + right signals
+void BurnTrackballUpdatePortA(INT32 dev);
+void BurnTrackballUpdatePortB(INT32 dev);
+// slither (taito/d_qix.cpp) has a divider circuit on down + right signals
 void BurnTrackballUpdateSlither(INT32 dev);
 
 // BurnTrackballUDLR() can be used to load digital inputs into the trackball
-void BurnTrackballUDLR(INT32 dev, INT32 u, INT32 d, INT32 l, INT32 r);
+void BurnTrackballUDLR(INT32 dev, INT32 u, INT32 d, INT32 l, INT32 r, INT32 speed = 0);
 
 // Configure if an axis (Port) is reversed (1) or normal (0)
 void BurnTrackballConfig(INT32 dev, INT32 PortA_rev, INT32 PortB_rev);
 void BurnTrackballConfigStartStopPoints(INT32 dev, INT32 PortA_Start, INT32 PortA_Stop, INT32 PortB_Start, INT32 PortB_Stop);
+void BurnTrackballSetVelocityCurve(INT32 bLogarithmic); // mostly for itech32
 
-// Read the position counter (8/16bit)
-UINT8 BurnTrackballRead(INT32 dev, INT32 isB);
+// Read the position counter
+UINT8 BurnTrackballRead(INT32 dev, INT32 isB); // 2 axis per device #
+UINT8 BurnTrackballRead(INT32 dev);            // linear device #
 UINT16 BurnTrackballReadWord(INT32 dev, INT32 isB);
+UINT16 BurnTrackballReadWord(INT32 dev);
+INT32 BurnTrackballReadSigned(INT32 dev, INT32 isB);
+INT32 BurnTrackballReadSigned(INT32 dev);
+INT32 BurnTrackballGetDirection(INT32 num, INT32 isB); // -1 backwards (left, down), +1 forward (right, up), 0 idle
+INT32 BurnTrackballGetDirection(INT32 dev);
+INT32 BurnTrackballGetVelocity(INT32 num, INT32 isB);
+INT32 BurnTrackballGetVelocity(INT32 dev);
 
-// TODO: add configurable start/stop points
+// Reset the position counters
+void BurnTrackballReadReset(); // all devices
+void BurnTrackballReadReset(INT32 num, INT32 isB);
+void BurnTrackballReadReset(INT32 dev);
 
 #define BurnTrackballExit BurnGunExit
 #define BurnTrackballScan BurnGunScan

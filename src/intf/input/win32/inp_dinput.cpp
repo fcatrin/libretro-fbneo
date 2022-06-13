@@ -4,7 +4,7 @@
 #include "burner.h"
 #include "inp_keys.h"
 
-#include <InitGuid.h>
+#include <initguid.h>
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -17,7 +17,7 @@
 #include "dinput_core.h"
 
 #define MAX_KEYBOARD	(1)
-#define MAX_GAMEPAD		(8)
+#define MAX_GAMEPAD		(32)
 #define MAX_JOYAXIS		(8)
 #define MAX_MOUSE		(4)
 #define MAX_MOUSEAXIS	(3)

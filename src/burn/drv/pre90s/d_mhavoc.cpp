@@ -52,7 +52,7 @@ static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvJoy3[8];
 static UINT8 DrvJoy4[8];
-static UINT8 DrvDips[3];
+static UINT8 DrvDips[4];
 static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
@@ -74,6 +74,7 @@ static struct BurnInputInfo MhavocInputList[] = {
 	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
 };
 
 STDINPUTINFO(Mhavoc)
@@ -89,6 +90,9 @@ static struct BurnInputInfo AlphaoneInputList[] = {
 
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
 };
 
 STDINPUTINFO(Alphaone)
@@ -155,6 +159,10 @@ static struct BurnDIPInfo MhavocDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
 	{0x0e, 0x01, 0x02, 0x02, "Off"					},
 	{0x0e, 0x01, 0x02, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
+	{0x0f, 0x01, 0x01, 0x00, "No"					},
+	{0x0f, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Mhavoc)
@@ -176,6 +184,10 @@ static struct BurnDIPInfo AlphaoneDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
 	{0x07, 0x01, 0x10, 0x10, "Off"					},
 	{0x07, 0x01, 0x10, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
+	{0x0a, 0x01, 0x01, 0x00, "No"					},
+	{0x0a, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Alphaone)
@@ -241,11 +253,7 @@ static void mhavoc_main_write(UINT16 address, UINT8 data)
 
 			if (gamma_halt)
 			{
-				M6502Close();
-				M6502Open(1);
-				M6502Reset();
-				M6502Close();
-				M6502Open(0);
+				M6502Reset(1);
 
 				alpha_rcvd = 0;
 				alpha_xmtd = 0;
@@ -289,11 +297,7 @@ static void mhavoc_main_write(UINT16 address, UINT8 data)
 			alpha_xmtd = 1;
 			alpha_data = data;
 
-			M6502Close();
-			M6502Open(1);
-			M6502SetIRQLine(0x20, CPU_IRQSTATUS_AUTO);
-			M6502Close();
-			M6502Open(0);
+			M6502SetIRQLine(1, 0x20, CPU_IRQSTATUS_AUTO);
 		}
 		return;
 	}
@@ -489,6 +493,28 @@ static INT32 port0_read(INT32 /*offset*/)
 	return DrvDips[0];
 }
 
+static INT32 res_check()
+{
+	if (DrvDips[3] & 1) {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 1080) {
+			vector_rescale((1080*800/600), 1080);
+			return 1;
+		}
+	} else {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 600) {
+			vector_rescale(800, 600);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static INT32 DrvDoReset(INT32 clear_mem)
 {
 	if (clear_mem) {
@@ -531,6 +557,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	avgletsgo = 0;
 	nExtraCycles[0] = 0;
 	nExtraCycles[1] = 0;
+
+	res_check();
 
 	return 0;
 }
@@ -618,8 +646,7 @@ static INT32 MhavocInit()
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 	PokeyAllPotCallback(0, port0_read);
 
-	tms5220_init(); // mhavocrv
-	tms5220_set_frequency(555555);
+	tms5220_init(555555); // mhavocrv
 
 	avgdvg_init(USE_AVG_MHAVOC, DrvVectorRAM, 0x4000, M6502TotalCycles, 300, 260);
 
@@ -669,8 +696,7 @@ static INT32 AlphaoneInit()
 	PokeyInit(1250000, 2, 0.50, 0);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 
-	tms5220_init(); // not in this set
-	tms5220_set_frequency(555555);
+	tms5220_init(555555); // not in this set
 
 	avgdvg_init(USE_AVG_MHAVOC, DrvVectorRAM, 0x4000, M6502TotalCycles, 580, 500);
 
@@ -725,6 +751,8 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
+	if (res_check()) return 0; // resolution was changed
+
 	draw_vector(DrvPalette);
 
 	return 0;
@@ -762,7 +790,7 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6502Open(0);
-		nCyclesDone[0] += M6502Run((nCyclesTotal[0] * (i + 1) / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, M6502);
 
 		if (alpha_irq_clock_enable && ((i%3)==2))
 		{
@@ -781,10 +809,9 @@ static INT32 DrvFrame()
 			M6502Open(1);
 		
 			if (gamma_halt) {
-				nCyclesDone[1] += (nCyclesTotal[1] * (i + 1) / nInterleave) - nCyclesDone[1];
-				M6502Idle((nCyclesTotal[1] * (i + 1) / nInterleave) - nCyclesDone[1]);
+				CPU_IDLE(1, M6502);
 			} else {
-				nCyclesDone[1] += M6502Run((nCyclesTotal[1] * (i + 1) / nInterleave) - nCyclesDone[1]);
+				CPU_RUN(1, M6502);
 			}
 
 			if ((i%3)==2) {
@@ -907,7 +934,7 @@ struct BurnDriver BurnDrvMhavoc = {
 	"mhavoc", NULL, NULL, NULL, "1983",
 	"Major Havoc (rev 3)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocRomInfo, mhavocRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -927,7 +954,7 @@ static struct BurnRomInfo mhavoc2RomDesc[] = {
 
 	{ "136025.108",		0x4000, 0x93faf210, 2 | BRF_PRG | BRF_ESS }, //  7 M6502 #1 Code
 
-	{ "036408-01.b1",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
+	{ "136002-125.6c",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
 };
 
 STD_ROM_PICK(mhavoc2)
@@ -937,7 +964,7 @@ struct BurnDriver BurnDrvMhavoc2 = {
 	"mhavoc2", "mhavoc", NULL, NULL, "1983",
 	"Major Havoc (rev 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavoc2RomInfo, mhavoc2RomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -957,7 +984,7 @@ static struct BurnRomInfo mhavocrvRomDesc[] = {
 
 	{ "136025.908",		0x4000, 0xc52ec664, 2 | BRF_PRG | BRF_ESS }, //  7 M6502 #1 Code
 
-	{ "036408-01.b1",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
+	{ "136002-125.6c",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
 };
 
 STD_ROM_PICK(mhavocrv)
@@ -967,7 +994,7 @@ struct BurnDriver BurnDrvMhavocrv = {
 	"mhavocrv", "mhavoc", NULL, NULL, "2006",
 	"Major Havoc - Return to Vax\0", NULL, "hack (JMA)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocrvRomInfo, mhavocrvRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -987,7 +1014,7 @@ static struct BurnRomInfo mhavocpRomDesc[] = {
 
 	{ "136025.008",		0x4000, 0x22ea7399, 2 | BRF_PRG | BRF_ESS }, //  7 M6502 #1 Code
 
-	{ "036408-01.b1",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
+	{ "136002-125.6c",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
 };
 
 STD_ROM_PICK(mhavocp)
@@ -997,7 +1024,7 @@ struct BurnDriver BurnDrvMhavocp = {
 	"mhavocp", "mhavoc", NULL, NULL, "1983",
 	"Major Havoc (prototype)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, mhavocpRomInfo, mhavocpRomName, NULL, NULL, NULL, NULL, MhavocInputInfo, MhavocpDIPInfo,
 	MhavocInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -1017,7 +1044,7 @@ static struct BurnRomInfo alphaoneRomDesc[] = {
 	{ "vec_pg01.tw",	0x4000, 0xe392a94d, 1 | BRF_PRG | BRF_ESS }, //  6
 	{ "vec_pg23.tw",	0x4000, 0x1ff74292, 1 | BRF_PRG | BRF_ESS }, //  7
 
-	{ "036408-01.b1",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
+	{ "136002-125.6c",	0x0100, 0x5903af03, 3 | BRF_GRA },           //  8 AVG PROM
 };
 
 STD_ROM_PICK(alphaone)
@@ -1027,7 +1054,7 @@ struct BurnDriver BurnDrvAlphaone = {
 	"alphaone", "mhavoc", NULL, NULL, "1983",
 	"Alpha One (prototype, 3 lives)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, alphaoneRomInfo, alphaoneRomName, NULL, NULL, NULL, NULL, AlphaoneInputInfo, AlphaoneDIPInfo,
 	AlphaoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3
@@ -1056,7 +1083,7 @@ struct BurnDriver BurnDrvAlphaonea = {
 	"alphaonea", "mhavoc", NULL, NULL, "1983",
 	"Alpha One (prototype, 5 lives)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_VECTOR, 0,
 	NULL, alphaoneaRomInfo, alphaoneaRomName, NULL, NULL, NULL, NULL, AlphaoneInputInfo, AlphaoneDIPInfo,
 	AlphaoneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x2000,
 	800, 600, 4, 3

@@ -204,6 +204,10 @@ BEGIN
 	IDS_SEL_COLECO				"ColecoVision"
 	IDS_SEL_GG					"Game Gear"
 	IDS_SEL_MSX					"MSX"
+	IDS_SEL_NES                 "NES"
+	IDS_SEL_FDS                 "FDS"
+	IDS_SEL_NGP                 "Neo Geo Pocket"
+	IDS_SEL_CHANNELF            "Fairchild Channel F"
 	IDS_SEL_SPECTRUM			"ZX Spectrum"
 	IDS_SEL_MIDWAY				"Midway"
 	IDS_SEL_CAPCOM_GRP			"Capcom"
@@ -234,6 +238,9 @@ BEGIN
 	IDS_GENRE_RUNGUN            "Run 'n Gun (Shooter)"
     IDS_GENRE_STRATEGY          "Strategy"
     IDS_GENRE_ACTION            "Action (Classic)"
+    IDS_GENRE_RPG               "RPG"
+    IDS_GENRE_SIM               "Simulator"
+    IDS_GENRE_ADV               "Adventure"
 
 	IDS_FAMILY					"Family"
 	IDS_FAMILY_MSLUG			"Metal Slug"
@@ -374,6 +381,8 @@ BEGIN
 	IDS_ERR_NO_DRIVER_SEL_SLOT1	"No driver has been selected for slot 1."
 	IDS_ERR_NON_WORKING			"This game isn't working. Load it anyway?"
 	IDS_ERR_CDEMU_INI_FAIL		"Couldn't initialise CD emulation."
+	
+	IDS_ERR_MACRO_NOT_MAPPING	"Double-click the macro to change its mapping first"
 
 	IDS_ERR_LOCAL_FAIL_CONNECT	"Failed to connect to Internet"
 	IDS_ERR_LOCAL_FAIL_OPEN_URL	"Failed to access FB Neo website"

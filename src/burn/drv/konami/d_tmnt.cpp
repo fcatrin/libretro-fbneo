@@ -52,6 +52,9 @@ static INT32 LayerPri[3];
 static UINT8 DrvSoundLatch;
 static INT32 PriorityFlag;
 
+static INT32 LastCntrl;
+static INT32 Toggle;
+
 static INT32 dim_c, dim_v;
 static INT32 NoDim = 0;
 
@@ -70,6 +73,8 @@ static UINT8 DrvVBlank;
 static INT32 InitEEPROMCount;
 
 static INT32 uses_k007232 = 0;
+
+static INT32 is_tmnt2 = 0;
 
 static const eeprom_interface BlswhstlEEPROMInterface =
 {
@@ -352,156 +357,156 @@ static struct BurnInputInfo Ssriders4psInputList[] =
 STDINPUTINFO(Ssriders4ps)
 
 static struct BurnInputInfo Thndrx2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 coin"	},
 
 	{"P1 Start",		BIT_DIGITAL,	DrvInputPort0 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvInputPort0 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvInputPort0 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvInputPort0 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvInputPort0 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvInputPort0 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvInputPort0 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvInputPort0 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvInputPort1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvInputPort1 + 1,	"p2 coin"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvInputPort2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvInputPort2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvInputPort2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvInputPort1 + 2,	"service"	},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,			"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvInputPort1 + 2,	"service"	},
 	{"Diagnostics",		BIT_DIGITAL,	DrvInputPort1 + 3,	"diag"		},
 };
 
 STDINPUTINFO(Thndrx2)
 
 static struct BurnInputInfo LgtnfghtInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvInputPort0 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvInputPort1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvInputPort1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvInputPort1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvInputPort1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvInputPort0 + 4,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvInputPort2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvInputPort2 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvInputPort2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvInputPort0 + 6,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDip + 2,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,			"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvInputPort0 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,			"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDip + 2,			"dip"		},
 };
 
 STDINPUTINFO(Lgtnfght)
 
 static struct BurnInputInfo QgakumonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvInputPort1 + 7,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvInputPort1 + 1,	"p1 fire 4"	},
-	{"P1 Push",		BIT_DIGITAL,	DrvInputPort1 + 4,	"p1 fire 5"	},
+	{"P1 Push",			BIT_DIGITAL,	DrvInputPort1 + 4,	"p1 fire 5"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvInputPort2 + 7,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvInputPort2 + 1,	"p2 fire 4"	},
-	{"P2 Push",		BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 5"	},
+	{"P2 Push",			BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 5"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvInputPort0 + 4,	"service"	},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,			"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvInputPort0 + 4,	"service"	},
 	{"Diagnostics",		BIT_DIGITAL,	DrvInputPort5 + 7,	"diag"		},
 };
 
 STDINPUTINFO(Qgakumon)
 
 static struct BurnInputInfo PunkshotInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvInputPort1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvInputPort1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvInputPort1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvInputPort2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvInputPort2 + 5,	"p2 fire 2"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvInputPort0 + 2,	"p3 coin"	},
-	{"P3 Up",		BIT_DIGITAL,	DrvInputPort3 + 2,	"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	DrvInputPort3 + 3,	"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	DrvInputPort3 + 0,	"p3 left"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvInputPort0 + 2,	"p3 coin"	},
+	{"P3 Up",			BIT_DIGITAL,	DrvInputPort3 + 2,	"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	DrvInputPort3 + 3,	"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	DrvInputPort3 + 0,	"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	DrvInputPort3 + 1,	"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	DrvInputPort3 + 4,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvInputPort3 + 5,	"p3 fire 2"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	DrvInputPort0 + 3,	"p4 coin"	},
-	{"P4 Up",		BIT_DIGITAL,	DrvInputPort4 + 2,	"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	DrvInputPort4 + 3,	"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	DrvInputPort4 + 0,	"p4 left"	},
+	{"P4 Coin",			BIT_DIGITAL,	DrvInputPort0 + 3,	"p4 coin"	},
+	{"P4 Up",			BIT_DIGITAL,	DrvInputPort4 + 2,	"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	DrvInputPort4 + 3,	"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	DrvInputPort4 + 0,	"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	DrvInputPort4 + 1,	"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	DrvInputPort4 + 4,	"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	DrvInputPort4 + 5,	"p4 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,			"reset"		},
 	{"Service 1",		BIT_DIGITAL,	DrvInputPort0 + 4,	"service"	},
 	{"Service 2",		BIT_DIGITAL,	DrvInputPort0 + 5,	"service2"	},
 	{"Service 3",		BIT_DIGITAL,	DrvInputPort0 + 6,	"service3"	},
 	{"Service 4",		BIT_DIGITAL,	DrvInputPort0 + 7,	"service4"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDip + 2,		"dip"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,			"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDip + 2,			"dip"		},
 };
 
 STDINPUTINFO(Punkshot)
 
 static struct BurnInputInfo Punkshot2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvInputPort0 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvInputPort5 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvInputPort1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvInputPort1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvInputPort1 + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvInputPort1 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvInputPort1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvInputPort1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvInputPort0 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvInputPort5 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvInputPort2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvInputPort2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvInputPort2 + 0,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvInputPort2 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvInputPort2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvInputPort2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvInputPort0 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,		"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDip + 2,		"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,			"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvInputPort0 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDip + 0,			"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDip + 1,			"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDip + 2,			"dip"		},
 };
 
 STDINPUTINFO(Punkshot2)
@@ -542,7 +547,7 @@ static inline void DrvMakeInputs()
 static inline void SsridersMakeInputs()
 {
 	DrvMakeInputs();
-	
+
 	DrvInput[5] ^= 0xf6;
 	//if (DrvInputPort5[7]) DrvInput[5] -= 0x80;
 }
@@ -1097,8 +1102,8 @@ STD_ROM_PICK(Tmntu)
 STD_ROM_FN(Tmntu)
 
 static struct BurnRomInfo TmntuaRomDesc[] = {
-	{ "963-j23.j17",        0x020000, 0xf77314e2, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
-	{ "963-j24.k17",        0x020000, 0x47f662d3, BRF_ESS | BRF_PRG }, //  1
+	{ "963-n23.j17",        0x020000, 0x388c333f, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "963-n24.k17",        0x020000, 0xaf3efd63, BRF_ESS | BRF_PRG }, //  1
 	{ "963-j21.j15",        0x010000, 0x7bee9fe8, BRF_ESS | BRF_PRG }, //  2
 	{ "963-j22.k15",        0x010000, 0x2efed09f, BRF_ESS | BRF_PRG }, //  3
 	
@@ -1126,6 +1131,35 @@ STD_ROM_PICK(Tmntua)
 STD_ROM_FN(Tmntua)
 
 static struct BurnRomInfo TmntubRomDesc[] = {
+	{ "963-j23.j17",        0x020000, 0xf77314e2, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "963-j24.k17",        0x020000, 0x47f662d3, BRF_ESS | BRF_PRG }, //  1
+	{ "963-j21.j15",        0x010000, 0x7bee9fe8, BRF_ESS | BRF_PRG }, //  2
+	{ "963-j22.k15",        0x010000, 0x2efed09f, BRF_ESS | BRF_PRG }, //  3
+	
+	{ "963e20.g13",         0x008000, 0x1692a6d6, BRF_ESS | BRF_PRG }, //  4	Z80 Program 
+	
+	{ "963a28.h27",         0x080000, 0xdb4769a8, BRF_GRA },	       //  5	Tiles
+	{ "963a29.k27",         0x080000, 0x8069cd2e, BRF_GRA },	       //  6
+	
+	{ "963a17.h4",          0x080000, 0xb5239a44, BRF_GRA },	       //  7	Sprites
+	{ "963a18.h6",          0x080000, 0xdd51adef, BRF_GRA },	       //  8
+	{ "963a15.k4",          0x080000, 0x1f324eed, BRF_GRA },	       //  9
+	{ "963a16.k6",          0x080000, 0xd4bd9984, BRF_GRA },	       // 10
+	
+	{ "963a30.g7",          0x000100, 0xabd82680, BRF_GRA },	       // 11	PROMs
+	{ "963a31.g19",         0x000100, 0xf8004a1c, BRF_GRA },	       // 12
+	
+	{ "963a26.c13",         0x020000, 0xe2ac3063, BRF_SND },	       // 13	K007232 Samples
+	
+	{ "963a27.d18",         0x020000, 0x2dfd674b, BRF_SND },	       // 14	UP7759C Samples
+	
+	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
+};
+
+STD_ROM_PICK(Tmntub)
+STD_ROM_FN(Tmntub)
+
+static struct BurnRomInfo TmntucRomDesc[] = {
 	{ "963-h23.j17",        0x020000, 0x718086e1, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "963-h24.k17",        0x020000, 0x2f7d66e1, BRF_ESS | BRF_PRG }, //  1
 	{ "963-h21.j15",        0x010000, 0x1944641e, BRF_ESS | BRF_PRG }, //  2
@@ -1151,8 +1185,8 @@ static struct BurnRomInfo TmntubRomDesc[] = {
 	{ "963a25.d5",          0x080000, 0xfca078c7, BRF_SND },	       // 15	Title Music Sample
 };
 
-STD_ROM_PICK(Tmntub)
-STD_ROM_FN(Tmntub)
+STD_ROM_PICK(Tmntuc)
+STD_ROM_FN(Tmntuc)
 
 static struct BurnRomInfo TmhtRomDesc[] = {
 	{ "963-f23.j17",        0x020000, 0x9cb5e461, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -2237,7 +2271,7 @@ static INT32 TmntMemIndex()
 
 	RamEnd                 = Next;
 
-	konami_palette32	= (UINT32*)Next;
+	konami_palette32	   = (UINT32*)Next;
 	DrvPalette             = (UINT32*)Next; Next += 0x00400 * sizeof(UINT32);
 	DrvTitleSample         = (INT16*)Next; Next += 0x40000 * sizeof(INT16);
 	DrvTiles               = Next; Next += 0x008000 * 8 * 8;
@@ -2495,7 +2529,9 @@ static INT32 DrvDoReset()
 	PlayTitleSample = 0;
 	TitleSamplePos = 0;
 	PriorityFlag = 0;
-	
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -2504,11 +2540,13 @@ static INT32 TmntDoReset()
 	INT32 nRet = DrvDoReset();
 	
 	if (uses_k007232) K007232Reset(0);
+
+	ZetOpen(0);
 	UPD7759Reset();
-	
-	UPD7759StartWrite(0, 0);
+	UPD7759StartWrite(0, 0); // First sample is cut w/o this hack. ("Fire!" after coin-up/select character)
 	UPD7759ResetWrite(0, 1);
-	
+	ZetClose();
+
 	return nRet;
 }
 
@@ -2526,7 +2564,9 @@ static INT32 CuebrickDoReset()
 	DrvNvRamBank = 0;
 	PriorityFlag = 0;
 	CuebrickSndIrqFire = 0;
-	
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -2556,7 +2596,9 @@ static INT32 BlswhstlDoReset()
 	BlswhstlTileRomBank = 0;
 	
 	K052109_irq_enabled = 0;
-	
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -2630,6 +2672,8 @@ static INT32 SsridersDoReset()
 	dim_c = 0;
 	dim_v = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -2651,10 +2695,12 @@ static INT32 PunkshotDoReset()
 	K052109_irq_enabled = 0;
 	DrvVBlank = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
-UINT8 __fastcall Tmnt68KReadByte(UINT32 a)
+static UINT8 __fastcall Tmnt68KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x100000)
 	K051937ByteRead(0x140000)
@@ -2701,7 +2747,7 @@ UINT8 __fastcall Tmnt68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Tmnt68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Tmnt68KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x100000)
 	K015937ByteWrite(0x140000)
@@ -2709,13 +2755,12 @@ void __fastcall Tmnt68KWriteByte(UINT32 a, UINT8 d)
 
 	switch (a) {
 		case 0x0a0001: {
-			static INT32 Last;
-			if (Last == 0x08 && (d & 0x08) == 0) {
+			if (LastCntrl == 0x08 && (d & 0x08) == 0) {
 				ZetOpen(0);
 				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 				ZetClose();
 			}
-			Last = d & 0x08;
+			LastCntrl = d & 0x08;
 			
 			bIrqEnable = (d & 0x20) ? 1 : 0;
 			
@@ -2749,7 +2794,7 @@ void __fastcall Tmnt68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Tmnt68KReadWord(UINT32 a)
+static UINT16 __fastcall Tmnt68KReadWord(UINT32 a)
 {
 	switch (a) {
 		default: {
@@ -2760,7 +2805,7 @@ UINT16 __fastcall Tmnt68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Tmnt68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Tmnt68KWriteWord(UINT32 a, UINT16 d)
 {
 	K051960WordWrite(0x140400)
 	
@@ -2771,7 +2816,7 @@ void __fastcall Tmnt68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall Mia68KReadByte(UINT32 a)
+static UINT8 __fastcall Mia68KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x100000)
 	K051937ByteRead(0x140000)
@@ -2810,7 +2855,7 @@ UINT8 __fastcall Mia68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Mia68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Mia68KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x100000)
 	K015937ByteWrite(0x140000)
@@ -2818,13 +2863,12 @@ void __fastcall Mia68KWriteByte(UINT32 a, UINT8 d)
 	
 	switch (a) {
 		case 0x0a0001: {
-			static INT32 Last;
-			if (Last == 0x08 && (d & 0x08) == 0) {
+			if (LastCntrl == 0x08 && (d & 0x08) == 0) {
 				ZetOpen(0);
 				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 				ZetClose();
 			}
-			Last = d & 0x08;
+			LastCntrl = d & 0x08;
 			
 			bIrqEnable = (d & 0x20) ? 1 : 0;
 			
@@ -2853,7 +2897,7 @@ void __fastcall Mia68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Mia68KReadWord(UINT32 a)
+static UINT16 __fastcall Mia68KReadWord(UINT32 a)
 {
 	switch (a) {
 		default: {
@@ -2864,7 +2908,7 @@ UINT16 __fastcall Mia68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Mia68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Mia68KWriteWord(UINT32 a, UINT16 d)
 {
 	K051960WordWrite(0x140400)
 	
@@ -2875,7 +2919,7 @@ void __fastcall Mia68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall Cuebrick68KReadByte(UINT32 a)
+static UINT8 __fastcall Cuebrick68KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x100000)
 	K051937ByteRead(0x140000)
@@ -2925,7 +2969,7 @@ UINT8 __fastcall Cuebrick68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Cuebrick68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Cuebrick68KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x100000)
 	K015937ByteWrite(0x140000)
@@ -2970,7 +3014,7 @@ void __fastcall Cuebrick68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Cuebrick68KReadWord(UINT32 a)
+static UINT16 __fastcall Cuebrick68KReadWord(UINT32 a)
 {
 	if (a >= 0x0b0000 && a <= 0x0b03ff) {
 		SEK_DEF_READ_WORD(0, a);
@@ -2986,7 +3030,7 @@ UINT16 __fastcall Cuebrick68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Cuebrick68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Cuebrick68KWriteWord(UINT32 a, UINT16 d)
 {
 	K051960WordWrite(0x140400)
 	
@@ -3002,7 +3046,7 @@ void __fastcall Cuebrick68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall Blswhstl68KReadByte(UINT32 a)
+static UINT8 __fastcall Blswhstl68KReadByte(UINT32 a)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		INT32 Offset = (a - 0x180000) >> 1;
@@ -3055,10 +3099,7 @@ UINT8 __fastcall Blswhstl68KReadByte(UINT32 a)
 		}
 		
 		case 0x700005: {
-			UINT8 Res;
-			static INT32 Toggle;
-
-			Res = 0xff - DrvInput[0];
+			UINT8 Res = 0xff - DrvInput[0];
 			
 			if (InitEEPROMCount) {
 				InitEEPROMCount--;
@@ -3088,7 +3129,7 @@ UINT8 __fastcall Blswhstl68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Blswhstl68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Blswhstl68KWriteByte(UINT32 a, UINT8 d)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		INT32 Offset = (a - 0x180000) >> 1;
@@ -3182,7 +3223,7 @@ void __fastcall Blswhstl68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Blswhstl68KReadWord(UINT32 a)
+static UINT16 __fastcall Blswhstl68KReadWord(UINT32 a)
 {
 	if (a >= 0x300000 && a <= 0x303fff) {
 		UINT16 *SpriteRam = (UINT16*)DrvSpriteRam;
@@ -3205,7 +3246,7 @@ UINT16 __fastcall Blswhstl68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Blswhstl68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Blswhstl68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		INT32 Offset = (a - 0x180000) >> 1;
@@ -3296,7 +3337,6 @@ static void tmnt2_protection_write()
 	zmod = (INT16)mod[8];	// global z
 	xzoom = mod[0x1c/2];
 	yzoom = (keepaspect) ? xzoom : mod[0x1e/2];
-
 	ylock = xlock = (i & 0x0020 && (!xzoom || xzoom == 0x100));
 
 	if (!xlock)
@@ -3305,7 +3345,7 @@ static void tmnt2_protection_write()
 		if (i > 0)
 		{
 			i >>= 8;
-			xoffs += (INT32)(pow(i, /*1.898461*/1.891292) * xoffs / 599.250121);
+			xoffs += (INT32)(pow(i, /*1.891292*/1.841292) * xoffs / 599.250121);
 		}
 		else if (i < 0)
 		{
@@ -3319,7 +3359,7 @@ static void tmnt2_protection_write()
 		if (i > 0)
 		{
 			i >>= 8;
-			yoffs += (INT32)(pow(i, /*1.898461*/1.891292) * yoffs / 599.250121);
+			yoffs += (INT32)(pow(i, /*1.891292*/1.841292) * yoffs / 599.250121);
 		}
 		else if (i < 0)
 		{
@@ -3339,12 +3379,12 @@ static void tmnt2_protection_write()
 	SekWriteWord((dst_addr + 12) * 2, attr2 | color);
 }
 
-void __fastcall Tmnt268KProtWord(UINT32 a, UINT16 d)
+static void __fastcall Tmnt268KProtWord(UINT32 a, UINT16 d)
 {
 	*((UINT16*)(Drv68KRam + 0x4800 + (a & 0x1e))) = BURN_ENDIAN_SWAP_INT16(d);
 }
 
-void __fastcall Tmnt268KProtByte(UINT32 a, UINT8 d)
+static void __fastcall Tmnt268KProtByte(UINT32 a, UINT8 d)
 {
 	a &= 0x1f;
 	Drv68KRam[0x4801 ^ a] = d;
@@ -3415,7 +3455,7 @@ static void ssriders_protection_w(INT32 offset)
 	}
 }
 
-UINT8 __fastcall Ssriders68KReadByte(UINT32 a)
+static UINT8 __fastcall Ssriders68KReadByte(UINT32 a)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		INT32 Offset = (a - 0x180000);
@@ -3479,10 +3519,8 @@ UINT8 __fastcall Ssriders68KReadByte(UINT32 a)
 		}
 		
 		case 0x1c0103: {
-			UINT8 Res;
-			static INT32 Toggle;
+			UINT8 Res = DrvInput[5];
 
-			Res = DrvInput[5];
 			if (DrvVBlank) Res |= 0x08;
 			Res |= EEPROMRead() & 0x01;
 			
@@ -3515,7 +3553,7 @@ UINT8 __fastcall Ssriders68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Ssriders68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Ssriders68KWriteByte(UINT32 a, UINT8 d)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		INT32 Offset = (a - 0x180000);
@@ -3614,7 +3652,7 @@ void __fastcall Ssriders68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Ssriders68KReadWord(UINT32 a)
+static UINT16 __fastcall Ssriders68KReadWord(UINT32 a)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		UINT16 *SpriteRam = (UINT16*)DrvSpriteRam;
@@ -3643,7 +3681,7 @@ UINT16 __fastcall Ssriders68KReadWord(UINT32 a)
 	return 0;
 }
 
-void __fastcall Ssriders68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Ssriders68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0x180000 && a <= 0x183fff) {
 		UINT16 *SpriteRam = (UINT16*)DrvSpriteRam;
@@ -3689,7 +3727,7 @@ void __fastcall Ssriders68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-UINT8 __fastcall Thndrx268KReadByte(UINT32 a)
+static UINT8 __fastcall Thndrx268KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x600000)
 	K051937ByteRead(0x700000)
@@ -3728,11 +3766,10 @@ UINT8 __fastcall Thndrx268KReadByte(UINT32 a)
 
 		case 0x500202:
 		{
-			static INT32 toggle;
-			toggle ^= 0x08;
+			Toggle ^= 0x08;
 			INT32 ret = 0xfe;
 			ret |= (EEPROMRead() & 1);
-			ret ^= toggle;
+			ret ^= Toggle;
 
 			return ret;
 		}
@@ -3745,7 +3782,7 @@ UINT8 __fastcall Thndrx268KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Thndrx268KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Thndrx268KWriteWord(UINT32 a, UINT16 d)
 {
 	if ((a & 0xffffc00) == 0x700400) {
 		K051960Write((a & 0x3fe) | 0, d >> 8);
@@ -3754,7 +3791,7 @@ void __fastcall Thndrx268KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-void __fastcall Thndrx268KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Thndrx268KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x600000)
 	K015937ByteWrite(0x700000)
@@ -3789,12 +3826,11 @@ void __fastcall Thndrx268KWriteByte(UINT32 a, UINT8 d)
 
 		//	EEPROMWrite(d & 0x04, d & 0x02, d & 0x01);
 
-			static INT32 last;
-			if (last == 0 && (d & 0x20) != 0) {
+			if (LastCntrl == 0 && (d & 0x20) != 0) {
 				ZetSetVector(0xff);
 				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
-			last = d & 0x20;
+			LastCntrl = d & 0x20;
 
 			K052109RMRDLine = d & 0x40;
 		}
@@ -3802,7 +3838,7 @@ void __fastcall Thndrx268KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Lgtnfght68KReadWord(UINT32 a)
+static UINT16 __fastcall Lgtnfght68KReadWord(UINT32 a)
 {
 	if (a >= 0xb0000 && a <= 0xb3fff) {
 		UINT16 *SpriteRam = (UINT16*)DrvSpriteRam;
@@ -3819,7 +3855,7 @@ UINT16 __fastcall Lgtnfght68KReadWord(UINT32 a)
 	return 0;
 }
 
-UINT8 __fastcall Lgtnfght68KReadByte(UINT32 a)
+static UINT8 __fastcall Lgtnfght68KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x100000)
 
@@ -3873,7 +3909,7 @@ UINT8 __fastcall Lgtnfght68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Lgtnfght68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Lgtnfght68KWriteWord(UINT32 a, UINT16 d)
 {
 	if (a >= 0xb0000 && a <= 0xb3fff) {
 		UINT16 *SpriteRam = (UINT16*)DrvSpriteRam;
@@ -3888,7 +3924,7 @@ void __fastcall Lgtnfght68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-void __fastcall Lgtnfght68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Lgtnfght68KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x100000)
 
@@ -3932,12 +3968,11 @@ void __fastcall Lgtnfght68KWriteByte(UINT32 a, UINT8 d)
 	{
 		case 0xa0019:
 		{
-			static INT32 last;
-			if (last == 0 && (d & 0x4) != 0) {
+			if (LastCntrl == 0 && (d & 0x4) != 0) {
 				ZetSetVector(0xff);
 				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
-			last = d & 0x4;
+			LastCntrl = d & 0x4;
 
 			K052109RMRDLine = d & 0x8;
 		}
@@ -3952,7 +3987,7 @@ void __fastcall Lgtnfght68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT16 __fastcall Punkshot68KReadWord(UINT32 a)
+static UINT16 __fastcall Punkshot68KReadWord(UINT32 a)
 {
 	if ((a & 0xfffc00) == 0x110400) {
 		return K051960Read((a & 0x3fe) | 1) | (K051960Read((a & 0x3fe) | 0) << 8);
@@ -3961,7 +3996,7 @@ UINT16 __fastcall Punkshot68KReadWord(UINT32 a)
 	return 0;
 }
 
-UINT8 __fastcall Punkshot68KReadByte(UINT32 a)
+static UINT8 __fastcall Punkshot68KReadByte(UINT32 a)
 {
 	K052109WordNoA12Read(0x100000)
 	K051937ByteRead(0x110000)
@@ -4007,7 +4042,7 @@ UINT8 __fastcall Punkshot68KReadByte(UINT32 a)
 	return 0;
 }
 
-void __fastcall Punkshot68KWriteWord(UINT32 a, UINT16 d)
+static void __fastcall Punkshot68KWriteWord(UINT32 a, UINT16 d)
 {
 	if ((a & 0xfffc00) == 0x110400) {
 		K051960Write((a & 0x3fe) | 0, d >> 8);
@@ -4022,7 +4057,7 @@ void __fastcall Punkshot68KWriteWord(UINT32 a, UINT16 d)
 	}
 }
 
-void __fastcall Punkshot68KWriteByte(UINT32 a, UINT8 d)
+static void __fastcall Punkshot68KWriteByte(UINT32 a, UINT8 d)
 {
 	K052109WordNoA12Write(0x100000)
 	K015937ByteWrite(0x110000)
@@ -4038,15 +4073,14 @@ void __fastcall Punkshot68KWriteByte(UINT32 a, UINT8 d)
 		case 0x0a0020:
 		case 0x0a0021:
 		{
-			static INT32 last;
 			K052109RMRDLine = d & 0x08;
 
-			if (last == 0x04 && (d & 0x04) == 0x00) {
+			if (LastCntrl == 0x04 && (d & 0x04) == 0x00) {
 				ZetSetVector(0xff);
 				ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 			}
 
-			last = d & 0x04; 
+			LastCntrl = d & 0x04;
 		}
 		return;
 
@@ -4060,7 +4094,7 @@ void __fastcall Punkshot68KWriteByte(UINT32 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall TmntZ80Read(UINT16 a)
+static UINT8 __fastcall TmntZ80Read(UINT16 a)
 {
 	if (a >= 0xb000 && a <= 0xb00d) {
 		return K007232ReadReg(0, a - 0xb000);
@@ -4092,7 +4126,7 @@ UINT8 __fastcall TmntZ80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall TmntZ80Write(UINT16 a, UINT8 d)
+static void __fastcall TmntZ80Write(UINT16 a, UINT8 d)
 {
 	if (a >= 0xb000 && a <= 0xb00d) {
 		K007232WriteReg(0, (a - 0xb000), d);
@@ -4139,7 +4173,7 @@ void __fastcall TmntZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall MiaZ80Read(UINT16 a)
+static UINT8 __fastcall MiaZ80Read(UINT16 a)
 {
 	if (a >= 0xb000 && a <= 0xb00d) {
 		return K007232ReadReg(0, a - 0xb000);
@@ -4165,7 +4199,7 @@ UINT8 __fastcall MiaZ80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall MiaZ80Write(UINT16 a, UINT8 d)
+static void __fastcall MiaZ80Write(UINT16 a, UINT8 d)
 {
 	if (a >= 0xb000 && a <= 0xb00d) {
 		K007232WriteReg(0, (a - 0xb000), d);
@@ -4191,7 +4225,7 @@ void __fastcall MiaZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall BlswhstlZ80Read(UINT16 a)
+static UINT8 __fastcall BlswhstlZ80Read(UINT16 a)
 {
 	if (a >= 0xfa00 && a <= 0xfa2f) {
 		if (a == 0xfa00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -4211,7 +4245,7 @@ UINT8 __fastcall BlswhstlZ80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall BlswhstlZ80Write(UINT16 a, UINT8 d)
+static void __fastcall BlswhstlZ80Write(UINT16 a, UINT8 d)
 {
 	if (a >= 0xfa00 && a <= 0xfa2f) {
 		K053260Write(0, (a - 0xfa00), d);
@@ -4241,7 +4275,7 @@ void __fastcall BlswhstlZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-void __fastcall Thndrx2Z80Write(UINT16 a, UINT8 d)
+static void __fastcall Thndrx2Z80Write(UINT16 a, UINT8 d)
 {
 	if (a >= 0xfc00 && a <= 0xfc2f) {
 		K053260Write(0, (a - 0xfc00), d);
@@ -4267,7 +4301,7 @@ void __fastcall Thndrx2Z80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall Thndrx2Z80Read(UINT16 a)
+static UINT8 __fastcall Thndrx2Z80Read(UINT16 a)
 {
 	if (a >= 0xfc00 && a <= 0xfc2f) {
 		if (a == 0xfc00) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -4284,7 +4318,7 @@ UINT8 __fastcall Thndrx2Z80Read(UINT16 a)
 	return 0;
 }
 
-void __fastcall LgtnfghtZ80Write(UINT16 a, UINT8 d)
+static void __fastcall LgtnfghtZ80Write(UINT16 a, UINT8 d)
 {
 	if (a >= 0xc000 && a <= 0xc02f) {
 		K053260Write(0, (a - 0xc000), d);
@@ -4303,7 +4337,7 @@ void __fastcall LgtnfghtZ80Write(UINT16 a, UINT8 d)
 	}
 }
 
-UINT8 __fastcall LgtnfghtZ80Read(UINT16 a)
+static UINT8 __fastcall LgtnfghtZ80Read(UINT16 a)
 {
 	if (a >= 0xc000 && a <= 0xc02f) {
 		if (a == 0xc000) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
@@ -4708,7 +4742,8 @@ static INT32 TmntInit()
 
 	UPD7759Init(0, UPD7759_STANDARD_CLOCK, DrvUPD7759CRom);
 	UPD7759SetRoute(0, 0.60, BURN_SND_ROUTE_BOTH);
-	
+	UPD7759SetSyncCallback(0, ZetTotalCycles, 3579545);
+
 	TmntTitleSampleSetRoute(1.00, BURN_SND_ROUTE_BOTH);
 	
 	LayerColourBase[0] = 0;
@@ -4967,6 +5002,8 @@ static INT32 BlswhstlInit()
 	K053260SetRoute(0, BURN_SND_K053260_ROUTE_2, 0.50, BURN_SND_ROUTE_LEFT);
 
 	EEPROMInit(&BlswhstlEEPROMInterface);
+
+	NoDim = 1;
 	
 	// Reset the driver
 	BlswhstlDoReset();
@@ -5322,6 +5359,8 @@ static INT32 Tmnt2Init()
 	// Reset the driver
 	SsridersDoReset();
 
+	is_tmnt2 = 1;
+
 	return 0;
 }
 
@@ -5524,6 +5563,7 @@ static INT32 CommonExit()
 	DrvVBlank = 0;
 	InitEEPROMCount = 0;
 	uses_k007232 = 0;
+	is_tmnt2 = 0;
 
 	return 0;
 }
@@ -5628,7 +5668,7 @@ static inline void BlswhstlCalcPaletteWithContrast(INT32 i, INT32 brt)
 	DrvPalette[i] = (r<<16) | (g<<8) | b;
 }
 
-static void PaletteDim(INT32 dimslayer)
+static void PaletteDim(INT32 layer2, INT32 layer0)
 {
 	INT32 i, dim, en, cb, ce, brt;
 
@@ -5639,17 +5679,30 @@ static void PaletteDim(INT32 dimslayer)
 	if (en) brt -= 40*dim/8;
 
 	if (brt < 100 && !NoDim) {
-		cb = LayerColourBase[dimslayer] << 4;
+		cb = LayerColourBase[layer2] << 4;
 		ce = cb + 128;
 
-		for (i =  0; i < cb; i++)
-			BlswhstlCalcPaletteWithContrast(i, brt);
+		//bprintf(0, _T("--pri(5) = %02x    pri(6) = %02x\n"), K053251GetPriority(5), K053251GetPriority(6));
+		//bprintf(0, _T("dimming layer %x:  %x - %x\n"), layer2, cb, ce);
+		if (is_tmnt2 && K053251GetPriority(5) == 0x30) {
+			// dim just the first layer (Mars through the windows)
+			cb = LayerColourBase[layer0] << 4;
+			ce = cb + 128;
+			for (i = 0; i < 0x800; i++)
+				BlswhstlCalcPaletteWithContrast(i, 100);
 
-		for (i = cb; i < ce; i++) // text
-			BlswhstlCalcPaletteWithContrast(i, 100);
+			for (i = cb; i < ce; i++) // selected layer
+				BlswhstlCalcPaletteWithContrast(i, brt);
+		} else {
+			for (i =  0; i < cb; i++)
+				BlswhstlCalcPaletteWithContrast(i, brt);
 
-		for (i = ce; i < 2048; i++)
-			BlswhstlCalcPaletteWithContrast(i, brt);
+			for (i = cb; i < ce; i++) // text
+				BlswhstlCalcPaletteWithContrast(i, 100);
+
+			for (i = ce; i < 0x800; i++)
+				BlswhstlCalcPaletteWithContrast(i, brt);
+		}
 
 		if (~dim_c & 0x10) {
 			konami_set_highlight_over_sprites_mode(1);
@@ -5683,15 +5736,15 @@ static INT32 TmntDraw()
 static INT32 BlswhstlDraw()
 {
 	INT32 Layer[3];
-	
+
 	K052109UpdateScroll();
 	
-	INT32 BGColourBase   = K053251GetPaletteIndex(0);
+	INT32 BGColourBase = K053251GetPaletteIndex(0);
 	SpriteColourBase   = K053251GetPaletteIndex(1);
 	LayerColourBase[0] = K053251GetPaletteIndex(2);
 	LayerColourBase[1] = K053251GetPaletteIndex(4);
 	LayerColourBase[2] = K053251GetPaletteIndex(3);
-	
+
 	LayerPri[0] = K053251GetPriority(2);
 	LayerPri[1] = K053251GetPriority(4);
 	LayerPri[2] = K053251GetPriority(3);
@@ -5702,9 +5755,10 @@ static INT32 BlswhstlDraw()
 	KonamiClearBitmaps(DrvPalette[16 * BGColourBase]);
 
 	sortlayers(Layer, LayerPri);
-
-	PaletteDim(Layer[2]);
-
+	PaletteDim(Layer[2], Layer[0]);
+	// save for later (dink)
+	//bprintf(0, _T("layer order: %x   %x   %x\n"), Layer[0], Layer[1], Layer[2]);
+	//bprintf(0, _T("pri   order: %x   %x   %x\n"), LayerPri[0], LayerPri[1], LayerPri[2]);
 	if (nBurnLayer & 1) K052109RenderLayer(Layer[0], 0, 1);
 	if (nBurnLayer & 2) K052109RenderLayer(Layer[1], 0, 2);
 	if (nBurnLayer & 4) K052109RenderLayer(Layer[2], 0, 4);
@@ -5723,7 +5777,7 @@ static INT32 Thndrx2Draw()
 	BlswhstlCalcPalette();
 	K052109UpdateScroll();
 	
-	INT32 BGColourBase   = K053251GetPaletteIndex(0);
+	INT32 BGColourBase = K053251GetPaletteIndex(0);
 	SpriteColourBase   = K053251GetPaletteIndex(1);
 	LayerColourBase[0] = K053251GetPaletteIndex(2);
 	LayerColourBase[1] = K053251GetPaletteIndex(4);
@@ -5853,7 +5907,6 @@ static INT32 TmntFrame()
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
 			K007232Update(0, pSoundBuf, nSegmentLength);
-			UPD7759Update(0, pSoundBuf, nSegmentLength);
 			if (PlayTitleSample) RenderTitleSample(pSoundBuf, nSegmentLength);
 			nSoundBufferPos += nSegmentLength;
 		}
@@ -5867,9 +5920,11 @@ static INT32 TmntFrame()
 		if (nSegmentLength) {
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
 			K007232Update(0, pSoundBuf, nSegmentLength);
-			UPD7759Update(0, pSoundBuf, nSegmentLength);
 			if (PlayTitleSample) RenderTitleSample(pSoundBuf, nSegmentLength);
 		}
+		ZetOpen(0);
+		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
+		ZetClose();
 	}
 	
 	if (pBurnDraw) TmntDraw();
@@ -6253,43 +6308,42 @@ static INT32 LgtnfghtFrame()
 
 static INT32 Tmnt2Frame()
 {
-	INT32 nInterleave = 262;
-	INT32 nSoundBufferPos = 0;
-
 	if (DrvReset) SsridersDoReset();
 
 	SsridersMakeInputs();
 
+	INT32 nInterleave = 256;
+	INT32 nSoundBufferPos = 0;
 	nCyclesTotal[0] = 16000000 / 60;
 	nCyclesTotal[1] = 8000000 / 60;
 	nCyclesDone[0] = nCyclesDone[1] = 0;
+	INT32 drawn = 0;
 
 	SekNewFrame();
 	ZetNewFrame();
-	
-	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nCurrentCPU, nNext;
 
-		// Run 68000
-		nCurrentCPU = 0;
+	for (INT32 i = 0; i < nInterleave; i++) {
+		INT32 scanline = (i + 240) % 256;
+
 		SekOpen(0);
-		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == 19) DrvVBlank = 0;
-		if (i == 243) DrvVBlank = 1;
-		if (i == 243 && K052109_irq_enabled) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+		if (scanline == 22) {
+			DrvVBlank = 0;
+			if (pBurnDraw) BlswhstlDraw();
+			drawn = 1;
+		}
+		if (scanline == 240) {
+			DrvVBlank = 1;
+			if (K052109_irq_enabled) {
+				SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+			}
+		}
+		CPU_RUN(0, Sek);
 		SekClose();
-		
-		// Run Z80
-		nCurrentCPU = 1;
+
 		ZetOpen(0);
-		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesSegment = ZetRun(nCyclesSegment);
-		nCyclesDone[nCurrentCPU] += nCyclesSegment;
+		CPU_RUN(1, Zet);
 		ZetClose();
-		
+
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
@@ -6309,8 +6363,8 @@ static INT32 Tmnt2Frame()
 			K053260Update(0, pSoundBuf, nSegmentLength);
 		}
 	}
-	
-	if (pBurnDraw) BlswhstlDraw();
+
+	if (pBurnDraw && !drawn) BlswhstlDraw();
 
 	return 0;
 }
@@ -6403,17 +6457,18 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		
 		BurnYM2151Scan(nAction, pnMin);
 
-		// Scan critical driver variables
-		SCAN_VAR(nCyclesDone);
-		SCAN_VAR(nCyclesSegment);
-		SCAN_VAR(DrvDip);
-		SCAN_VAR(DrvInput);
 		SCAN_VAR(bIrqEnable);
 		SCAN_VAR(DrvSoundLatch);
 		SCAN_VAR(TitleSoundLatch);
 		SCAN_VAR(PlayTitleSample);
 		SCAN_VAR(TitleSamplePos);
 		SCAN_VAR(PriorityFlag);
+		SCAN_VAR(DrvVBlank);
+		SCAN_VAR(dim_c);
+		SCAN_VAR(dim_v);
+
+		SCAN_VAR(LastCntrl);
+		SCAN_VAR(Toggle);
 
 		BurnRandomScan(nAction);
 	}
@@ -6455,24 +6510,10 @@ static INT32 CuebrickScan(INT32 nAction, INT32 *pnMin)
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		KonamiICScan(nAction);
 		SCAN_VAR(CuebrickSndIrqFire);
+		SCAN_VAR(DrvNvRamBank);
 	}
 
-	return DrvScan(nAction, pnMin);
-}
-
-static INT32 BlswhstlScan(INT32 nAction, INT32 *pnMin)
-{
-	if (nAction & ACB_DRIVER_DATA) {
-		ZetScan(nAction);
-		K053260Scan(nAction, pnMin);
-				
-		SCAN_VAR(InitEEPROMCount);
-	}
-	
-	EEPROMScan(nAction, pnMin);
-	
 	return DrvScan(nAction, pnMin);
 }
 
@@ -6481,13 +6522,12 @@ static INT32 SsridersScan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		ZetScan(nAction);
 		K053260Scan(nAction, pnMin);
-				
+
 		SCAN_VAR(InitEEPROMCount);
-		SCAN_VAR(DrvVBlank);
+
+		EEPROMScan(nAction, pnMin);
 	}
-	
-	EEPROMScan(nAction, pnMin);
-	
+
 	return DrvScan(nAction, pnMin);
 }
 
@@ -6505,7 +6545,7 @@ struct BurnDriver BurnDrvTmnt = {
 	"tmnt", NULL, NULL, NULL, "1989",
 	"Teenage Mutant Ninja Turtles (World 4 Players, version X)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmntRomInfo, TmntRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6515,7 +6555,7 @@ struct BurnDriver BurnDrvTmntu = {
 	"tmntu", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Ninja Turtles (US 4 Players, version R)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmntuRomInfo, TmntuRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6523,9 +6563,9 @@ struct BurnDriver BurnDrvTmntu = {
 
 struct BurnDriver BurnDrvTmntua = {
 	"tmntua", "tmnt", NULL, NULL, "1989",
-	"Teenage Mutant Ninja Turtles (US 4 Players, version J)\0", NULL, "Konami", "GX963",
+	"Teenage Mutant Ninja Turtles (US 4 Players, version N)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmntuaRomInfo, TmntuaRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6533,10 +6573,20 @@ struct BurnDriver BurnDrvTmntua = {
 
 struct BurnDriver BurnDrvTmntub = {
 	"tmntub", "tmnt", NULL, NULL, "1989",
+	"Teenage Mutant Ninja Turtles (US 4 Players, version J)\0", NULL, "Konami", "GX963",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	NULL, TmntubRomInfo, TmntubRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
+	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
+	NULL, 0x400, 304, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvTmntuc = {
+	"tmntuc", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Ninja Turtles (US 4 Players, version H)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
-	NULL, TmntubRomInfo, TmntubRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	NULL, TmntucRomInfo, TmntucRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
 };
@@ -6545,7 +6595,7 @@ struct BurnDriver BurnDrvTmht = {
 	"tmht", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Hero Turtles (UK 4 Players, version F)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmhtRomInfo, TmhtRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6555,7 +6605,7 @@ struct BurnDriver BurnDrvTmhta = {
 	"tmhta", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Hero Turtles (UK 4 Players, version S)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmhtaRomInfo, TmhtaRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6565,7 +6615,7 @@ struct BurnDriver BurnDrvTmhtb = {
 	"tmhtb", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Hero Turtles (UK 4 Players, version ?)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmhtbRomInfo, TmhtbRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6575,7 +6625,7 @@ struct BurnDriver BurnDrvTmntj = {
 	"tmntj", "tmnt", NULL, NULL, "1990",
 	"Teenage Mutant Ninja Turtles (Japan 4 Players, version 2)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmntjRomInfo, TmntjRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6585,7 +6635,7 @@ struct BurnDriver BurnDrvTmnta = {
 	"tmnta", "tmnt", NULL, NULL, "1990",
 	"Teenage Mutant Ninja Turtles (Asia 4 Players, version ?)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, TmntaRomInfo, TmntaRomName, NULL, NULL, NULL, NULL, TmntInputInfo, TmntDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6595,7 +6645,7 @@ struct BurnDriver BurnDrvTmht2p = {
 	"tmht2p", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Hero Turtles (UK 2 Players, version U)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, Tmht2pRomInfo, Tmht2pRomName, NULL, NULL, NULL, NULL, Tmnt2pInputInfo, Tmnt2pDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6605,7 +6655,7 @@ struct BurnDriver BurnDrvTmht2pa = {
 	"tmht2pa", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Hero Turtles (UK 2 Players, version ?)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, Tmht2paRomInfo, Tmht2paRomName, NULL, NULL, NULL, NULL, Tmnt2pInputInfo, Tmnt2pDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6615,7 +6665,7 @@ struct BurnDriver BurnDrvTmht2pj = {
 	"tmnt2pj", "tmnt", NULL, NULL, "1990",
 	"Teenage Mutant Ninja Turtles (Japan 2 Players, version 1)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, Tmnt2pjRomInfo, Tmnt2pjRomName, NULL, NULL, NULL, NULL, Tmnt2pInputInfo, Tmnt2pDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6625,7 +6675,7 @@ struct BurnDriver BurnDrvTmht2po = {
 	"tmnt2po", "tmnt", NULL, NULL, "1989",
 	"Teenage Mutant Ninja Turtles (Oceania 2 Players, version ?)\0", NULL, "Konami", "GX963",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, Tmnt2poRomInfo, Tmnt2poRomName, NULL, NULL, NULL, NULL, Tmnt2pInputInfo, Tmnt2pDIPInfo,
 	TmntInit, TmntExit, TmntFrame, TmntDraw, TmntScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6635,7 +6685,7 @@ struct BurnDriver BurnDrvMia = {
 	"mia", NULL, NULL, NULL, "1989",
 	"M.I.A. - Missing in Action (version T)\0", NULL, "Konami", "GX808",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, MiaRomInfo, MiaRomName, NULL, NULL, NULL, NULL, MiaInputInfo, MiaDIPInfo,
 	MiaInit, MiaExit, MiaFrame, TmntDraw, MiaScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6645,7 +6695,7 @@ struct BurnDriver BurnDrvMia2 = {
 	"mia2", "mia", NULL, NULL, "1989",
 	"M.I.A. - Missing in Action (version S)\0", NULL, "Konami", "GX808",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, Mia2RomInfo, Mia2RomName, NULL, NULL, NULL, NULL, MiaInputInfo, MiaDIPInfo,
 	MiaInit, MiaExit, MiaFrame, TmntDraw, MiaScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6655,7 +6705,7 @@ struct BurnDriver BurnDrvCuebrick = {
 	"cuebrick", NULL, NULL, NULL, "1989",
 	"Cue Brick (World, version D)\0", NULL, "Konami", "GX903",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_PUZZLE, 0,
 	NULL, CuebrickRomInfo, CuebrickRomName, NULL, NULL, NULL, NULL, MiaInputInfo, MiaDIPInfo,
 	CuebrickInit, CommonExit, CuebrickFrame, TmntDraw, CuebrickScan,
 	NULL, 0x400, 304, 224, 4, 3
@@ -6665,9 +6715,9 @@ struct BurnDriver BurnDrvBlswhstl = {
 	"blswhstl", NULL, NULL, NULL, "1991",
 	"Bells & Whistles (World, version L)\0", NULL, "Konami", "GX060",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, BlswhstlRomInfo, BlswhstlRomName, NULL, NULL, NULL, NULL, BlswhstlInputInfo, NULL,
-	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, BlswhstlScan,
+	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 224, 280, 3, 4
 };
 
@@ -6675,9 +6725,9 @@ struct BurnDriver BurnDrvBlswhstla = {
 	"blswhstla", "blswhstl", NULL, NULL, "1991",
 	"Bells & Whistles (Asia, version M)\0", NULL, "Konami", "GX060",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, BlswhstlaRomInfo, BlswhstlaRomName, NULL, NULL, NULL, NULL, BlswhstlInputInfo, NULL,
-	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, BlswhstlScan,
+	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 224, 280, 3, 4
 };
 
@@ -6685,9 +6735,9 @@ struct BurnDriver BurnDrvDetatwin = {
 	"detatwin", "blswhstl", NULL, NULL, "1991",
 	"Detana!! Twin Bee (Japan ver. J)\0", NULL, "Konami", "GX060",
 	L"\u51FA\u305F\u306A!! Twin Bee \u30C4\u30A4\u30F3\u30D3\u30FC (Japan, version J)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, DetatwinRomInfo, DetatwinRomName, NULL, NULL, NULL, NULL, BlswhstlInputInfo, NULL,
-	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, BlswhstlScan,
+	BlswhstlInit, BlswhstlExit, BlswhstlFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 224, 280, 3, 4
 };
 
@@ -6695,7 +6745,7 @@ struct BurnDriver BurnDrvSsriders = {
 	"ssriders", NULL, NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. EAC)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersRomInfo, SsridersRomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6705,7 +6755,7 @@ struct BurnDriver BurnDrvSsridersebd = {
 	"ssridersebd", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (2 Players ver. EBD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersebdRomInfo, SsridersebdRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6715,7 +6765,7 @@ struct BurnDriver BurnDrvSsridersebc = {
 	"ssridersebc", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (2 Players ver. EBC)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersebcRomInfo, SsridersebcRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6725,7 +6775,7 @@ struct BurnDriver BurnDrvSsridersuda = {
 	"ssridersuda", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. UDA)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersudaRomInfo, SsridersudaRomName, NULL, NULL, NULL, NULL, Ssriders4psInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6735,7 +6785,7 @@ struct BurnDriver BurnDrvSsriderseaa = {
 	"ssriderseaa", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. EAA)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsriderseaaRomInfo, SsriderseaaRomName, NULL, NULL, NULL, NULL, Ssriders4psInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6745,7 +6795,7 @@ struct BurnDriver BurnDrvSsridersuab = {
 	"ssridersuab", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. UAB)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersuabRomInfo, SsridersuabRomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6755,7 +6805,7 @@ struct BurnDriver BurnDrvSsridersuac = {
 	"ssridersuac", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. UAC)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersuacRomInfo, SsridersuacRomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6765,7 +6815,7 @@ struct BurnDriver BurnDrvSsridersubc = {
 	"ssridersubc", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (2 Players ver. UBC)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersubcRomInfo, SsridersubcRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6775,7 +6825,7 @@ struct BurnDriver BurnDrvSsridersabd = {
 	"ssridersabd", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (2 Players ver. ABD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersabdRomInfo, SsridersabdRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6785,7 +6835,7 @@ struct BurnDriver BurnDrvSsridersadd = {
 	"ssridersadd", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. ADD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersaddRomInfo, SsridersaddRomName, NULL, NULL, NULL, NULL, Ssriders4psInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6795,8 +6845,8 @@ struct BurnDriver BurnDrvSsridersjac = {
 	"ssridersjac", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. JAC)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
-	NULL, SsridersjacRomInfo, SsridersjacRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	NULL, SsridersjacRomInfo, SsridersjacRomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
 };
@@ -6805,8 +6855,8 @@ struct BurnDriver BurnDrvSsridersjad = {
 	"ssridersjad", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (4 Players ver. JAD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
-	NULL, SsridersjadRomInfo, SsridersjadRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	NULL, SsridersjadRomInfo, SsridersjadRomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
 };
@@ -6815,7 +6865,7 @@ struct BurnDriver BurnDrvSsridersjbd = {
 	"ssridersjbd", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (2 Players ver. JBD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, SsridersjbdRomInfo, SsridersjbdRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	SsridersInit, BlswhstlExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6830,7 +6880,7 @@ struct BurnDriverD BurnDrvSsridersb = {
 	"ssridersb", "ssriders", NULL, NULL, "1991",
 	"Sunset Riders (bootleg 4 Players ver. ADD)\0", NULL, "Konami", "GX064",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_RUNGUN, 0,
 	NULL, ssridersbRomInfo, ssridersbRomName, NULL, NULL, NULL, NULL, Ssriders4psInputInfo, NULL,
 	SsridersbInit, CommonExit, SsridersFrame, BlswhstlDraw, SsridersScan,
 	NULL, 0x810, 288, 224, 4, 3
@@ -6840,7 +6890,7 @@ struct BurnDriver BurnDrvThndrx2 = {
 	"thndrx2", NULL, NULL, NULL, "1991",
 	"Thunder Cross II (World)\0", NULL, "Konami", "GX073",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
 	NULL, thndrx2RomInfo, thndrx2RomName, NULL, NULL, NULL, NULL, Thndrx2InputInfo, NULL,
 	Thndrx2Init, BlswhstlExit, Thndrx2Frame, Thndrx2Draw, Thndrx2aScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6850,7 +6900,7 @@ struct BurnDriver BurnDrvThndrx2a = {
 	"thndrx2a", "thndrx2", NULL, NULL, "1991",
 	"Thunder Cross II (Asia)\0", NULL, "Konami", "GX073",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
 	NULL, thndrx2aRomInfo, thndrx2aRomName, NULL, NULL, NULL, NULL, Thndrx2InputInfo, NULL,
 	Thndrx2Init, BlswhstlExit, Thndrx2Frame, Thndrx2Draw, Thndrx2aScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6860,7 +6910,7 @@ struct BurnDriver BurnDrvThndrx2j = {
 	"thndrx2j", "thndrx2", NULL, NULL, "1991",
 	"Thunder Cross II (Japan)\0", NULL, "Konami", "GX073",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_HORSHOOT, 0,
 	NULL, thndrx2jRomInfo, thndrx2jRomName, NULL, NULL, NULL, NULL, Thndrx2InputInfo, NULL,
 	Thndrx2Init, BlswhstlExit, Thndrx2Frame, Thndrx2Draw, Thndrx2aScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6870,7 +6920,7 @@ struct BurnDriver BurnDrvLgtnfght = {
 	"lgtnfght", NULL, NULL, NULL, "1990",
 	"Lightning Fighters (World)\0", NULL, "Konami", "GX939",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, lgtnfghtRomInfo, lgtnfghtRomName, NULL, NULL, NULL, NULL, LgtnfghtInputInfo, LgtnfghtDIPInfo,
 	LgtnfghtInit, BlswhstlExit, LgtnfghtFrame, BlswhstlDraw, Thndrx2aScan, 
 	NULL, 0x800, 224, 288, 3, 4
@@ -6880,7 +6930,7 @@ struct BurnDriver BurnDrvLgtnfghtu = {
 	"lgtnfghtu", "lgtnfght", NULL, NULL, "1990",
 	"Lightning Fighters (US)\0", NULL, "Konami", "GX939",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, lgtnfghtuRomInfo, lgtnfghtuRomName, NULL, NULL, NULL, NULL, LgtnfghtInputInfo, LgtnfghtDIPInfo,
 	LgtnfghtInit, BlswhstlExit, LgtnfghtFrame, BlswhstlDraw, Thndrx2aScan, 
 	NULL, 0x800, 224, 288, 3, 4
@@ -6890,7 +6940,7 @@ struct BurnDriver BurnDrvLgtnfghta = {
 	"lgtnfghta", "lgtnfght", NULL, NULL, "1990",
 	"Lightning Fighters (Asia)\0", NULL, "Konami", "GX939",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, lgtnfghtaRomInfo, lgtnfghtaRomName, NULL, NULL, NULL, NULL, LgtnfghtInputInfo, LgtnfghtDIPInfo,
 	LgtnfghtInit, BlswhstlExit, LgtnfghtFrame, BlswhstlDraw, Thndrx2aScan, 
 	NULL, 0x800, 224, 288, 3, 4
@@ -6900,7 +6950,7 @@ struct BurnDriver BurnDrvTrigon = {
 	"trigon", "lgtnfght", NULL, NULL, "1990",
 	"Trigon (Japan)\0", NULL, "Konami", "GX939",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, trigonRomInfo, trigonRomName, NULL, NULL, NULL, NULL, LgtnfghtInputInfo, LgtnfghtDIPInfo,
 	LgtnfghtInit, BlswhstlExit, LgtnfghtFrame, BlswhstlDraw, Thndrx2aScan, 
 	NULL, 0x800, 224, 288, 3, 4
@@ -6910,7 +6960,7 @@ struct BurnDriver BurnDrvTmnt2 = {
 	"tmnt2", NULL, NULL, NULL, "1991",
 	"Teenage Mutant Ninja Turtles - Turtles in Time (4 Players ver. UAA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmnt2RomInfo, tmnt2RomName, NULL, NULL, NULL, NULL, Ssriders4pInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6920,7 +6970,7 @@ struct BurnDriver BurnDrvTmnt22pu = {
 	"tmnt22pu", "tmnt2", NULL, NULL, "1991",
 	"Teenage Mutant Ninja Turtles - Turtles in Time (2 Players ver. UDA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmnt22puRomInfo, tmnt22puRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6930,7 +6980,7 @@ struct BurnDriver BurnDrvTmnt24pu = {
 	"tmnt24pu", "tmnt2", NULL, NULL, "1991",
 	"Teenage Mutant Ninja Turtles - Turtles in Time (4 Players ver. UEA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmnt24puRomInfo, tmnt24puRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6940,7 +6990,7 @@ struct BurnDriver BurnDrvTmht22pe = {
 	"tmht22pe", "tmnt2", NULL, NULL, "1991",
 	"Teenage Mutant Hero Turtles - Turtles in Time (2 Players ver. EBA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmht22peRomInfo, tmht22peRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6950,7 +7000,7 @@ struct BurnDriver BurnDrvTmht24pe = {
 	"tmht24pe", "tmnt2", NULL, NULL, "1991",
 	"Teenage Mutant Hero Turtles - Turtles in Time (4 Players ver. EAA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmht24peRomInfo, tmht24peRomName, NULL, NULL, NULL, NULL, SsridersInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6960,7 +7010,7 @@ struct BurnDriver BurnDrvTmnt2a = {
 	"tmnt2a", "tmnt2", NULL, NULL, "1991",
 	"Teenage Mutant Ninja Turtles - Turtles in Time (4 Players ver. ADA)\0", NULL, "Konami", "GX063",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, tmnt2aRomInfo, tmnt2aRomName, NULL, NULL, NULL, NULL, Ssriders4psInputInfo, NULL,
 	Tmnt2Init, BlswhstlExit, Tmnt2Frame, BlswhstlDraw, SsridersScan,
 	NULL, 0x800, 288, 224, 4, 3
@@ -6980,7 +7030,7 @@ struct BurnDriver BurnDrvPunkshot = {
 	"punkshot", NULL, NULL, NULL, "1990",
 	"Punk Shot (US 4 Players)\0", NULL, "Konami", "GX907",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
 	NULL, punkshotRomInfo, punkshotRomName, NULL, NULL, NULL, NULL, PunkshotInputInfo, PunkshotDIPInfo,
 	PunkshotInit, PunkshotExit, PunkshotFrame, PunkshotDraw, Thndrx2aScan, 
 	NULL, 0x800, 288, 224, 4, 3
@@ -6990,7 +7040,7 @@ struct BurnDriver BurnDrvPunkshot2 = {
 	"punkshot2", "punkshot", NULL, NULL, "1990",
 	"Punk Shot (US 2 Players)\0", NULL, "Konami", "GX907",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
 	NULL, punkshot2RomInfo, punkshot2RomName, NULL, NULL, NULL, NULL, Punkshot2InputInfo, Punkshot2DIPInfo,
 	PunkshotInit, PunkshotExit, PunkshotFrame, PunkshotDraw, Thndrx2aScan, 
 	NULL, 0x800, 288, 224, 4, 3
@@ -7000,7 +7050,7 @@ struct BurnDriver BurnDrvPunkshot2e = {
 	"punkshot2e", "punkshot", NULL, NULL, "1990",
 	"Punk Shot (World 2 Players)\0", NULL, "Konami", "GX907",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
 	NULL, punkshot2eRomInfo, punkshot2eRomName, NULL, NULL, NULL, NULL, Punkshot2InputInfo, Punkshot2DIPInfo,
 	PunkshotInit, PunkshotExit, PunkshotFrame, PunkshotDraw, Thndrx2aScan, 
 	NULL, 0x800, 288, 224, 4, 3
@@ -7010,7 +7060,7 @@ struct BurnDriver BurnDrvPunkshotj = {
 	"punkshotj", "punkshot", NULL, NULL, "1990",
 	"Punk Shot (Japan 2 Players)\0", NULL, "Konami", "GX907",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_KONAMI_68K_Z80, GBF_SPORTSMISC, 0,
 	NULL, punkshotjRomInfo, punkshotjRomName, NULL, NULL, NULL, NULL, Punkshot2InputInfo, PunkshotjDIPInfo,
 	PunkshotInit, PunkshotExit, PunkshotFrame, PunkshotDraw, Thndrx2aScan, 
 	NULL, 0x800, 288, 224, 4, 3

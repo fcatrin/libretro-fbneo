@@ -89,10 +89,10 @@ typedef struct square_s
    uint8 regs[4];
    INT32 vbl_length;
    INT32 freq;
-   float phaseacc;
-   float output_vol;
-   float env_phase;
-   float sweep_phase;
+   INT32 phaseacc;
+   INT32 output_vol;
+   INT32 env_phase;
+   INT32 sweep_phase;
    uint8 adder;
    uint8 env_vol;
    boolean enabled;
@@ -105,8 +105,8 @@ typedef struct triangle_s
    INT32 linear_length;
    INT32 vbl_length;
    INT32 write_latency;
-   float phaseacc;
-   float output_vol;
+   INT32 phaseacc;
+   uint8 output_vol;
    uint8 adder;
    boolean counter_started;
    boolean enabled;
@@ -116,11 +116,11 @@ typedef struct triangle_s
 typedef struct noise_s
 {
    uint8 regs[4]; /* regs[1] unused */
-   INT32 cur_pos;
+   INT32 lfsr;
    INT32 vbl_length;
-   float phaseacc;
-   float output_vol;
-   float env_phase;
+   INT32 phaseacc;
+   INT32 output_vol;
+   INT32 env_phase;
    uint8 env_vol;
    boolean enabled;
 } noise_t;
@@ -132,9 +132,10 @@ typedef struct dpcm_s
    uint32 address;
    uint32 length;
    INT32 bits_left;
-   float phaseacc;
-   float output_vol;
+   INT32 phaseacc;
    uint8 cur_byte;
+   uint8 dmc_buffer;
+   uint8 dmc_buffer_filled;
    boolean enabled;
    boolean irq_occurred;
    INT8 vol;
@@ -144,7 +145,7 @@ typedef struct dpcm_s
 typedef struct apu
 {
    /* Sound channels */
-   square_t   squ[2];
+   square_t   squ[4];
    triangle_t tri;
    noise_t    noi;
    dpcm_t     dpcm;
@@ -174,7 +175,7 @@ typedef struct apu
 /* vblank length table used for squares, triangle, noise */
 static const uint8 vbl_length[32] =
 {
-   5, 127, 10, 1, 19,  2, 40,  3, 80,  4, 30,  5, 7,  6, 13,  7,
+   5, 127, 10, 1, 20,  2, 40,  3, 80,  4, 30,  5, 7,  6, 13,  7,
    6,   8, 12, 9, 24, 10, 48, 11, 96, 12, 36, 13, 8, 14, 16, 15
 };
 
@@ -185,16 +186,22 @@ static const INT32 freq_limit[8] =
 };
 
 /* table of noise frequencies */
-static const INT32 noise_freq[16] =
-{
-   4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 2046
-};
+static const INT32 noise_freq[2][16] = {
+{   // NTSC
+	4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068
+},
+{   // PAL
+	4, 8, 14, 30, 60, 88, 118, 148, 188, 236, 354, 472, 708, 944, 1890, 3778
+} };
 
 /* dpcm transfer freqs */
-static const INT32 dpcm_clocks[16] =
-{
-   428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 85, 72, 54
-};
+static const INT32 dpcm_freq[2][16] = {
+{   // NTSC
+	428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128, 106, 84, 72, 54
+},
+{   // PAL
+	398, 354, 316, 298, 276, 236, 210, 198, 176, 148, 132, 118, 98, 78, 66, 50
+} };
 
 /* ratios of pos/neg pulse for square waves */
 /* 2/16 = 12.5%, 4/16 = 25%, 8/16 = 50%, 12/16 = 75% */

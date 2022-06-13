@@ -9,6 +9,7 @@
 INT32 K051960_irq_enabled;
 INT32 K051960_nmi_enabled;
 INT32 K051960_spriteflip;
+INT32 K051960_shadow_config;
 
 static UINT8 *K051960Ram = NULL;
 static UINT8 K051960SpriteRomBank[3];
@@ -58,7 +59,14 @@ void K051960SpritesRender(INT32 min_priority, INT32 max_priority)
 		Code = K051960Ram[Offset + 2] + ((K051960Ram[Offset + 1] & 0x1f) << 8);
 		Colour = K051960Ram[Offset + 3] & 0xff;
 		Pri = 0;
-		Shadow = Colour & 0x80;
+
+		if (K051960_shadow_config & 0x04)
+			Shadow = 0;
+		else if (K051960_shadow_config & 0x02)
+			Shadow = 1;
+		else
+			Shadow = Colour & 0x80;
+
 		K051960Callback(&Code, &Colour, &Pri, &Shadow);
 
 		if (max_priority != -1)
@@ -114,10 +122,10 @@ void K051960SpritesRender(INT32 min_priority, INT32 max_priority)
 					c &= K051960RomExpMask;
 
 					if (Shadow) {
-						konami_render_zoom_shadow_tile(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, 16, 16, 0x10000, 0x10000, (max_priority ==-1) ? Pri:0xffffffff, 0);
+						konami_render_zoom_shadow_sprite(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, 16, 16, 0x10000, 0x10000, (max_priority ==-1) ? Pri:0xffffffff, 0);
 					} else {
 						if (max_priority == -1) {
-							konami_draw_16x16_prio_tile(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, Pri);
+							konami_draw_16x16_prio_sprite(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, Pri);
 						} else {
 							konami_draw_16x16_tile(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip);
 						}
@@ -150,10 +158,10 @@ void K051960SpritesRender(INT32 min_priority, INT32 max_priority)
 					c &= K051960RomExpMask;
 
 					if (Shadow) {
-						konami_render_zoom_shadow_tile(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, 16, 16, zw << 12, zh << 12, (max_priority ==-1) ? Pri:0xffffffff, 0);
+						konami_render_zoom_shadow_sprite(K051960RomExp, c, nBpp, Colour, sx, sy, xFlip, yFlip, 16, 16, zw << 12, zh << 12, (max_priority ==-1) ? Pri:0xffffffff, 0);
 					} else {
 						if (max_priority == -1) {
-							konami_draw_16x16_priozoom_tile(K051960RomExp, c, nBpp, Colour, 0, sx, sy, xFlip, yFlip, 16, 16, zw << 12, zh << 12, Pri);
+							konami_draw_16x16_priozoom_sprite(K051960RomExp, c, nBpp, Colour, 0, sx, sy, xFlip, yFlip, 16, 16, zw << 12, zh << 12, Pri);
 						} else {
 							konami_draw_16x16_zoom_tile(K051960RomExp, c, nBpp, Colour, 0, sx, sy, xFlip, yFlip, 16, 16, zw << 12, zh << 12);
 						}
@@ -186,7 +194,7 @@ UINT8 K051960Read(UINT32 Offset)
 {
 	if (K051960ReadRoms) {
 		K051960RomOffset = (Offset & 0x3fc) >> 2;
-		K0519060FetchRomData(Offset & 3);
+		return K0519060FetchRomData(Offset & 3);
 	}
 	
 	return K051960Ram[Offset];
@@ -242,6 +250,8 @@ void K051960Reset()
 	K051960_irq_enabled = 0;
 	K051960_nmi_enabled = 0;
 	K051960_spriteflip = 0;
+
+	K051960_shadow_config = 0;
 }
 
 void K051960GfxDecode(UINT8 *src, UINT8 *dst, INT32 len)
@@ -316,6 +326,7 @@ void K051960Scan(INT32 nAction)
 		SCAN_VAR(K051960_irq_enabled);
 		SCAN_VAR(K051960_nmi_enabled);
 		SCAN_VAR(K051960_spriteflip);
+		SCAN_VAR(K051960_shadow_config);
 	}
 }
 
@@ -328,7 +339,13 @@ void K051937Write(UINT32 Offset, UINT8 Data)
 		K051960ReadRoms     = Data & 0x20;
 		return;
 	}
-	
+
+	if (Offset == 1) {
+		K051960_shadow_config = Data & 0x07;
+		//bprintf(0, _T("shadow config: %x\n"), Data & 0x07);
+		return;
+	}
+
 	if (Offset >= 2 && Offset <= 4) {
 		K051960SpriteRomBank[Offset - 2] = Data;
 		return;

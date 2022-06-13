@@ -42,6 +42,8 @@ static UINT8 DrvDips[3];
 static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
+static INT32 nExtraCycles[4];
+
 static UINT8 *soundlatch;
 static UINT8 *soundlatch2;
 static UINT8 *flipscreen;
@@ -78,155 +80,156 @@ STDINPUTINFO(Gyruss)
 
 static struct BurnDIPInfo GyrussDIPList[]=
 {
-	// Default Values
-	{0x10, 0xff, 0xff, 0xff, NULL					},
-	{0x11, 0xff, 0xff, 0x3b, NULL					},
-	{0x12, 0xff, 0xff, 0x00, NULL					},
+	DIP_OFFSET(0x10)
+	{0x00, 0xff, 0xff, 0xff, NULL					},
+	{0x01, 0xff, 0xff, 0x3b, NULL					},
+	{0x02, 0xff, 0xff, 0x00, NULL					},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"				},
-	{0x10, 0x01, 0x0f, 0x02, "4 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x05, "3 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x08, "2 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x04, "3 Coins 2 Credits "	},
-	{0x10, 0x01, 0x0f, 0x01, "4 Coins 3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x03, "3 Coins 4 Credits "	},
-	{0x10, 0x01, 0x0f, 0x07, "2 Coins 3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits "	},
-	{0x10, 0x01, 0x0f, 0x06, "2 Coins 5 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits "	},
-	{0x10, 0x01, 0x0f, 0x09, "1 Coin  7 Credits "	},
-	{0x10, 0x01, 0x0f, 0x00, "Free Play"			},
+	{0x00, 0x01, 0x0f, 0x02, "4 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x05, "3 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x08, "2 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x04, "3 Coins 2 Credits "	},
+	{0x00, 0x01, 0x0f, 0x01, "4 Coins 3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x03, "3 Coins 4 Credits "	},
+	{0x00, 0x01, 0x0f, 0x07, "2 Coins 3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits "	},
+	{0x00, 0x01, 0x0f, 0x06, "2 Coins 5 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits "	},
+	{0x00, 0x01, 0x0f, 0x09, "1 Coin  7 Credits "	},
+	{0x00, 0x01, 0x0f, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    16, "Coin B"				},
-	{0x10, 0x01, 0xf0, 0x20, "4 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x50, "3 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x80, "2 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x40, "3 Coins 2 Credits "	},
-	{0x10, 0x01, 0xf0, 0x10, "4 Coins 3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x30, "3 Coins 4 Credits "	},
-	{0x10, 0x01, 0xf0, 0x70, "2 Coins 3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits "	},
-	{0x10, 0x01, 0xf0, 0x60, "2 Coins 5 Credits "	},
-	{0x10, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits "	},
-	{0x10, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits "	},
-	{0x10, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits "	},
-	{0x10, 0x01, 0xf0, 0x90, "1 Coin  7 Credits "	},
-	{0x10, 0x01, 0xf0, 0x00, "Free Play"			},
+	{0x00, 0x01, 0xf0, 0x20, "4 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x50, "3 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x80, "2 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x40, "3 Coins 2 Credits "	},
+	{0x00, 0x01, 0xf0, 0x10, "4 Coins 3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x30, "3 Coins 4 Credits "	},
+	{0x00, 0x01, 0xf0, 0x70, "2 Coins 3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits "	},
+	{0x00, 0x01, 0xf0, 0x60, "2 Coins 5 Credits "	},
+	{0x00, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits "	},
+	{0x00, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits "	},
+	{0x00, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits "	},
+	{0x00, 0x01, 0xf0, 0x90, "1 Coin  7 Credits "	},
+	{0x00, 0x01, 0xf0, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x11, 0x01, 0x03, 0x03, "3"					},
-	{0x11, 0x01, 0x03, 0x02, "4"					},
-	{0x11, 0x01, 0x03, 0x01, "5"					},
-	{0x11, 0x01, 0x03, 0x00, "255 (Cheat)"			},
+	{0x01, 0x01, 0x03, 0x03, "3"					},
+	{0x01, 0x01, 0x03, 0x02, "4"					},
+	{0x01, 0x01, 0x03, 0x01, "5"					},
+	{0x01, 0x01, 0x03, 0x00, "255 (Cheat)"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"				},
-	{0x11, 0x01, 0x04, 0x00, "Upright"				},
-	{0x11, 0x01, 0x04, 0x04, "Cocktail"				},
+	{0x01, 0x01, 0x04, 0x00, "Upright"				},
+	{0x01, 0x01, 0x04, 0x04, "Cocktail"				},
 
 	{0   , 0xfe, 0   ,    2, "Bonus Life"			},
-	{0x11, 0x01, 0x08, 0x08, "30k 90k 60k+"			},
-	{0x11, 0x01, 0x08, 0x00, "40k 110k 70k+"		},
+	{0x01, 0x01, 0x08, 0x08, "30k 90k 60k+"			},
+	{0x01, 0x01, 0x08, 0x00, "40k 110k 70k+"		},
 
 	{0   , 0xfe, 0   ,    8, "Difficulty"			},
-	{0x11, 0x01, 0x70, 0x70, "1 (Easiest)"			},
-	{0x11, 0x01, 0x70, 0x60, "2"					},
-	{0x11, 0x01, 0x70, 0x50, "3"					},
-	{0x11, 0x01, 0x70, 0x40, "4"					},
-	{0x11, 0x01, 0x70, 0x30, "5 (Average)"			},
-	{0x11, 0x01, 0x70, 0x20, "6"					},
-	{0x11, 0x01, 0x70, 0x10, "7"					},
-	{0x11, 0x01, 0x70, 0x00, "8 (Hardest)"			},
+	{0x01, 0x01, 0x70, 0x70, "1 (Easiest)"			},
+	{0x01, 0x01, 0x70, 0x60, "2"					},
+	{0x01, 0x01, 0x70, 0x50, "3"					},
+	{0x01, 0x01, 0x70, 0x40, "4"					},
+	{0x01, 0x01, 0x70, 0x30, "5 (Average)"			},
+	{0x01, 0x01, 0x70, 0x20, "6"					},
+	{0x01, 0x01, 0x70, 0x10, "7"					},
+	{0x01, 0x01, 0x70, 0x00, "8 (Hardest)"			},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
-	{0x11, 0x01, 0x80, 0x80, "Off"					},
-	{0x11, 0x01, 0x80, 0x00, "On"					},
+	{0x01, 0x01, 0x80, 0x80, "Off"					},
+	{0x01, 0x01, 0x80, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Demo Music"			},
-	{0x12, 0x01, 0x01, 0x01, "Off"					},
-	{0x12, 0x01, 0x01, 0x00, "On"					},
+	{0x02, 0x01, 0x01, 0x01, "Off"					},
+	{0x02, 0x01, 0x01, 0x00, "On"					},
 };
 
 STDDIPINFO(Gyruss)
 
 static struct BurnDIPInfo GyrussceDIPList[]=
 {
-	{0x10, 0xff, 0xff, 0xff, NULL					},
-	{0x11, 0xff, 0xff, 0x3b, NULL					},
-	{0x12, 0xff, 0xff, 0x20, NULL					},
+	DIP_OFFSET(0x10)
+	{0x00, 0xff, 0xff, 0xff, NULL					},
+	{0x01, 0xff, 0xff, 0x3b, NULL					},
+	{0x02, 0xff, 0xff, 0x20, NULL					},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"				},
-	{0x10, 0x01, 0x0f, 0x02, "4 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x05, "3 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x08, "2 Coins 1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x04, "3 Coins 2 Credits "	},
-	{0x10, 0x01, 0x0f, 0x01, "4 Coins 3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits "	},
-	{0x10, 0x01, 0x0f, 0x03, "3 Coins 4 Credits "	},
-	{0x10, 0x01, 0x0f, 0x07, "2 Coins 3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits "	},
-	{0x10, 0x01, 0x0f, 0x06, "2 Coins 5 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits "	},
-	{0x10, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits "	},
-	{0x10, 0x01, 0x0f, 0x09, "1 Coin  7 Credits "	},
-	{0x10, 0x01, 0x0f, 0x00, "Free Play"			},
+	{0x00, 0x01, 0x0f, 0x02, "4 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x05, "3 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x08, "2 Coins 1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x04, "3 Coins 2 Credits "	},
+	{0x00, 0x01, 0x0f, 0x01, "4 Coins 3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits "	},
+	{0x00, 0x01, 0x0f, 0x03, "3 Coins 4 Credits "	},
+	{0x00, 0x01, 0x0f, 0x07, "2 Coins 3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0e, "1 Coin  2 Credits "	},
+	{0x00, 0x01, 0x0f, 0x06, "2 Coins 5 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0d, "1 Coin  3 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0c, "1 Coin  4 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits "	},
+	{0x00, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits "	},
+	{0x00, 0x01, 0x0f, 0x09, "1 Coin  7 Credits "	},
+	{0x00, 0x01, 0x0f, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    16, "Coin B"				},
-	{0x10, 0x01, 0xf0, 0x20, "4 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x50, "3 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x80, "2 Coins 1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x40, "3 Coins 2 Credits "	},
-	{0x10, 0x01, 0xf0, 0x10, "4 Coins 3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits "	},
-	{0x10, 0x01, 0xf0, 0x30, "3 Coins 4 Credits "	},
-	{0x10, 0x01, 0xf0, 0x70, "2 Coins 3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits "	},
-	{0x10, 0x01, 0xf0, 0x60, "2 Coins 5 Credits "	},
-	{0x10, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits "	},
-	{0x10, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits "	},
-	{0x10, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits "	},
-	{0x10, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits "	},
-	{0x10, 0x01, 0xf0, 0x90, "1 Coin  7 Credits "	},
-	{0x10, 0x01, 0xf0, 0x00, "Free Play"			},
+	{0x00, 0x01, 0xf0, 0x20, "4 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x50, "3 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x80, "2 Coins 1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x40, "3 Coins 2 Credits "	},
+	{0x00, 0x01, 0xf0, 0x10, "4 Coins 3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits "	},
+	{0x00, 0x01, 0xf0, 0x30, "3 Coins 4 Credits "	},
+	{0x00, 0x01, 0xf0, 0x70, "2 Coins 3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xe0, "1 Coin  2 Credits "	},
+	{0x00, 0x01, 0xf0, 0x60, "2 Coins 5 Credits "	},
+	{0x00, 0x01, 0xf0, 0xd0, "1 Coin  3 Credits "	},
+	{0x00, 0x01, 0xf0, 0xc0, "1 Coin  4 Credits "	},
+	{0x00, 0x01, 0xf0, 0xb0, "1 Coin  5 Credits "	},
+	{0x00, 0x01, 0xf0, 0xa0, "1 Coin  6 Credits "	},
+	{0x00, 0x01, 0xf0, 0x90, "1 Coin  7 Credits "	},
+	{0x00, 0x01, 0xf0, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x11, 0x01, 0x03, 0x03, "3"					},
-	{0x11, 0x01, 0x03, 0x02, "4"					},
-	{0x11, 0x01, 0x03, 0x01, "5"					},
-	{0x11, 0x01, 0x03, 0x00, "255 (Cheat)"			},
+	{0x01, 0x01, 0x03, 0x03, "3"					},
+	{0x01, 0x01, 0x03, 0x02, "4"					},
+	{0x01, 0x01, 0x03, 0x01, "5"					},
+	{0x01, 0x01, 0x03, 0x00, "255 (Cheat)"			},
 
 	{0   , 0xfe, 0   ,    2, "Cabinet"				},
-	{0x11, 0x01, 0x04, 0x00, "Upright"				},
-	{0x11, 0x01, 0x04, 0x04, "Cocktail"				},
+	{0x01, 0x01, 0x04, 0x00, "Upright"				},
+	{0x01, 0x01, 0x04, 0x04, "Cocktail"				},
 	
 	{0   , 0xfe, 0   ,    2, "Bonus Life"			},
-	{0x11, 0x01, 0x08, 0x08, "50k 120k 70k+"		},
-	{0x11, 0x01, 0x08, 0x00, "60k 140k 80k+"		},
+	{0x01, 0x01, 0x08, 0x08, "50k 120k 70k+"		},
+	{0x01, 0x01, 0x08, 0x00, "60k 140k 80k+"		},
 
 	{0   , 0xfe, 0   ,    8, "Difficulty"			},
-	{0x11, 0x01, 0x70, 0x70, "1 (Easiest)"			},
-	{0x11, 0x01, 0x70, 0x60, "2"					},
-	{0x11, 0x01, 0x70, 0x50, "3"					},
-	{0x11, 0x01, 0x70, 0x40, "4"					},
-	{0x11, 0x01, 0x70, 0x30, "5 (Average)"			},
-	{0x11, 0x01, 0x70, 0x20, "6"					},
-	{0x11, 0x01, 0x70, 0x10, "7"					},
-	{0x11, 0x01, 0x70, 0x00, "8 (Hardest)"			},
+	{0x01, 0x01, 0x70, 0x70, "1 (Easiest)"			},
+	{0x01, 0x01, 0x70, 0x60, "2"					},
+	{0x01, 0x01, 0x70, 0x50, "3"					},
+	{0x01, 0x01, 0x70, 0x40, "4"					},
+	{0x01, 0x01, 0x70, 0x30, "5 (Average)"			},
+	{0x01, 0x01, 0x70, 0x20, "6"					},
+	{0x01, 0x01, 0x70, 0x10, "7"					},
+	{0x01, 0x01, 0x70, 0x00, "8 (Hardest)"			},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
-	{0x11, 0x01, 0x80, 0x80, "Off"					},
-	{0x11, 0x01, 0x80, 0x00, "On"					},
+	{0x01, 0x01, 0x80, 0x80, "Off"					},
+	{0x01, 0x01, 0x80, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Demo Music"			},
-	{0x12, 0x01, 0x01, 0x01, "Off"					},
-	{0x12, 0x01, 0x01, 0x00, "On"					},
+	{0x02, 0x01, 0x01, 0x01, "Off"					},
+	{0x02, 0x01, 0x01, 0x00, "On"					},
 };
 
 STDDIPINFO(Gyrussce)
@@ -495,8 +498,8 @@ static INT32 MemIndex()
 	soundlatch		= Next; Next += 0x000001;
 	soundlatch2		= Next; Next += 0x000001;
 
-	interrupt_enable0 	= Next; Next += 0x000001;
-	interrupt_enable1	= Next; Next += 0x000001;
+	interrupt_enable0 = Next; Next += 0x000001;
+	interrupt_enable1 = Next; Next += 0x000001;
 
 	DrvShareRAM		= Next; Next += 0x000800;
 	DrvColRAM		= Next; Next += 0x000400;
@@ -603,7 +606,7 @@ static INT32 DrvDoReset()
 
 	ZetReset(1);
 
-	I8039Open(1);
+	I8039Open(0);
 	I8039Reset();
 	I8039Close();
 
@@ -617,17 +620,14 @@ static INT32 DrvDoReset()
 
 	HiscoreReset();
 
+	nExtraCycles[0] = nExtraCycles[1] = nExtraCycles[2] = nExtraCycles[3] = 0;
+
 	return 0;
 }
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x0000,  0, 1)) return 1;
@@ -687,8 +687,8 @@ static INT32 DrvInit()
 	ZetSetInHandler(gyruss_sound0_in);
 	ZetClose();
 
-	I8039Init(1);
-	I8039Open(1);
+	I8039Init(0);
+	I8039Open(0);
 	I8039SetProgramReadHandler(gyruss_i8039_read);
 	I8039SetCPUOpReadHandler(gyruss_i8039_read);
 	I8039SetCPUOpReadArgHandler(gyruss_i8039_read);
@@ -718,12 +718,12 @@ static INT32 DrvInit()
 	filter_rc_init(6, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 1); // master out l
 	filter_rc_init(7, FLT_RC_LOWPASS, 1000, 5100, 0, CAP_P(0), 1); // master out r
 
-	filter_rc_set_src_gain(0, 0.22);
-	filter_rc_set_src_gain(1, 0.22);
-	filter_rc_set_src_gain(2, 0.22);
-	filter_rc_set_src_gain(3, 0.22);
-	filter_rc_set_src_gain(4, 0.22);
-	filter_rc_set_src_gain(5, 0.22);
+	filter_rc_set_src_gain(0, 0.32);
+	filter_rc_set_src_gain(1, 0.32);
+	filter_rc_set_src_gain(2, 0.42);
+	filter_rc_set_src_gain(3, 0.32);
+	filter_rc_set_src_gain(4, 0.32);
+	filter_rc_set_src_gain(5, 0.42);
 	filter_rc_set_src_gain(6, 0.64);
 	filter_rc_set_src_gain(7, 0.64);
 
@@ -760,7 +760,7 @@ static INT32 DrvExit()
 	AY8910Exit(4);
 	filter_rc_exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -791,33 +791,9 @@ static void draw_background(INT32 over)
 		sy -= 16;
 
 		if (!over) {
-			if (flipy) {
-				if (flipx) {
-					Render8x8Tile_FlipXY_Clip(pTransDraw, code, sx, sy, color, 2, 0x100, DrvGfxROM2);
-				} else {
-					Render8x8Tile_FlipY_Clip(pTransDraw, code, sx, sy, color, 2, 0x100, DrvGfxROM2);
-				}
-			} else {
-				if (flipx) {
-					Render8x8Tile_FlipX_Clip(pTransDraw, code, sx, sy, color, 2, 0x100, DrvGfxROM2);
-				} else {
-					Render8x8Tile_Clip(pTransDraw, code, sx, sy, color, 2, 0x100, DrvGfxROM2);
-				}
-			}
+			Draw8x8Tile(pTransDraw, code, sx, sy, flipx, flipy, color, 2, 0x100, DrvGfxROM2);
 		} else {
-			if (flipy) {
-				if (flipx) {
-					Render8x8Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
-				} else {
-					Render8x8Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
-				}
-			} else {
-				if (flipx) {
-					Render8x8Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
-				} else {
-					Render8x8Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 2, 0, 0x100, DrvGfxROM2);
-				}
-			}
+			Draw8x8MaskTile(pTransDraw, code, sx, sy, flipx, flipy, color, 2, 0, 0x100, DrvGfxROM2);
 		}
 	}
 }
@@ -906,13 +882,13 @@ static INT32 DrvFrame()
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[4] = { 3072000 / 60, 2000000 / 60, 3579545 / 60, 8000000 / 15 / 60 };
-	INT32 nCyclesDone[4] = { 0, 0, 0, 0 };
+	INT32 nCyclesDone[4] = { nExtraCycles[0], nExtraCycles[1], nExtraCycles[2], nExtraCycles[3] };
 
 	if (pBurnDraw) {
 		DrvDraw();
 	}
-	
-	I8039Open(1);
+
+	I8039Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
@@ -924,7 +900,7 @@ static INT32 DrvFrame()
 			ZetSetIRQLine(Z80_INPUT_LINE_NMI, CPU_IRQSTATUS_ACK);
 		}
 		ZetClose();
-		
+
 		M6809Open(0);
 		CPU_RUN(1, M6809);
 		if (i == (nInterleave - 248) && *interrupt_enable1) {
@@ -961,12 +937,18 @@ static INT32 DrvFrame()
 		filter_rc_update(6, pAY8910Buffer[12], pBurnSoundOut, nBurnSoundLen);
 		filter_rc_update(7, pAY8910Buffer[13], pBurnSoundOut, nBurnSoundLen);
 		filter_rc_update(6, pAY8910Buffer[14], pBurnSoundOut, nBurnSoundLen);
-
+		BurnSoundDCFilter();
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundTweakVolume(pBurnSoundOut, nBurnSoundLen, 1.10);
 	}
 
 	I8039Close();
-	
+
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
+	nExtraCycles[2] = nCyclesDone[2] - nCyclesTotal[2];
+	nExtraCycles[3] = nCyclesDone[3] - nCyclesTotal[3];
+
 	if (pBurnDraw) {
 		if (nBurnLayer & 4) draw_background(1);
 		BurnTransferCopy(DrvPalette);
@@ -975,7 +957,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -994,17 +976,19 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		ZetScan(nAction);
 		M6809Scan(nAction);
-		I8039Scan(nAction,pnMin);
+		I8039Scan(nAction, pnMin);
 
 		AY8910Scan(nAction, pnMin);
 		DACScan(nAction, pnMin);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	return 0;
 }
 
 
-// Gyruss (Konami)
+// Gyruss 
 
 static struct BurnRomInfo gyrussRomDesc[] = {
 	{ "gyrussk.1",		0x2000, 0xc673b43d, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
@@ -1035,7 +1019,7 @@ STD_ROM_FN(gyruss)
 
 struct BurnDriver BurnDrvGyruss = {
 	"gyruss", NULL, NULL, NULL, "1983",
-	"Gyruss (Konami)\0", NULL, "Konami", "GX347",
+	"Gyruss\0", NULL, "Konami", "GX347",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
 	NULL, gyrussRomInfo, gyrussRomName, NULL, NULL, NULL, NULL, GyrussInputInfo, GyrussDIPInfo,
@@ -1084,26 +1068,26 @@ struct BurnDriver BurnDrvGyrussce = {
 };
 
 
-// Gyruss (bootleg)
+// Gyruss (bootleg?)
 
 static struct BurnRomInfo gyrussbRomDesc[] = {
-	{ "1.bin",		0x2000, 0x6bc21c10, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "2.bin",		0x2000, 0xa4ec03e4, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "3.bin",		0x2000, 0x27454a98, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "1.bin",			0x2000, 0x6bc21c10, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "2.bin",			0x2000, 0xa4ec03e4, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3.bin",			0x2000, 0x27454a98, 1 | BRF_PRG | BRF_ESS }, //  2
 
-	{ "9.bin",		0x2000, 0x822bf27e, 2 | BRF_PRG | BRF_ESS }, //  3 Sub M6809 Code
+	{ "9.bin",			0x2000, 0x822bf27e, 2 | BRF_PRG | BRF_ESS }, //  3 Sub M6809 Code
 
-	{ "11.bin",		0x2000, 0xf4ae1c17, 3 | BRF_PRG | BRF_ESS }, //  4 Audio Z80 Code
-	{ "12.bin",		0x2000, 0xba498115, 3 | BRF_PRG | BRF_ESS }, //  5
+	{ "11.bin",			0x2000, 0xf4ae1c17, 3 | BRF_PRG | BRF_ESS }, //  4 Audio Z80 Code
+	{ "12.bin",			0x2000, 0xba498115, 3 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "13.bin",		0x1000, 0x3f9b5dea, 4 | BRF_PRG | BRF_ESS }, //  6 Audio i8039
+	{ "13.bin",			0x1000, 0x3f9b5dea, 4 | BRF_PRG | BRF_ESS }, //  6 Audio i8039
 
-	{ "6.bin",		0x2000, 0xc949db10, 5 | BRF_GRA },           //  7 Sprites
-	{ "5.bin",		0x2000, 0x4f22411a, 5 | BRF_GRA },           //  8
-	{ "8.bin",		0x2000, 0x47cd1fbc, 5 | BRF_GRA },           //  9
-	{ "7.bin",		0x2000, 0x8e8d388c, 5 | BRF_GRA },           // 10
+	{ "6.bin",			0x2000, 0xc949db10, 5 | BRF_GRA },           //  7 Sprites
+	{ "5.bin",			0x2000, 0x4f22411a, 5 | BRF_GRA },           //  8
+	{ "8.bin",			0x2000, 0x47cd1fbc, 5 | BRF_GRA },           //  9
+	{ "7.bin",			0x2000, 0x8e8d388c, 5 | BRF_GRA },           // 10
 
-	{ "4.bin",		0x2000, 0x27d8329b, 6 | BRF_GRA },           // 11 Background Tiles
+	{ "4.bin",			0x2000, 0x27d8329b, 6 | BRF_GRA },           // 11 Background Tiles
 
 	{ "gyrussk.pr3",	0x0020, 0x98782db3, 7 | BRF_GRA },           // 12 Color Proms
 	{ "gyrussk.pr1",	0x0100, 0x7ed057de, 7 | BRF_GRA },           // 13
@@ -1115,7 +1099,7 @@ STD_ROM_FN(gyrussb)
 
 struct BurnDriver BurnDrvGyrussb = {
 	"gyrussb", "gyruss", NULL, NULL, "1983",
-	"Gyruss (bootleg)\0", NULL, "bootleg", "GX347",
+	"Gyruss (bootleg?)\0", NULL, "bootleg?", "GX347",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
 	NULL, gyrussbRomInfo, gyrussbRomName, NULL, NULL, NULL, NULL, GyrussInputInfo, GyrussDIPInfo,
@@ -1124,12 +1108,12 @@ struct BurnDriver BurnDrvGyrussb = {
 };
 
 
-// Venus
+// Venus (bootleg of Gyruss)
 
 static struct BurnRomInfo venusRomDesc[] = {
-	{ "r1",			0x2000, 0xd030abb1, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "r2",			0x2000, 0xdbf65d4d, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "r3",			0x2000, 0xdb246fcd, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "r1",				0x2000, 0xd030abb1, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "r2",				0x2000, 0xdbf65d4d, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "r3",				0x2000, 0xdb246fcd, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "gyrussk.9",		0x2000, 0x822bf27e, 2 | BRF_PRG | BRF_ESS }, //  3 Sub M6809 Code
 
@@ -1155,7 +1139,7 @@ STD_ROM_FN(venus)
 
 struct BurnDriver BurnDrvVenus = {
 	"venus", "gyruss", NULL, NULL, "1983",
-	"Venus\0", NULL, "bootleg", "GX347",
+	"Venus (bootleg of Gyruss)\0", NULL, "bootleg", "GX347",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_KONAMI, GBF_SHOOT, 0,
 	NULL, venusRomInfo, venusRomName, NULL, NULL, NULL, NULL, GyrussInputInfo, GyrussDIPInfo,

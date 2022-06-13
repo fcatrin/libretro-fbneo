@@ -31,6 +31,7 @@
 
 // set tilemap to use a transparency mask (is set when using GenericTilemapSetTransMask())
 #define TMAP_TRANSMASK		(1 << 10)
+#define TMAP_TRANSSPLIT     (1 << 11)
 
 // Tile defines (used in tilemap_callback)
 
@@ -54,17 +55,26 @@
 // set group, pass this as a flag
 #define TILE_GROUP(x)		(((x) << 16) | TILE_GROUP_ENABLE)
 
+// struct for passing tile info in tilemap callback
+struct GenericTilemapCallbackStruct
+{
+	UINT32 gfx;			// select graphics number
+	UINT32 code;
+	UINT32 color;
+	UINT32 flags;		// flipx, flipy, group, etc
+	UINT32 category;
+};
+
 // This are used to make sure the tilemap functions are given standard names
-#define tilemap_callback( xname )	void xname##_map_callback(INT32 offs, INT32 *tile_gfx, INT32 *tile_code, INT32 *tile_color, UINT32 *tile_flags, INT32 *category)
+#define tilemap_callback( xname )	void xname##_map_callback(INT32 offs, struct GenericTilemapCallbackStruct *sTile)
 #define tilemap_scan( xname )		INT32 xname##_map_scan(INT32 col, INT32 row)
 
 // Pass the tilemap callback variables using this macro (looks nice)
-#define TILE_SET_INFO(ttgfx, ttcode, ttcolor, ttflags)  \
-	if (*category) {}       \
-	*tile_gfx = (ttgfx);    \
-	*tile_code = (ttcode);  \
-	*tile_color = (ttcolor);\
-	*tile_flags = (ttflags)
+#define TILE_SET_INFO(tilegfx, tilecode, tilecolor, tileflags)  \
+	sTile->gfx = (tilegfx);    	\
+	sTile->code = (tilecode);  	\
+	sTile->color = (tilecolor);	\
+	sTile->flags = (tileflags)
 
 // The tilemap scan calculates the offset of the current tile information in the video ram
 // these are the two most common variations
@@ -83,7 +93,7 @@ extern tilemap_scan( scan_cols );
 // tile_height	- how many pixels tall are the tiles
 // map_width	- how many tiles wide is the tile map
 // map_height	- how many tiles high is the tile map
-void GenericTilemapInit(INT32 which, INT32 (*pScan)(INT32 col, INT32 row), void (*pTile)(INT32 offs, INT32 *tile_gfx, INT32 *tile_code, INT32 *tile_color, UINT32 *tile_flags, INT32 *category), UINT32 tile_width, UINT32 tile_height, UINT32 map_width, UINT32 map_height);
+void GenericTilemapInit(INT32 which, INT32 (*pScan)(INT32 col, INT32 row), void (*pTile)(INT32 offs, struct GenericTilemapCallbackStruct *sTile), UINT32 tile_width, UINT32 tile_height, UINT32 map_width, UINT32 map_height);
 
 // SetGfx sets information on the tile data the tile map is drawing.
 // This MUST be used in conjunction with GenericTilemapInit
@@ -134,9 +144,16 @@ void GenericTilemapSetScrollRow(INT32 which, INT32 row, INT32 scroll);
 // Set scroll value for individual column. Must set GenericTilemapSetScrollCols first!
 void GenericTilemapSetScrollCol(INT32 which, INT32 col, INT32 scroll);
 
-// Set video offsets, this allows adjusting where the tilemap is displayed on the screen
-// This is applied AFTER the scroll values
+// Set video offsets, this allows adjusting where the tilemap is displayed on the screen.
+// This is applied AFTER the scroll values - this one assumes flipped screen uses same offsets.
+// TMAP_GLOBAL can be used for this function
 void GenericTilemapSetOffsets(INT32 which, INT32 x, INT32 y);
+
+// Set video offsets, this allows adjusting where the tilemap is displayed on the screen. This 
+// is applied AFTER the scroll values - use this one if offsets are different when the screen
+// is flipped.
+// TMAP_GLOBAL can be used for this function
+void GenericTilemapSetOffsets(INT32 which, INT32 x, INT32 y, INT32 x_flipped, INT32 y_flipped);
 
 // Used to flip the tilemap on the screen vertically or horizontally
 // Very useful for *flipscreen

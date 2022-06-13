@@ -48,6 +48,7 @@ INT32 ZetScan(INT32 nAction);
 INT32 ZetRun(INT32 nCycles);
 INT32 ZetRun(INT32 nCPU, INT32 nCycles);
 void ZetRunEnd();
+void ZetRunEnd(INT32 nCPU);
 void ZetSetIRQLine(const INT32 line, const INT32 status);
 void ZetSetIRQLine(INT32 nCPU, const INT32 line, const INT32 status);
 void ZetSetVector(INT32 vector);
@@ -78,6 +79,10 @@ void ZetSetIY(INT32 n, UINT16 value);
 void ZetSetPC(INT32 n, UINT16 value);
 void ZetSetR(INT32 n, UINT16 value);
 void ZetSetSP(INT32 n, UINT16 value);
+
+void ZetCPUPush(INT32 nCPU);
+void ZetCPUPop();
+
 
 void ZetSetReadHandler(UINT8 (__fastcall *pHandler)(UINT16));
 void ZetSetWriteHandler(void (__fastcall *pHandler)(UINT16, UINT8));

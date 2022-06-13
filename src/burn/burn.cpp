@@ -3,7 +3,7 @@
 #include "version.h"
 #include "burnint.h"
 #include "timer.h"
-#include "burn_sound.h"
+//#include "burn_sound.h" // included in burnint.h
 #include "driverlist.h"
 
 #ifndef __LIBRETRO__
@@ -20,13 +20,13 @@ INT32 nBurnVer = BURN_VERSION;		// Version number of the library
 UINT32 nBurnDrvCount = 0;		// Count of game drivers
 UINT32 nBurnDrvActive = ~0U;	// Which game driver is selected
 UINT32 nBurnDrvSelect[8] = { ~0U, ~0U, ~0U, ~0U, ~0U, ~0U, ~0U, ~0U }; // Which games are selected (i.e. loaded but not necessarily active)
-									
+
 bool bBurnUseMMX;
 #if defined BUILD_A68K
 bool bBurnUseASMCPUEmulation = false;
 #endif
 
-// Just so we can start using FBNEO_DEBUG and keep backwards compatablity should whatever is left of FB Alpha rise from it's grave. 
+// Just so we can start using FBNEO_DEBUG and keep backwards compatablity should whatever is left of FB Alpha rise from it's grave.
 #if defined (FBNEO_DEBUG) && (!defined FBA_DEBUG)
 #define FBA_DEBUG 1
 #endif
@@ -60,6 +60,8 @@ INT32 nFMInterpolation = 0;			// Desired interpolation level for FM sound
 UINT8 nBurnLayer = 0xFF;	// Can be used externally to select which layers to show
 UINT8 nSpriteEnable = 0xFF;	// Can be used externally to select which layers to show
 
+INT32 bRunAhead = 0;
+
 INT32 nMaxPlayers;
 
 bool bSaveCRoms = 0;
@@ -84,7 +86,8 @@ extern "C" INT32 BurnLibInit()
 	BurnLibExit();
 	nBurnDrvCount = sizeof(pDriver) / sizeof(pDriver[0]);	// count available drivers
 
-	cmc_4p_Precalc();
+	BurnSoundInit();
+
 	bBurnUseMMX = BurnCheckMMXSupport();
 
 	return 0;
@@ -196,10 +199,10 @@ extern "C" TCHAR* BurnDrvGetText(UINT32 i)
 
 	if (!(i & DRV_ASCIIONLY)) {
 		switch (i & 0xFF) {
-#if !defined(__LIBRETRO__) && !defined(BUILD_SDL) && !defined(BUILD_MACOS)
+#if !defined(__LIBRETRO__) && !defined(BUILD_SDL) && !defined(BUILD_SDL2) && !defined(BUILD_MACOS)
 			case DRV_FULLNAME:
 				pszStringW = pDriver[nBurnDrvActive]->szFullNameW;
-				
+
 				if (i & DRV_NEXTNAME) {
 					if (pszCurrentNameW && pDriver[nBurnDrvActive]->szFullNameW) {
 						pszCurrentNameW += wcslen(pszCurrentNameW) + 1;
@@ -543,7 +546,7 @@ extern "C" INT32 BurnDrvSetVisibleSize(INT32 pnWidth, INT32 pnHeight)
 		pDriver[nBurnDrvActive]->nWidth = pnWidth;
 		pDriver[nBurnDrvActive]->nHeight = pnHeight;
 	}
-	
+
 	return 0;
 }
 
@@ -552,7 +555,7 @@ extern "C" INT32 BurnDrvSetAspect(INT32 pnXAspect,INT32 pnYAspect)
 	pDriver[nBurnDrvActive]->nXAspect = pnXAspect;
 	pDriver[nBurnDrvActive]->nYAspect = pnYAspect;
 
-	return 0;	
+	return 0;
 }
 
 // Get the hardware code
@@ -589,6 +592,28 @@ extern "C" INT32 BurnDrvGetGenreFlags()
 extern "C" INT32 BurnDrvGetFamilyFlags()
 {
 	return pDriver[nBurnDrvActive]->Family;
+}
+
+// Save Aspect & Screensize in BurnDrvInit(), restore in BurnDrvExit()
+// .. as games may need to change modes, etc.
+static INT32 DrvAspectX, DrvAspectY;
+static INT32 DrvX, DrvY;
+static INT32 DrvCached = 0;
+
+static void BurnCacheSizeAspect_Internal()
+{
+	BurnDrvGetFullSize(&DrvX, &DrvY);
+	BurnDrvGetAspect(&DrvAspectX, &DrvAspectY);
+	DrvCached = 1;
+}
+
+static void BurnRestoreSizeAspect_Internal()
+{
+	if (DrvCached) {
+		BurnDrvSetVisibleSize(DrvX, DrvY);
+		BurnDrvSetAspect(DrvAspectX, DrvAspectY);
+		DrvCached = 0;
+	}
 }
 
 // Init game emulation (loading any needed roms)
@@ -643,9 +668,12 @@ extern "C" INT32 BurnDrvInit()
 
 	BurnSetRefreshRate(60.0);
 
+	BurnCacheSizeAspect_Internal();
+
 	CheatInit();
 	HiscoreInit();
 	BurnStateInit();
+	StateRunAheadInit();
 	BurnInitMemoryManager();
 	BurnRandomInit();
 	BurnSoundDCFilterReset();
@@ -690,17 +718,20 @@ extern "C" INT32 BurnDrvExit()
 	CheatExit();
 	CheatSearchExit();
 	BurnStateExit();
-	
+	StateRunAheadExit();
+
 	nBurnCPUSpeedAdjust = 0x0100;
-	
-	pBurnDrvPalette = NULL;	
-	
+
+	pBurnDrvPalette = NULL;
+
 	INT32 nRet = pDriver[nBurnDrvActive]->Exit();			// Forward to drivers function
-	
+
 	BurnExitMemoryManager();
 #if defined FBNEO_DEBUG
 	DebugTrackerExit();
 #endif
+
+	BurnRestoreSizeAspect_Internal();
 
 	return nRet;
 }
@@ -800,14 +831,16 @@ INT32 BurnUpdateProgress(double fProgress, const TCHAR* pszText, bool bAbs)
 // NOTE: Make sure this is called before any soundcore init!
 INT32 BurnSetRefreshRate(double dFrameRate)
 {
-	if (!bForce60Hz) {
-		nBurnFPS = (INT32)(100.0 * dFrameRate);
-#ifdef __LIBRETRO__
-		// By design, libretro dislike having nBurnSoundRate > nBurnFPS * 10
-		if (nBurnSoundRate > nBurnFPS * 10)
-			nBurnSoundRate = nBurnFPS * 10;
-#endif
+	if (bForce60Hz) {
+		dFrameRate = 60.00;
 	}
+
+	nBurnFPS = (INT32)(100.0 * dFrameRate);
+#ifdef __LIBRETRO__
+	// By design, libretro dislike having nBurnSoundRate > nBurnFPS * 10
+	if (nBurnSoundRate > nBurnFPS * 10)
+		nBurnSoundRate = nBurnFPS * 10;
+#endif
 
 	nBurnSoundLen = (nBurnSoundRate * 100 + (nBurnFPS >> 1)) / nBurnFPS;
 
@@ -917,7 +950,97 @@ INT32 BurnAreaScan(INT32 nAction, INT32* pnMin)
 		nRet |= pDriver[nBurnDrvActive]->AreaScan(nAction, pnMin);
 	}
 
+#ifdef __LIBRETRO__
+	// standalone method to handle hiscores with runahead
+	// doesn't work with libretro's second instance or 2+ frames
+	if (nAction & (ACB_RUNAHEAD | ACB_2RUNAHEAD)) {
+		HiscoreScan(nAction, pnMin);
+	}
+#endif
+
 	return nRet;
+}
+
+// --------- State-ing for RunAhead ----------
+static INT32 nTotalLenRunAhead = 0;
+static UINT8 *RunAheadBuffer = NULL;
+static UINT8 *pRunAheadBuffer = NULL;
+// for drivers, hiscore, etc, to recognize that this is the "runahead frame"
+INT32 bBurnRunAheadFrame = 0;
+
+void StateRunAheadInit()
+{
+	if (bRunAhead && (BurnDrvGetFlags() & BDF_RUNAHEAD_DRAWSYNC)) {
+		bprintf(PRINT_ERROR, _T(" ** RunAhead: Driver requests DRAW SYNC for this game.\n"));
+	}
+
+	if (bRunAhead && (BurnDrvGetFlags() & BDF_RUNAHEAD_DISABLED)) {
+		bprintf(PRINT_ERROR, _T(" ** RunAhead: Driver requests RunAhead DISABLED for this game.\n"));
+	}
+
+	nTotalLenRunAhead = 0;
+	RunAheadBuffer = NULL;
+	pRunAheadBuffer = NULL;
+
+	bBurnRunAheadFrame = 0;
+}
+
+void StateRunAheadExit()
+{
+	if (RunAheadBuffer != NULL) {
+		free (RunAheadBuffer);
+	}
+
+	nTotalLenRunAhead = 0;
+	RunAheadBuffer = NULL;
+	pRunAheadBuffer = NULL;
+
+	bBurnRunAheadFrame = 0;
+}
+
+static INT32 __cdecl RunAheadLenAcb(struct BurnArea* pba)
+{
+	nTotalLenRunAhead += pba->nLen;
+
+	return 0;
+}
+
+static INT32 __cdecl RunAheadReadAcb(struct BurnArea* pba)
+{
+	memcpy(pRunAheadBuffer, pba->Data, pba->nLen);
+	pRunAheadBuffer += pba->nLen;
+
+	return 0;
+}
+
+static INT32 __cdecl RunAheadWriteAcb(struct BurnArea* pba)
+{
+	memcpy(pba->Data, pRunAheadBuffer, pba->nLen);
+	pRunAheadBuffer += pba->nLen;
+
+	return 0;
+}
+
+void StateRunAheadSave()
+{
+	if (RunAheadBuffer == NULL) { // Initialise on first RunAhead frame instead of driver init, to ensure emulation is ready
+		nTotalLenRunAhead = 0;
+		BurnAcb = RunAheadLenAcb; // Get length of RunAhead buffer
+		BurnAreaScan(ACB_FULLSCAN | ACB_READ | ACB_RUNAHEAD, NULL);
+
+		RunAheadBuffer = (UINT8*)malloc (nTotalLenRunAhead);
+		bprintf(0, _T(" ** RunAhead initted, state size $%x.\n"), nTotalLenRunAhead);
+	}
+	pRunAheadBuffer = RunAheadBuffer;
+	BurnAcb = RunAheadReadAcb;
+	BurnAreaScan(ACB_FULLSCAN | ACB_READ | ACB_RUNAHEAD, NULL);
+}
+
+void StateRunAheadLoad()
+{
+	pRunAheadBuffer = RunAheadBuffer;
+	BurnAcb = RunAheadWriteAcb;
+	BurnAreaScan(ACB_FULLSCAN | ACB_WRITE | ACB_RUNAHEAD, NULL);
 }
 
 // ----------------------------------------------------------------------------
@@ -930,7 +1053,7 @@ struct MovieExtInfo
 	UINT32 hour, minute, second;
 };
 
-#if !defined(BUILD_SDL) && !defined(BUILD_MACOS)
+#if !defined(BUILD_SDL) && !defined(BUILD_SDL2) && !defined(BUILD_MACOS)
 extern struct MovieExtInfo MovieInfo; // from replay.cpp
 #else
 struct MovieExtInfo MovieInfo = { 0, 0, 0, 0, 0, 0 };
@@ -1035,18 +1158,26 @@ void logerror(char* szFormat, ...)
 #endif
 
 #if defined (FBNEO_DEBUG)
-void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize)
+void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize, INT32 append)
 {
-    FILE *f = fopen(filename, "wb+");
-    fwrite(buffer, 1, bufsize, f);
-    fclose(f);
+	FILE *f = fopen(filename, (append) ? "a+b" : "wb+");
+	if (f) {
+		fwrite(buffer, 1, bufsize, f);
+		fclose(f);
+	} else {
+		bprintf(PRINT_ERROR, _T(" - BurnDump() - Error writing file.\n"));
+	}
 }
 
 void BurnDumpLoad_(char *filename, UINT8 *buffer, INT32 bufsize)
 {
-    FILE *f = fopen(filename, "rb+");
-    fread(buffer, 1, bufsize, f);
-    fclose(f);
+	FILE *f = fopen(filename, "rb+");
+	if (f) {
+		fread(buffer, 1, bufsize, f);
+		fclose(f);
+	} else {
+		bprintf(PRINT_ERROR, _T(" - BurnDumpLoad() - File not found.\n"));
+	}
 }
 #endif
 

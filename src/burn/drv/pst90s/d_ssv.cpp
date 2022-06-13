@@ -15,10 +15,35 @@
 
 /*
 	srmp7 - no music/sfx
-	gundam - verify layer should be OVER sprites and not behind
 	analog inputs not hooked up at all
-	clipping is not hooked up (broken) - marked with "iq_132" test with twin eagle
 */
+
+struct rectangle
+{
+	INT32 min_x;
+	INT32 max_x;
+	INT32 min_y;
+	INT32 max_y;
+
+	rectangle(INT32 minx = 0, INT32 maxx = 0, INT32 miny = 0, INT32 maxy = 0) {
+		set(minx, maxx, miny, maxy);
+	}
+
+	void set(INT32 minx, INT32 maxx, INT32 miny, INT32 maxy) {
+		min_x = minx; max_x = maxx;
+		min_y = miny; max_y = maxy;
+	}
+
+	rectangle operator &= (const rectangle &other) {
+		if (min_x < other.min_x) min_x = other.min_x;
+		if (min_y < other.min_y) min_y = other.min_y;
+		if (max_x > other.max_x) max_x = other.max_x;
+		if (max_y > other.max_y) max_y = other.max_y;
+		if (min_y > max_y) min_y = max_y;
+		if (min_x > max_x) min_x = max_x;
+		return *this;
+	}
+};
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -35,16 +60,24 @@ static UINT8 *DrvV60RAM0;
 static UINT8 *DrvV60RAM1;
 static UINT8 *DrvV60RAM2;
 static UINT8 *DrvSprRAM;
+static UINT8 *DrvSprRAMDelayed;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvDspRAM;
 static UINT8 *DrvNVRAM;
 static UINT8 *DrvScrollRAM;
+static UINT8 *DrvScrollRAMDelayed; // just a pointer!
 static UINT8 *DrvVectors;
 
 // GDFS
 static UINT8 *DrvTMAPRAM;
 static UINT8 *DrvTMAPScroll;
 static UINT8 *DrvGfxROM2;
+static INT16 DrvGun0;
+static INT16 DrvGun1;
+static INT16 DrvGun2;
+static INT16 DrvGun3;
+static UINT16 gdfs_eeprom_old;
+static UINT8 gdfs_lightgun_select;
 
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
@@ -65,21 +98,16 @@ static INT32 vblank;
 static INT32 shadow_pen_shift;
 static INT32 shadow_pen_mask;
 static INT32 tile_code[16];
-static INT32 Gclip_min_x;
-static INT32 Gclip_max_x;
-static INT32 Gclip_min_y;
-static INT32 Gclip_max_y;
+static rectangle Gclip;
 static INT32 interrupt_ultrax = 0;
 static INT32 watchdog_disable = 0;
 static INT32 is_gdfs = 0;
-static INT32 vbl_kludge = 0; // late vbl, for flicker issues in vertical games
-static INT32 vbl_invert = 0; // invert vblank register, for drifto94
 
 static INT32 dsp_enable = 0;
 
 static INT32 nDrvSndROMLen[4];
 static INT32 nDrvGfxROMLen;
-static INT32 nDrvGfxROM2Len;
+static INT64 nDrvGfxROM2Len;
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -90,81 +118,95 @@ static UINT8 DrvJoy6[8];
 static UINT8 DrvJoy7[8];
 static UINT8 DrvJoy8[8];
 static UINT8 DrvInputs[8];
-static UINT8 DrvDips[2];
+static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
 static INT32 line_cycles_total = 0;
 static INT32 line_cycles = 0;
+static INT32 draw_next_line = 0;
 
+static INT32 use_hblank = 0;
 static INT32 pastelis = 0;
 static INT32 sxyreact_kludge = 0;
 static INT16 SxyGun = 0;
 
+// Theory of sprite buffering for this machine  -dink nov. 22, 2021
+// spriteram is delayed 1 frame, buffered once per frame
+// scroll register updates are buffered in a list, for each line they are
+// updated on.  This list is then "replayed" on the next frame.
+struct scroll_rec {
+	INT32 line;
+	UINT8 regs[0x80];
+};
+
+static scroll_rec scroll_buf[2][512];
+
 static struct BurnInputInfo DrvInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Drv)
 
 static struct BurnInputInfo VasaraInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Vasara)
 
 static struct BurnInputInfo SurvartsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
@@ -173,11 +215,11 @@ static struct BurnInputInfo SurvartsInputList[] = {
 	{"P1 Button 5",		BIT_DIGITAL,	DrvJoy4 + 1,	"p1 fire 5"	},
 	{"P1 Button 6",		BIT_DIGITAL,	DrvJoy4 + 2,	"p1 fire 6"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
@@ -186,73 +228,73 @@ static struct BurnInputInfo SurvartsInputList[] = {
 	{"P2 Button 5",		BIT_DIGITAL,	DrvJoy4 + 5,	"p2 fire 5"	},
 	{"P2 Button 6",		BIT_DIGITAL,	DrvJoy4 + 6,	"p2 fire 6"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Survarts)
 
 static struct BurnInputInfo KeithlcyInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Keithlcy)
 
 static struct BurnInputInfo Twineag2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Twineag2)
 
 static struct BurnInputInfo MeosismInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
@@ -260,120 +302,118 @@ static struct BurnInputInfo MeosismInputList[] = {
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 4"	},
 	{"P1 Button 5",		BIT_DIGITAL,	DrvJoy3 + 4,	"p1 fire 5"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Service 1",	BIT_DIGITAL,	DrvJoy3 + 3,	"service2"	},
-	{"Service 2",	BIT_DIGITAL,	DrvJoy2 + 3,	"service3"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 5,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Service 1",		BIT_DIGITAL,	DrvJoy3 + 3,	"service2"	},
+	{"Service 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"service3"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 5,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Meosism)
 
 static struct BurnInputInfo RyoriohInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Ryorioh)
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo GdfsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
+	A("P1 Gun X",    	BIT_ANALOG_REL, &DrvGun0,    	"mouse x-axis"),
+	A("P1 Gun Y",    	BIT_ANALOG_REL, &DrvGun1,    	"mouse y-axis"),
 
-	// placeholders for analog inputs
-	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy3 + 8,	"p1 fire 4"	},
-	{"P1 Button 5",		BIT_DIGITAL,	DrvJoy3 + 9,	"p1 fire 5"	},
-	{"P1 Button 6",		BIT_DIGITAL,	DrvJoy3 + 10,	"p1 fire 6"	},
-	{"P1 Button 7",		BIT_DIGITAL,	DrvJoy3 + 11,	"p1 fire 7"	},
-
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
-	{"P2 Button 7",		BIT_DIGITAL,	DrvJoy3 + 11,	"p2 fire 7"	},
+	A("P2 Gun X",    	BIT_ANALOG_REL, &DrvGun2,    	"p2 x-axis"	),
+	A("P2 Gun Y",    	BIT_ANALOG_REL, &DrvGun3,    	"p2 y-axis"	),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
-
+#undef A
 STDINPUTINFO(Gdfs)
 
 static struct BurnInputInfo MahjongInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
-	{"A",			BIT_DIGITAL,	DrvJoy8 + 5,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy5 + 5,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy8 + 4,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy7 + 4,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy6 + 4,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy8 + 3,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy7 + 3,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy8 + 2,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy8 + 1,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah reach"	},
-	{"Bet",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah bet"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy8 + 5,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy8 + 4,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy7 + 4,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy8 + 3,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy8 + 2,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy8 + 1,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy7 + 1,	"mah reach"	},
+	{"P1 Bet",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah bet"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
 	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
 	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
 	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -384,46 +424,46 @@ STDINPUTINFO(Mahjong)
 
 static struct BurnInputInfo Srmp4InputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy8 + 0,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy8 + 0,	"p1 start"	},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
-	{"A",			BIT_DIGITAL,	DrvJoy8 + 5,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy5 + 5,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy8 + 4,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy7 + 4,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy6 + 4,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy8 + 3,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy7 + 3,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy8 + 2,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy8 + 1,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah reach"	},
-	{"Bet",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah bet"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy8 + 5,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy8 + 4,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy7 + 4,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy8 + 3,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy8 + 2,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy8 + 1,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy7 + 1,	"mah reach"	},
+	{"P1 Bet",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah bet"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
 	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
 	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
 	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -434,33 +474,33 @@ STDINPUTINFO(Srmp4)
 
 static struct BurnInputInfo HypreactInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 right"	},
-	{"A",			BIT_DIGITAL,	DrvJoy4 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy1 + 1,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy4 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy5 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy7 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy4 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy1 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy1 + 2,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy1 + 1,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy1 + 3,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy2 + 2,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy2 + 1,	"mah reach"	},
-	{"Bet",			BIT_DIGITAL,	DrvJoy5 + 5,	"mah bet"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 4,	"p1 right"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy4 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy1 + 1,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy4 + 1,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy4 + 2,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy1 + 3,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy4 + 3,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy1 + 2,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy1 + 1,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy1 + 3,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy2 + 2,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy2 + 1,	"mah reach"	},
+	{"P1 Bet",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah bet"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
 	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -471,45 +511,45 @@ STDINPUTINFO(Hypreact)
 
 static struct BurnInputInfo Hypreac2InputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
-	{"A",			BIT_DIGITAL,	DrvJoy4 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy6 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy4 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy5 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy7 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy4 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy4 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy7 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy4 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy6 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah reach"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy4 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy6 + 0,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy4 + 1,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy4 + 2,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy4 + 4,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy4 + 3,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy4 + 4,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy5 + 4,	"mah reach"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
 	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
 	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
 	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -520,28 +560,28 @@ STDINPUTINFO(Hypreac2)
 
 static struct BurnInputInfo Srmp7InputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy7 + 0,	"p1 start"	},
-	{"A",			BIT_DIGITAL,	DrvJoy7 + 5,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy6 + 5,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy8 + 5,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy7 + 4,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy6 + 4,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy8 + 4,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy7 + 3,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy8 + 3,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy8 + 2,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy7 + 1,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy5 + 1,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah reach"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy7 + 0,	"p1 start"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy7 + 5,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy6 + 5,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy8 + 5,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy7 + 4,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy8 + 4,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy8 + 3,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy8 + 2,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy6 + 1,	"mah reach"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
 	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -552,63 +592,63 @@ STDINPUTINFO(Srmp7)
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo SxyreactInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	A("P1 Dial",    BIT_ANALOG_REL, &SxyGun,        "p1 x-axis" ),
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	A("P1 Dial",    	BIT_ANALOG_REL, &SxyGun,        "p1 x-axis" ),
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Test SW",     BIT_DIGITAL,	DrvJoy3 + 4,	"service2"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Test SW",     	BIT_DIGITAL,	DrvJoy3 + 4,	"service2"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 #undef A
 STDINPUTINFO(Sxyreact)
 
 static struct BurnInputInfo EaglshotInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 3,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Eaglshot)
@@ -1063,6 +1103,7 @@ static struct BurnDIPInfo Drifto94DIPList[]=
 {
 	{0x15, 0xff, 0xff, 0xff, NULL			},
 	{0x16, 0xff, 0xff, 0xff, NULL			},
+	{0x17, 0xff, 0xff, 0x00, NULL			},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
 	{0x15, 0x01, 0x01, 0x01, "Off"			},
@@ -1109,6 +1150,10 @@ static struct BurnDIPInfo Drifto94DIPList[]=
 	{0   , 0xfe, 0   ,    2, "Save Best Time"	},
 	{0x16, 0x01, 0x40, 0x00, "No"			},
 	{0x16, 0x01, 0x40, 0x40, "Yes"			},
+
+	{0   , 0xfe, 0   ,    2, "Refresh Rate"		},
+	{0x17, 0x01, 0x01, 0x01, "60.18"			},
+	{0x17, 0x01, 0x01, 0x00, "60.00"			},
 };
 
 STDDIPINFO(Drifto94)
@@ -1424,57 +1469,57 @@ STDDIPINFO(Mslider)
 
 static struct BurnDIPInfo GdfsDIPList[]=
 {
-	{0x1a, 0xff, 0xff, 0xff, NULL				},
-	{0x1b, 0xff, 0xff, 0xf7, NULL				},
+	{0x19, 0xff, 0xff, 0xff, NULL				},
+	{0x1a, 0xff, 0xff, 0xf7, NULL				},
 
 	{0   , 0xfe, 0   ,    2, "Controls"			},
-	{0x1a, 0x01, 0x01, 0x01, "Joystick"			},
-	{0x1a, 0x01, 0x01, 0x00, "Light Gun"			},
+	{0x19, 0x01, 0x01, 0x01, "Joystick"			},
+	{0x19, 0x01, 0x01, 0x00, "Light Gun"			},
 
 	{0   , 0xfe, 0   ,    2, "Light Gun Calibration"	},
-	{0x1a, 0x01, 0x02, 0x02, "Off"				},
-	{0x1a, 0x01, 0x02, 0x00, "On"				},
+	{0x19, 0x01, 0x02, 0x02, "Off"				},
+	{0x19, 0x01, 0x02, 0x00, "On"				},
 
 	{0   , 0xfe, 0   ,    2, "Level Select"			},
-	{0x1a, 0x01, 0x04, 0x04, "Off"				},
-	{0x1a, 0x01, 0x04, 0x00, "On"				},
+	{0x19, 0x01, 0x04, 0x04, "Off"				},
+	{0x19, 0x01, 0x04, 0x00, "On"				},
 
 	{0   , 0xfe, 0   ,    3, "Coinage"			},
-	{0x1a, 0x01, 0x18, 0x10, "2 Coins 1 Credits"		},
-	{0x1a, 0x01, 0x18, 0x18, "1 Coin  1 Credits"		},
-	{0x1a, 0x01, 0x18, 0x08, "1 Coin  2 Credits"		},
+	{0x19, 0x01, 0x18, 0x10, "2 Coins 1 Credits"		},
+	{0x19, 0x01, 0x18, 0x18, "1 Coin  1 Credits"		},
+	{0x19, 0x01, 0x18, 0x08, "1 Coin  2 Credits"		},
 
 	{0   , 0xfe, 0   ,    2, "Save Scores"			},
-	{0x1a, 0x01, 0x20, 0x00, "No"				},
-	{0x1a, 0x01, 0x20, 0x20, "Yes"				},
+	{0x19, 0x01, 0x20, 0x00, "No"				},
+	{0x19, 0x01, 0x20, 0x20, "Yes"				},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
-	{0x1a, 0x01, 0x40, 0x40, "Off"				},
-	{0x1a, 0x01, 0x40, 0x00, "On"				},
+	{0x19, 0x01, 0x40, 0x40, "Off"				},
+	{0x19, 0x01, 0x40, 0x00, "On"				},
 
 	{0   , 0xfe, 0   ,    2, "Invert X Axis"		},
-	{0x1b, 0x01, 0x01, 0x01, "Off"				},
-	{0x1b, 0x01, 0x01, 0x00, "On"				},
+	{0x1a, 0x01, 0x01, 0x01, "Off"				},
+	{0x1a, 0x01, 0x01, 0x00, "On"				},
 
 	{0   , 0xfe, 0   ,    2, "Language"			},
-	{0x1b, 0x01, 0x08, 0x00, "English"			},
-	{0x1b, 0x01, 0x08, 0x08, "Japanese"			},
+	{0x1a, 0x01, 0x08, 0x00, "English"			},
+	{0x1a, 0x01, 0x08, 0x08, "Japanese"			},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
-	{0x1b, 0x01, 0x10, 0x00, "Off"				},
-	{0x1b, 0x01, 0x10, 0x10, "On"				},
+	{0x1a, 0x01, 0x10, 0x00, "Off"				},
+	{0x1a, 0x01, 0x10, 0x10, "On"				},
 
 	{0   , 0xfe, 0   ,    2, "Damage From Machine Gun"	},
-	{0x1b, 0x01, 0x20, 0x20, "Light"			},
-	{0x1b, 0x01, 0x20, 0x00, "Heavy"			},
+	{0x1a, 0x01, 0x20, 0x20, "Light"			},
+	{0x1a, 0x01, 0x20, 0x00, "Heavy"			},
 
 	{0   , 0xfe, 0   ,    2, "Damage From Beam Cannon"	},
-	{0x1b, 0x01, 0x40, 0x40, "Light"			},
-	{0x1b, 0x01, 0x40, 0x00, "Heavy"			},
+	{0x1a, 0x01, 0x40, 0x40, "Light"			},
+	{0x1a, 0x01, 0x40, 0x00, "Heavy"			},
 
-	{0   , 0xfe, 0   ,    2, "Damage From Missle"		},
-	{0x1b, 0x01, 0x80, 0x80, "Light"			},
-	{0x1b, 0x01, 0x80, 0x00, "Heavy"			},
+	{0   , 0xfe, 0   ,    2, "Damage From Missile"		},
+	{0x1a, 0x01, 0x80, 0x80, "Light"			},
+	{0x1a, 0x01, 0x80, 0x00, "Heavy"			},
 };
 
 STDDIPINFO(Gdfs)
@@ -2068,9 +2113,9 @@ static inline void palette_update(INT32 offset)
 
 	UINT16 *pal = (UINT16*)(DrvPalRAM + offset);
 
-	INT32 r = pal[1] & 0xff;
-	INT32 g = pal[0] >> 8;
-	INT32 b = pal[0] & 0xff;
+	INT32 r = BURN_ENDIAN_SWAP_INT16(pal[1]) & 0xff;
+	INT32 g = BURN_ENDIAN_SWAP_INT16(pal[0]) >> 8;
+	INT32 b = BURN_ENDIAN_SWAP_INT16(pal[0]) & 0xff;
 
 	DrvPalette[offset/4] = BurnHighCol(r,g,b,0);
 }
@@ -2108,7 +2153,7 @@ static void dsp_write(INT32 offset, UINT8 data)
 
 	offset = (offset & 0xffe)/2;
 
-	UINT16 temp = ram[offset/2];
+	UINT16 temp = BURN_ENDIAN_SWAP_INT16(ram[offset/2]);
 
 	if (offset & 1) {
 		temp &= 0xff;
@@ -2118,7 +2163,7 @@ static void dsp_write(INT32 offset, UINT8 data)
 		temp |= data;
 	}
 
-	ram[offset/2] = temp;
+	ram[offset/2] = BURN_ENDIAN_SWAP_INT16(temp);
 }
 
 static UINT16 dsp_read(INT32 offset)
@@ -2127,7 +2172,7 @@ static UINT16 dsp_read(INT32 offset)
 
 	offset = (offset & 0xffe)/2;
 
-	UINT16 temp = ram[offset/2];
+	UINT16 temp = BURN_ENDIAN_SWAP_INT16(ram[offset/2]);
 
 	if (offset & 1) {
 		temp >>= 8;
@@ -2152,6 +2197,7 @@ static void common_main_write_byte(UINT32 address, UINT8 data)
 	}
 
 	if ((address & 0xffff80) == 0x1c0000) {
+		draw_next_line = 1;
 		DrvScrollRAM[(address & 0x7f)] = data;
 		return;
 	}
@@ -2198,20 +2244,22 @@ static void common_main_write_byte(UINT32 address, UINT8 data)
 			if (dsp_enable) snesdsp_write(true, data);
 		return;
 	}
+//	bprintf(0, _T("Wb  %x  %x\n"), address, data);
 }
 
 static void common_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xffe0000) == 0x140000) {
 		UINT16 *p = (UINT16*)(DrvPalRAM + (address & 0x1ffff));
-		*p = data;
+		*p = BURN_ENDIAN_SWAP_INT16(data);
 		palette_update(address);
 		return;
 	}
 
 	if ((address & 0xffff80) == 0x1c0000) {
+		draw_next_line = 1;
 		UINT16 *p = (UINT16*)(DrvScrollRAM + (address & 0x7f));
-		*p = data;
+		*p = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 	}
 
@@ -2222,7 +2270,7 @@ static void common_main_write_word(UINT32 address, UINT16 data)
 
 	if (address >= 0x230000 && address <= 0x230071) {
 		UINT16 *p = (UINT16*)(DrvVectors + (address & 0x7f));
-		*p = data;
+		*p = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 	}
 
@@ -2260,6 +2308,7 @@ static void common_main_write_word(UINT32 address, UINT16 data)
 			if (dsp_enable) snesdsp_write(true, data);
 		return;
 	}
+//	bprintf(0, _T("WW  %x  %x\n"), address, data);
 }
 
 static UINT16 common_main_read_word(UINT32 address)
@@ -2283,7 +2332,7 @@ static UINT16 common_main_read_word(UINT32 address)
 	switch (address & ~1)
 	{
 		case 0x1c0000:
-			if (pastelis) { // pastel island checks hblank
+			if (use_hblank) { // pastel island checks hblank
 				INT32 status = 0;
 				INT32 hblank_cycs = line_cycles_total * 95 / 100;
 				if ((v60TotalCycles() - line_cycles) > hblank_cycs) {
@@ -2292,11 +2341,7 @@ static UINT16 common_main_read_word(UINT32 address)
 				if (vblank) status |= 0x3000;
 				return status;
 			}
-			if (vbl_invert) {
-				return (vblank) ? 0 : 0x3000;
-			} else {
-				return (vblank) ? 0x3000 : 0;
-			}
+			return (vblank) ? 0x3000 : 0;
 
 		case 0x1c0002:
 			return 0;
@@ -2341,7 +2386,7 @@ static UINT16 common_main_read_word(UINT32 address)
 			return BurnRandom();
 	}
 
-	bprintf (0, _T("RW Unmapped: %5.5x\n"), address);
+//	bprintf (0, _T("RW Unmapped: %5.5x\n"), address);
 
 	return 0;
 }
@@ -2407,21 +2452,20 @@ static UINT8 common_main_read_byte(UINT32 address)
 	return 0;
 }
 
-#if 0
-static UINT16 gdfs_eeprom_read()
+static UINT8 gdfs_gun_read()
 {
-	return (((m_gdfs_lightgun_select & 1) ? 0 : 0xff) ^ m_io_gun[m_gdfs_lightgun_select]->read()) | (EEPROMRead() << 8);
+	UINT8 guns[4] = { BurnGunReturnX(0), BurnGunReturnY(0), BurnGunReturnX(1), BurnGunReturnY(1) };
+	return ((gdfs_lightgun_select & 1) ? 0 : 0xff) ^ guns[gdfs_lightgun_select];
 }
-#endif
 
 static void gdfs_eeprom_write(UINT16 data)
 {
 	EEPROMWriteBit((data & 0x4000) >> 14);
-	EEPROMSetCSLine((data & 0x1000) ? EEPROM_ASSERT_LINE : EEPROM_CLEAR_LINE);
+	EEPROMSetCSLine((data & 0x1000) ? EEPROM_CLEAR_LINE : EEPROM_ASSERT_LINE);
 	EEPROMSetClockLine((data & 0x2000) ? EEPROM_ASSERT_LINE : EEPROM_CLEAR_LINE);
 
-//	if (!(gdfs_eeprom_old & 0x0800) && (data & 0x0800))   // rising clock
-//		gdfs_lightgun_select = (data & 0x0300) >> 8;
+	if (!(gdfs_eeprom_old & 0x0800) && (data & 0x0800))
+		gdfs_lightgun_select = (data & 0x0300) >> 8;
 }
 
 static UINT16 gdfs_read_word(UINT32 address)
@@ -2433,8 +2477,7 @@ static UINT16 gdfs_read_word(UINT32 address)
 	switch (address)
 	{
 		case 0x540000:
-		case 0x540001:	// eeprom
-			return (EEPROMRead() << 8);
+			return (EEPROMRead() << 8) | gdfs_gun_read();
 	}
 
 	return common_main_read_word(address);
@@ -2448,9 +2491,9 @@ static UINT8 gdfs_read_byte(UINT32 address)
 
 	switch (address)
 	{
-		case 0x540000:
-		case 0x540001:	// eeprom
-			return (EEPROMRead() << 0);
+		case 0x540000: return EEPROMRead();
+		case 0x540001: return gdfs_gun_read();
+
 	}
 
 	return common_main_read_byte(address);
@@ -2469,14 +2512,13 @@ static void gdfs_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address & 0xffffc0) == 0x440000) {
-		*((UINT16*)(DrvTMAPScroll + (address & 0x3f))) = data;
+		*((UINT16*)(DrvTMAPScroll + (address & 0x3f))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 	}
 
 	switch (address)
 	{
 		case 0x500000:
-		case 0x500001:
 			gdfs_eeprom_write(data);
 		return;
 	}
@@ -2864,7 +2906,7 @@ static void eaglshot_write_word(UINT32 address, UINT16 data)
 		case 0x1c0076:
 		case 0x1c0077:
 			eaglshot_gfxram_bank(data);
-			*((UINT16*)(DrvScrollRAM + 0x76)) = data;
+			*((UINT16*)(DrvScrollRAM + 0x76)) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x21000e:
@@ -2963,6 +3005,13 @@ static INT32 DrvDoReset(INT32 full_reset)
 
 	watchdog = 0;
 
+	draw_next_line = -1;
+
+	HiscoreReset();
+
+	memset(scroll_buf, 0, sizeof(scroll_buf));
+	DrvScrollRAMDelayed = DrvScrollRAM;
+
 	return 0;
 }
 
@@ -2998,7 +3047,7 @@ static INT32 MemIndex()
 		st0020BlitRAM	= Next; Next += 0x000100;
 		st0020SprRAM	= Next; Next += 0x080000;
 		st0020GfxRAM	= Next; Next += 0x400000;
-		DrvTMAPRAM	= Next; Next += 0x040000;
+		DrvTMAPRAM		= Next; Next += 0x040000;
 		DrvTMAPScroll	= Next; Next += 0x000040;
 	}
 
@@ -3010,11 +3059,13 @@ static INT32 MemIndex()
 	DrvDspRAM		= Next; Next += 0x001000;
 
 	DrvVectors		= Next; Next += 0x000080;
-	DrvScrollRAM		= Next; Next += 0x000080;
+	DrvScrollRAM	= Next; Next += 0x000080;
 
-	eaglshot_bank		= Next; Next += 0x000002;
+	eaglshot_bank	= Next; Next += 0x000002;
 
 	RamEnd			= Next;
+
+	DrvSprRAMDelayed	= Next; Next += 0x040000;
 
 	MemEnd			= Next;
 
@@ -3036,14 +3087,14 @@ static void st010Expand(INT32 rom_offset)
 	// copy DSP program
 	for (INT32 i = 0; i < 0x10000; i+= 4)
 	{
-		*dspprg = dspsrc[0+i]<<24 | dspsrc[1+i]<<16 | dspsrc[2+i]<<8;
+		*dspprg = BURN_ENDIAN_SWAP_INT32(dspsrc[0+i]<<24 | dspsrc[1+i]<<16 | dspsrc[2+i]<<8);
 		dspprg++;
 	}
 
 	// copy DSP data
 	for (INT32 i = 0; i < 0x1000; i+= 2)
 	{
-		*dspdata++ = dspsrc[0x10000+i]<<8 | dspsrc[0x10001+i];
+		*dspdata++ = BURN_ENDIAN_SWAP_INT16(dspsrc[0x10000+i]<<8 | dspsrc[0x10001+i]);
 	}
 
 	BurnFree(dspsrc);
@@ -3060,7 +3111,7 @@ static void DrvComputeTileCode(INT32 version)
 	else
 	{
 		for (INT32 i = 0; i < 16; i++) {
-			tile_code[i] = ((i & 8) << 13) | ((i & 4) << 15) | ((i & 2) << 17) | ((i & 1) << 19); 
+			tile_code[i] = ((i & 8) << 13) | ((i & 4) << 15) | ((i & 2) << 17) | ((i & 1) << 19);
 		}
 	}
 }
@@ -3164,10 +3215,13 @@ static INT32 DrvGetRoms(bool bLoad)
 		// get gfx 2 rom length and make sure it can be
 		// masked properly
 		nDrvGfxROM2Len = GfxLoad2 - DrvGfxROM2;
-		for (INT32 i = 1; i < 0x8000000; i<<=1) {
-			if (nDrvGfxROM2Len <= (1 << i)) {
-				nDrvGfxROM2Len = 1 << i;
-				break;
+
+		if (nDrvGfxROM2Len) {
+			for (INT32 i = 1; i < 0x8000000; i<<=1) {
+				if (nDrvGfxROM2Len <= (1 << i)) {
+					nDrvGfxROM2Len = 1 << i;
+					break;
+				}
 			}
 		}
 
@@ -3185,16 +3239,11 @@ static INT32 DrvGetRoms(bool bLoad)
 	return 0;
 }
 
-static INT32 DrvCommonInit(void (*pV60Callback)(), void (*pRomLoadCallback)(), INT32 compute, INT32 s0, INT32 s1, INT32 s2, INT32 s3, double volume, INT32 funky_vbl)
+static INT32 DrvCommonInit(void (*pV60Callback)(), void (*pRomLoadCallback)(), INT32 compute, INT32 s0, INT32 s1, INT32 s2, INT32 s3, double volume)
 {
 	DrvGetRoms(false);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	DrvGetRoms(true);
 
@@ -3219,8 +3268,6 @@ static INT32 DrvCommonInit(void (*pV60Callback)(), void (*pRomLoadCallback)(), I
 
 	GenericTilesInit();
 
-	vbl_kludge = funky_vbl;
-
 	DrvDoReset(1);
 
 	return 0;
@@ -3238,18 +3285,17 @@ static INT32 DrvExit()
 
 	if (is_gdfs) EEPROMExit();
 
+	if (sxyreact_kludge || is_gdfs) {
+		BurnGunExit();
+	}
+
 	interrupt_ultrax = 0;
 	watchdog_disable = 0;
 	is_gdfs = 0;
 	dsp_enable = 0;
-	vbl_kludge = 0;
-	vbl_invert = 0;
-
-	if (sxyreact_kludge) {
-		BurnGunExit();
-	}
 	sxyreact_kludge = 0;
 	pastelis = 0;
+	use_hblank = 0;
 
 	return 0;
 }
@@ -3260,38 +3306,12 @@ static void DrvPaletteInit()
 
 	for (INT32 i = 0; i < 0x20000/2; i+=2)
 	{
-		INT32 r = pal[i+1] & 0xff;
-		INT32 g = pal[i+0] >> 8;
-		INT32 b = pal[i+0] & 0xff;
+		INT32 r = BURN_ENDIAN_SWAP_INT16(pal[i+1]) & 0xff;
+		INT32 g = BURN_ENDIAN_SWAP_INT16(pal[i+0]) >> 8;
+		INT32 b = BURN_ENDIAN_SWAP_INT16(pal[i+0]) & 0xff;
 
 		DrvPalette[i/2] = BurnHighCol(r,g,b,0);
 	}
-}
-
-struct rectangle
-{
-	INT32 min_x;
-	INT32 max_x;
-	INT32 min_y;
-	INT32 max_y;
-};
-
-static void set_rect(rectangle *rect, INT32 minx, INT32 maxx, INT32 miny, INT32 maxy)
-{
-	rect->min_x = minx;
-	rect->max_x = maxx;
-	rect->min_y = miny;
-	rect->max_y = maxy;
-}
-
-static void clip_rect(rectangle *rect, const rectangle *cliprect)
-{
-	if (rect->min_x < cliprect->min_x) rect->min_x = cliprect->min_x;
-	if (rect->min_y < cliprect->min_y) rect->min_y = cliprect->min_y;
-	if (rect->max_x > cliprect->max_x) rect->max_x = cliprect->max_x;
-	if (rect->max_y > cliprect->max_y) rect->max_y = cliprect->max_y;
-	if (rect->min_y >= rect->max_y) rect->min_y = rect->max_y;
-	if (rect->min_x >= rect->max_x) rect->min_x = rect->max_x;
 }
 
 static void drawgfx(INT32 gfx, UINT32 code, UINT32 color, INT32 flipx, INT32 flipy, INT32 x0, INT32 y0, INT32 shadow)
@@ -3315,16 +3335,16 @@ static void drawgfx(INT32 gfx, UINT32 code, UINT32 color, INT32 flipx, INT32 fli
 #define SSV_DRAWGFX(SETPIXELCOLOR)                                              \
 	for ( sy = y0; sy != y1; sy += dy )                                         \
 	{                                                                           \
-		if ( sy >= Gclip_min_y && sy <= Gclip_max_y )                 \
+		if ( sy >= Gclip.min_y && sy <= Gclip.max_y )                 \
 		{                                                                       \
 			source  =   addr;                                                   \
 			dest    =   pTransDraw + (sy * nScreenWidth);                          \
-												\
+																		\
 			for ( sx = x0; sx != x1; sx += dx )                                 \
 			{                                                                   \
 				pen = (*source++) & penmask;                                     \
 												\
-				if ( pen && sx >= Gclip_min_y && sx <= Gclip_max_x )  \
+				if ( pen && sx >= Gclip.min_x && sx <= Gclip.max_x )  \
 					SETPIXELCOLOR                                            \
 			}                                                                   \
 		}                                                                       \
@@ -3429,19 +3449,19 @@ static inline void get_tile(INT32 x, INT32 y, INT32 size, INT32 page, int& code,
 							  ((x & ((size - 1) & ~0xf)) << 2) +
 							  ((y & ((0x200 - 1) & ~0xf)) >> 3)];
 
-	code = s3[0];  // code high bits
-	attr = s3[1];  // code low  bits + color
+	code = BURN_ENDIAN_SWAP_INT16(s3[0]);  // code high bits
+	attr = BURN_ENDIAN_SWAP_INT16(s3[1]);  // code low  bits + color
 
 	/* Code's high bits are scrambled */
 	code += tile_code[(attr & 0x3c00) >> 10];
 	flipy = (attr & 0x4000);
 	flipx = (attr & 0x8000);
 
-	if ((ssv_scroll[0x74 / 2] & 0x1000) && ((ssv_scroll[0x74 / 2] & 0x2000) == 0))
+	if ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74 / 2]) & 0x1000) && ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74 / 2]) & 0x2000) == 0))
 	{
 		if (flipx == 0) flipx = 1; else flipx = 0;
 	}
-	if ((ssv_scroll[0x74 / 2] & 0x4000) && ((ssv_scroll[0x74 / 2] & 0x2000) == 0))
+	if ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74 / 2]) & 0x4000) && ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74 / 2]) & 0x2000) == 0))
 	{
 		if (flipy == 0) flipy = 1; else flipy = 0;
 	}
@@ -3458,30 +3478,28 @@ void draw_row_64pixhigh(INT32 in_sy, INT32 scrollreg)
 
 	/* Set up a clipping region for the tilemap slice .. */
 	rectangle outclip;
-	set_rect(&outclip, 0, 0x20 * 0x10, in_sy, in_sy + 0x8 * 0x8);
-	rectangle cliprect;
-	set_rect(&cliprect, Gclip_min_x, Gclip_max_x, Gclip_min_y, Gclip_max_y);
+	outclip.set(0, 0x20 * 0x10, in_sy, in_sy + 0x8 * 0x8);
 
 	/* .. and clip it against the visible screen */
 
-	if (outclip.min_x > cliprect.max_x)    return;
-	if (outclip.min_y > cliprect.max_y)    return;
+	if (outclip.min_x > Gclip.max_x)    return;
+	if (outclip.min_y > Gclip.max_y)    return;
 
-	if (outclip.max_x < cliprect.min_x)    return;
-	if (outclip.max_y < cliprect.min_y)    return;
+	if (outclip.max_x < Gclip.min_x)    return;
+	if (outclip.max_y < Gclip.min_y)    return;
 
-	clip_rect(&outclip, &cliprect);
+	outclip &= Gclip;
 
 	for (INT32 line = outclip.min_y; line <= outclip.max_y; line++)
 	{
 		rectangle clip;
-		set_rect(&clip, outclip.min_x, outclip.max_x, line, line);
+		clip.set(outclip.min_x, outclip.max_x, line, line);
 
 		/* Get the scroll data */
-		INT32 tilemap_scrollx = ssv_scroll[scrollreg * 4 + 0];    // x scroll
-		INT32 tilemap_scrolly = ssv_scroll[scrollreg * 4 + 1];    // y scroll
-		INT32 unknown = ssv_scroll[scrollreg * 4 + 2];    // ???
-		INT32 mode = ssv_scroll[scrollreg * 4 + 3];    // layer disabled, shadow, depth etc.
+		INT32 tilemap_scrollx = BURN_ENDIAN_SWAP_INT16(ssv_scroll[scrollreg * 4 + 0]);    // x scroll
+		INT32 tilemap_scrolly = BURN_ENDIAN_SWAP_INT16(ssv_scroll[scrollreg * 4 + 1]);    // y scroll
+		INT32 unknown = BURN_ENDIAN_SWAP_INT16(ssv_scroll[scrollreg * 4 + 2]);    // ???
+		INT32 mode = BURN_ENDIAN_SWAP_INT16(ssv_scroll[scrollreg * 4 + 3]);    // layer disabled, shadow, depth etc.
 
 		/* Background layer disabled */
 		if ((mode & 0xe000) == 0)
@@ -3495,7 +3513,7 @@ void draw_row_64pixhigh(INT32 in_sy, INT32 scrollreg)
 		tilemap_scrolly += in_sy;
 
 		/* Tweak the scroll values */
-		tilemap_scrolly += ((ssv_scroll[0x70 / 2] & 0x1ff) - (ssv_scroll[0x70 / 2] & 0x200) + ssv_scroll[0x6a / 2] + 2);
+		tilemap_scrolly += ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x70 / 2]) & 0x1ff) - (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x70 / 2]) & 0x200) + BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x6a / 2]) + 2);
 
 		// Kludge for eaglshot
 		if ((unknown & 0x05ff) == 0x0440) tilemap_scrollx += -0x10;
@@ -3507,7 +3525,7 @@ void draw_row_64pixhigh(INT32 in_sy, INT32 scrollreg)
 		{
 			UINT32 scrolltable_base = ((mode & 0x00ff) * 0x400 ) /2;
 			//logerror("line %d realy %04x: scrolltable base is %08x\n", line,realy&0x1ff, scrolltable_base*2);
-			tilemap_scrollx += spriteram16[(scrolltable_base+(realy&0x1ff)) & 0x1ffff];
+			tilemap_scrollx += BURN_ENDIAN_SWAP_INT16(spriteram16[(scrolltable_base+(realy&0x1ff)) & 0x1ffff]);
 		}
 
 		/* Draw the rows */
@@ -3532,9 +3550,8 @@ static void draw_layer(INT32 nr)
 static void draw_sprites()
 {
 	/* Sprites list */
-	UINT16 *ssv_scroll = (UINT16*)DrvScrollRAM;
-	UINT16 *spriteram16 = (UINT16*)DrvSprRAM;
-
+	UINT16 *ssv_scroll =  (UINT16*)DrvScrollRAMDelayed;
+	UINT16 *spriteram16 = (UINT16*)DrvSprRAMDelayed;
 	UINT16 *s1  	=   spriteram16;
 	UINT16 *end1    =   spriteram16 + 0x02000/2;
 	UINT16 *end2    =   spriteram16 + 0x40000/2;
@@ -3547,23 +3564,23 @@ static void draw_sprites()
 		INT32 sy, y, yoffs, flipy, ynum, ystart, yend, yinc, sprites_offsy, tilemaps_offsy;
 		INT32 mode,global_depth,global_xnum,global_ynum;
 
-		mode   = s1[ 0 ];
-		sprite = s1[ 1 ];
-		xoffs  = s1[ 2 ];
-		yoffs  = s1[ 3 ];
+		mode   = BURN_ENDIAN_SWAP_INT16(s1[ 0 ]);
+		sprite = BURN_ENDIAN_SWAP_INT16(s1[ 1 ]);
+		xoffs  = BURN_ENDIAN_SWAP_INT16(s1[ 2 ]);
+		yoffs  = BURN_ENDIAN_SWAP_INT16(s1[ 3 ]);
 
 		/* Last sprite */
 		if (sprite & 0x8000) break;
 
 		/* Single-sprite address */
 		s2 = &spriteram16[ (sprite & 0x7fff) * 4 ];
-		tilemaps_offsy = ((s2[3] & 0x1ff) - (s2[3] & 0x200));
+		tilemaps_offsy = ((BURN_ENDIAN_SWAP_INT16(s2[3]) & 0x1ff) - (BURN_ENDIAN_SWAP_INT16(s2[3]) & 0x200));
 
 		/* Every single sprite is offset by x & yoffs, and additionally
 		by one of the 8 x & y offsets in the 1c0040-1c005f area   */
 
-		xoffs   +=      ssv_scroll[((mode & 0x00e0) >> 4) + 0x40/2];
-		yoffs   +=      ssv_scroll[((mode & 0x00e0) >> 4) + 0x42/2];
+		xoffs   +=      BURN_ENDIAN_SWAP_INT16(ssv_scroll[((mode & 0x00e0) >> 4) + 0x40/2]);
+		yoffs   +=      BURN_ENDIAN_SWAP_INT16(ssv_scroll[((mode & 0x00e0) >> 4) + 0x42/2]);
 
 		/* Number of single-sprites (1-32) */
 		num             =   (mode & 0x001f) + 1;
@@ -3577,14 +3594,14 @@ static void draw_sprites()
 
 			if (s2 >= end2) break;
 
-			sx      =       s2[ 2 ];
-			sy      =       s2[ 3 ];
+			sx      =       BURN_ENDIAN_SWAP_INT16(s2[ 2 ]);
+			sy      =       BURN_ENDIAN_SWAP_INT16(s2[ 3 ]);
 
 			local_depth     =   sx & 0xf000;
 			local_xnum      =   sx & 0x0c00;
 			local_ynum      =   sy & 0x0c00;
 
-			if (ssv_scroll[0x76/2] & 0x4000)
+			if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x76/2]) & 0x4000)
 			{
 				xnum    =   local_xnum;
 				ynum    =   local_ynum;
@@ -3597,24 +3614,24 @@ static void draw_sprites()
 				depth   =   global_depth;
 			}
 
-			if ( s2[0] <= 7 && s2[1] == 0 && xnum == 0 && ynum == 0x0c00)
+			if ( BURN_ENDIAN_SWAP_INT16(s2[0]) <= 7 && BURN_ENDIAN_SWAP_INT16(s2[1]) == 0 && xnum == 0 && ynum == 0x0c00)
 			{
-				INT32 scroll  =   s2[ 0 ];    // scroll index
+				INT32 scroll  =   BURN_ENDIAN_SWAP_INT16(s2[ 0 ]);    // scroll index
 
-				if (ssv_scroll[0x76/2] & 0x1000)
+				if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x76/2]) & 0x1000)
 					sy -= 0x20;                     // eaglshot
 				else
 				{
-					if (ssv_scroll[0x7a/2] & 0x0800)
+					if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x7a/2]) & 0x0800)
 					{
-						if (ssv_scroll[0x7a/2] & 0x1000)    // drifto94, dynagear, keithlcy, mslider, stmblade, gdfs, ultrax, twineag2
+						if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x7a/2]) & 0x1000)    // drifto94, dynagear, keithlcy, mslider, stmblade, gdfs, ultrax, twineag2
 							sy -= tilemaps_offsy;
 						else                        // srmp4
 							sy += tilemaps_offsy;
 					}
 				}
 
-				if ((mode & 0x001f) != 0 && s2[0] != 0)
+				if ((mode & 0x001f) != 0 && BURN_ENDIAN_SWAP_INT16(s2[0]) != 0)
 					if (nBurnLayer & 2) draw_row_64pixhigh(sy, scroll);
 			}
 			else
@@ -3622,19 +3639,19 @@ static void draw_sprites()
 				INT32 shadow, gfx;
 				if (s2 >= end2) break;
 
-				code    =   s2[0];  // code high bits
-				attr    =   s2[1];  // code low  bits + color
+				code    =   BURN_ENDIAN_SWAP_INT16(s2[0]);  // code high bits
+				attr    =   BURN_ENDIAN_SWAP_INT16(s2[1]);  // code low  bits + color
 
 				/* Code's high bits are scrambled */
 				code    +=  tile_code[(attr & 0x3c00)>>10];
 				flipy   =   (attr & 0x4000);
 				flipx   =   (attr & 0x8000);
 
-				if ((ssv_scroll[0x74/2] & 0x1000) && ((ssv_scroll[0x74/2] & 0x2000) == 0))
+				if ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x1000) && ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x2000) == 0))
 				{
 					if (flipx == 0) flipx = 1; else flipx = 0;
 				}
-				if ((ssv_scroll[0x74/2] & 0x4000) && ((ssv_scroll[0x74/2] & 0x2000) == 0))
+				if ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x4000) && ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x2000) == 0))
 				{
 					if (flipy == 0) flipy = 1; else flipy = 0;
 				}
@@ -3674,31 +3691,31 @@ static void draw_sprites()
 				sx  =   (sx & 0x1ff) - (sx & 0x200);
 				sy  =   (sy & 0x1ff) - (sy & 0x200);
 
-				sprites_offsx =  ((ssv_scroll[0x74/2] & 0x7f) - (ssv_scroll[0x74/2] & 0x80));
+				sprites_offsx =  ((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x7f) - (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x80));
 
-				sprites_offsy = -((ssv_scroll[0x70/2] & 0x1ff) - (ssv_scroll[0x70/2] & 0x200) + ssv_scroll[0x6a/2] + 1);
+				sprites_offsy = -((BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x70/2]) & 0x1ff) - (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x70/2]) & 0x200) + BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x6a/2]) + 1);
 
-				if (ssv_scroll[0x74/2] & 0x4000) // flipscreen y
+				if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x4000) // flipscreen y
 				{
 					sy = -sy;
-					if (ssv_scroll[0x74/2] & 0x8000)
+					if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x8000)
 						sy += 0x00;         //
 					else
 						sy -= 0x10;         // vasara (hack)
 				}
 
-				if (ssv_scroll[0x74/2] & 0x1000) // flipscreen x
+				if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x74/2]) & 0x1000) // flipscreen x
 				{
 					sx = -sx + 0x100;
 				}
 
-				if (ssv_scroll[0x7a/2] == 0x7140)
+				if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x7a/2]) == 0x7140)
 				{
 					// srmp7
 					sx  =   sprites_offsx + sx;
 					sy  =   sprites_offsy - sy;
 				}
-				else if (ssv_scroll[0x7a/2] & 0x0800)
+				else if (BURN_ENDIAN_SWAP_INT16(ssv_scroll[0x7a/2]) & 0x0800)
 				{
 					// dynagear, drifto94, eaglshot, keithlcy, mslider, srmp4, stmblade, twineag2, ultrax
 					sx  =   sprites_offsx + sx - (xnum * 8)    ;
@@ -3733,8 +3750,8 @@ static void gdfs_draw_layer()
 	UINT16 *ram = (UINT16*)DrvTMAPRAM;
 	UINT16 *sram = (UINT16*)DrvTMAPScroll;
 
-	INT32 scrollx = sram[0x0c/2] & 0xfff;
-	INT32 scrolly = sram[0x10/2] & 0xfff;
+	INT32 scrollx = BURN_ENDIAN_SWAP_INT16(sram[0x0c/2]) & 0xfff;
+	INT32 scrolly = BURN_ENDIAN_SWAP_INT16(sram[0x10/2]) & 0xfff;
 
 	INT32 yy = scrolly & 0xf;
 	INT32 xx = scrollx & 0xf;
@@ -3747,31 +3764,24 @@ static void gdfs_draw_layer()
 		{
 			INT32 offs = (((scrollx + x) & 0xff0) / 0x10) + sy;
 
-			INT32 attr  = ram[offs];
+			INT32 attr  = BURN_ENDIAN_SWAP_INT16(ram[offs]);
 			INT32 code  = attr & 0x3fff;
 			INT32 color = 0;
 			INT32 flipx = attr & 0x8000;
 			INT32 flipy = attr & 0x4000;
 
-			if (flipy) {
-				if (flipx) {
-					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, x - xx, y - yy, color, 8, 0, 0, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, x - xx, y - yy, color, 8, 0, 0, DrvGfxROM2);
-				}
-			} else {
-				if (flipx) {
-					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, x - xx, y - yy, color, 8, 0, 0, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_Clip(pTransDraw, code, x - xx, y - yy, color, 8, 0, 0, DrvGfxROM2);
-				}
-			}
+			Draw16x16MaskTile(pTransDraw, code, x - xx, y - yy, flipx, flipy, color, 8, 0, 0, DrvGfxROM2);
 		}
 	}
 }
 
-static INT32 DrvDraw()
+static INT32 lastline = 0;
+
+static INT32 DrvDrawBegin()
 {
+	lastline = 0;
+
+	if (!pBurnDraw) return 0;
 	if (DrvRecalc) {
 		DrvPaletteInit();
 		DrvRecalc = 0;
@@ -3779,12 +3789,23 @@ static INT32 DrvDraw()
 
 	BurnTransferClear();
 
+	return 0;
+}
+
+static INT32 DrvDrawScanline(INT32 drawto)
+{
+	if (drawto > nScreenHeight) drawto = nScreenHeight;
+	if (!pBurnDraw || drawto < 1 || drawto == lastline) return 0;
+	Gclip.set(0, nScreenWidth - 1, lastline, drawto - 1);
+	lastline = drawto;
+
+	//bprintf(0, _T("%04d: draw scanline %d\n"), nCurrentFrame, drawto-1);
 	if (enable_video)
 	{
 		UINT16 *scroll = (UINT16*)DrvScrollRAM;
 
 		// Shadow
-		if (scroll[0x76/2] & 0x0080)	// 4 bit shadows (mslider, stmblade)
+		if (BURN_ENDIAN_SWAP_INT16(scroll[0x76/2]) & 0x0080)	// 4 bit shadows (mslider, stmblade)
 		{
 			shadow_pen_shift = 11;
 		}
@@ -3795,30 +3816,27 @@ static INT32 DrvDraw()
 
 		shadow_pen_mask = (1 << shadow_pen_shift) - 1;
 
-		// used by twineag2 and ultrax
-		Gclip_min_x = ((nScreenWidth / 2) + scroll[0x62/2]) * 2 - scroll[0x64/2] * 2 + 2;
-		Gclip_max_x = ((nScreenWidth / 2) + scroll[0x62/2]) * 2 - scroll[0x62/2] * 2 + 1;
-		Gclip_min_y = (nScreenHeight + scroll[0x6a/2]) - scroll[0x6c/2] + 1;
-		Gclip_max_y = (nScreenHeight + scroll[0x6a/2]) - scroll[0x6a/2]        ;
+		// used by twineag2 and ultrax (game-set global clipping)
+		rectangle clippy;
+		clippy.min_x = ((Gclip.max_x / 2) + BURN_ENDIAN_SWAP_INT16(scroll[0x62/2])) * 2 - BURN_ENDIAN_SWAP_INT16(scroll[0x64/2]) * 2 + 2;
+		clippy.max_x = ((Gclip.max_x / 2) + BURN_ENDIAN_SWAP_INT16(scroll[0x62/2])) * 2 - BURN_ENDIAN_SWAP_INT16(scroll[0x62/2]) * 2 + 1;
+		clippy.min_y = (Gclip.max_y + BURN_ENDIAN_SWAP_INT16(scroll[0x6a/2])) - BURN_ENDIAN_SWAP_INT16(scroll[0x6c/2]) + 1;
+		clippy.max_y = (Gclip.max_y + BURN_ENDIAN_SWAP_INT16(scroll[0x6a/2])) - BURN_ENDIAN_SWAP_INT16(scroll[0x6a/2]);
 
-		if (Gclip_min_x < 0) Gclip_min_x = 0;
-		if (Gclip_min_y < 0) Gclip_min_y = 0;
-		if (Gclip_max_x >= nScreenWidth)  Gclip_max_x = nScreenWidth - 1;
-		if (Gclip_max_y >= nScreenHeight) Gclip_max_y = nScreenHeight - 1;
+		Gclip &= clippy;
 
-		if (Gclip_min_x > Gclip_max_x) Gclip_min_x = Gclip_max_x;
-		if (Gclip_min_y > Gclip_max_y) Gclip_min_y = Gclip_max_y;
-
-#if 1
-		// iq_132
-		Gclip_min_x = 0;
-		Gclip_max_x = nScreenWidth - 1;
-		Gclip_min_y = 0;
-		Gclip_max_y = nScreenHeight - 1;
-#endif
 		draw_layer(0);
 		draw_sprites();
 	}
+
+	return 0;
+}
+
+static INT32 DrvDrawEnd()
+{
+	if (!pBurnDraw) return 0;
+
+	DrvDrawScanline(nScreenHeight);
 
 	if (is_gdfs)
 	{
@@ -3827,6 +3845,15 @@ static INT32 DrvDraw()
 	}
 
 	BurnTransferCopy(DrvPalette);
+
+	return 0;
+}
+
+static INT32 DrvDraw()
+{
+	DrvDrawBegin();
+	DrvDrawScanline(nScreenHeight);
+	DrvDrawEnd();
 
 	return 0;
 }
@@ -3861,10 +3888,15 @@ static INT32 DrvFrame()
 			BurnGunMakeInputs(0, SxyGun, 0);
 		}
 
+		if (is_gdfs) {
+			BurnGunMakeInputs(0, DrvGun0, DrvGun1);
+			BurnGunMakeInputs(1, DrvGun2, DrvGun3);
+		}
+
 
 	}
 
-	INT32 nInterleave = 256;
+	INT32 nInterleave = 262;
 #ifdef SSV_UPD_SPEEDHACK
 	INT32 nCyclesTotal[2] = { (16000000 * 100) / 6018, (1000000 * 100) / 6018 };
 #else
@@ -3877,15 +3909,51 @@ static INT32 DrvFrame()
 	vblank = 0;
 
 	line_cycles_total = nCyclesTotal[0] / nInterleave;
+	DrvDrawBegin();
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		line_cycles = v60TotalCycles();
 
-		nCyclesDone[0] += v60Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		if (i == 0) { // start in vblank (was line 240) for 1frame less input lag
+			memcpy(DrvSprRAMDelayed, DrvSprRAM, 0x40000);
+			DrvScrollRAMDelayed = DrvScrollRAM;
 
-		if (dsp_enable)
-			nCyclesDone[1] += upd96050Run(nCyclesTotal[1] / nInterleave);
+			vblank = 1;
+			requested_int |= 1 << 3;
+			update_irq_state();
+		}
+
+		if (i == 22) { // adjusted end-of-vblank
+			vblank = 0;
+		}
+
+		CPU_RUN(0, v60);
+
+		if (i == 120+22 && pastelis) {
+			requested_int |= 1 << 2;
+			update_irq_state();
+			draw_next_line = 1;
+		}
+
+		if (draw_next_line != -1) {	// buffer scroll regs for next frame
+			memcpy(scroll_buf[nCurrentFrame & 1][i].regs, DrvScrollRAM, 0x80);
+			scroll_buf[nCurrentFrame & 1][i].line = i;
+			//bprintf(0, _T("(future) raster %d\n"), i);
+			draw_next_line = -1;
+		} else {
+			scroll_buf[nCurrentFrame & 1][i].line = -1;
+		}
+
+		if (scroll_buf[~nCurrentFrame & 1][i].line == i) { // last frame was buffered here!
+			//bprintf(0, _T("(current) raster %d\n"), i);
+			DrvScrollRAMDelayed = &scroll_buf[~nCurrentFrame & 1][i].regs[0];
+			DrvDrawScanline(i - 23);
+		}
+
+		if (dsp_enable) {
+			CPU_RUN(1, upd96050);
+		}
 
 		if (i == 0 && interrupt_ultrax) {
 			requested_int |= 1 << 1;
@@ -3896,27 +3964,13 @@ static INT32 DrvFrame()
 			requested_int |= 1 << 6;
 			update_irq_state();
 		}
-
-		if (i == 120 && pastelis) {
-			requested_int |= 1 << 2;
-			update_irq_state();
-		}
-
-		if (i == ((vbl_kludge) ? (nInterleave-1) : 240)) {
-			vblank = 1;
-			requested_int |= 1 << 3;
-			update_irq_state();
-		}
 	}
+	DrvDrawEnd();
 
 	v60Close();
 
 	if (pBurnSoundOut) {
 		ES5506Update(pBurnSoundOut, nBurnSoundLen);
-	}
-
-	if (pBurnDraw) {
-		BurnDrvRedraw();
 	}
 
 	return 0;
@@ -3943,7 +3997,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		ES5506Scan(nAction,pnMin);
 		if (dsp_enable) upd96050Scan(nAction);
 
-		if (sxyreact_kludge) BurnGunScan();
+		if (sxyreact_kludge || is_gdfs) BurnGunScan();
+		if (is_gdfs) {
+			SCAN_VAR(gdfs_eeprom_old);
+			SCAN_VAR(gdfs_lightgun_select);
+		}
 
 		SCAN_VAR(requested_int);
 		SCAN_VAR(enable_video);
@@ -4009,7 +4067,7 @@ static void VasaraV60Map()
 	v60MapMemory(DrvSprRAM,			0x100000, 0x13ffff, MAP_RAM);
 	v60MapMemory(DrvPalRAM,			0x140000, 0x15ffff, MAP_ROM); // handler
 	v60MapMemory(DrvV60RAM1,		0x160000, 0x17ffff, MAP_RAM);
-	v60MapMemory(DrvV60ROM,			0xc00000, 0xffffff, MAP_ROM);	
+	v60MapMemory(DrvV60ROM,			0xc00000, 0xffffff, MAP_ROM);
 	v60SetWriteWordHandler(common_main_write_word);
 	v60SetWriteByteHandler(common_main_write_byte);
 	v60SetReadWordHandler(common_main_read_word);
@@ -4018,7 +4076,12 @@ static void VasaraV60Map()
 
 static INT32 VasaraInit()
 {
-	return DrvCommonInit(VasaraV60Map, NULL, 0, 0, 1, -1, -1, 0.80, 1);
+	return DrvCommonInit(VasaraV60Map, NULL, 0, 0, 1, -1, -1, 2.80);
+}
+
+static INT32 Vasara2Init()
+{
+	return DrvCommonInit(VasaraV60Map, NULL, 0, 0, 1, -1, -1, 1.80);
 }
 
 struct BurnDriver BurnDrvVasara = {
@@ -4058,7 +4121,7 @@ struct BurnDriver BurnDrvVasara2 = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
 	NULL, vasara2RomInfo, vasara2RomName, NULL, NULL, NULL, NULL, VasaraInputInfo, Vasara2DIPInfo,
-	VasaraInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
+	Vasara2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	240, 336, 3, 4
 };
 
@@ -4089,7 +4152,7 @@ struct BurnDriver BurnDrvVasara2a = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
 	NULL, vasara2aRomInfo, vasara2aRomName, NULL, NULL, NULL, NULL, VasaraInputInfo, Vasara2DIPInfo,
-	VasaraInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
+	Vasara2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	240, 336, 3, 4
 };
 
@@ -4137,12 +4200,12 @@ static void SurvartsV60Map()
 
 static INT32 SurvartsInit()
 {
-	return DrvCommonInit(SurvartsV60Map, NULL, 0, -1, -1, 2, -1, 0.30, 0);
+	return DrvCommonInit(SurvartsV60Map, NULL, 0, -1, -1, 2, -1, 0.30);
 }
 
 static INT32 DynagearInit()
 {
-	return DrvCommonInit(SurvartsV60Map, NULL, 0, -1, -1, 2, -1, 0.20, 1);
+	return DrvCommonInit(SurvartsV60Map, NULL, 0, -1, -1, 2, -1, 0.30);
 }
 
 struct BurnDriver BurnDrvSurvarts = {
@@ -4297,7 +4360,7 @@ static INT32 KeithlcyInit()
 {
 	watchdog_disable = 1;
 
-	return DrvCommonInit(KeithlcyV60Map, NULL, 0, 0, -1, -1, -1, 0.80, 0);
+	return DrvCommonInit(KeithlcyV60Map, NULL, 0, 0, -1, -1, -1, 0.80);
 }
 
 struct BurnDriver BurnDrvKeithlcy = {
@@ -4341,8 +4404,9 @@ static INT32 PastelisInit()
 {
 	watchdog_disable = 1;
 	pastelis = 1;
+	use_hblank = 1;
 
-	return DrvCommonInit(KeithlcyV60Map, NULL, 0, 0, -1, -1, -1, 0.80, 0);
+	return DrvCommonInit(KeithlcyV60Map, NULL, 0, 0, -1, -1, -1, 0.80);
 }
 
 struct BurnDriver BurnDrvPastelis = {
@@ -4401,7 +4465,7 @@ static INT32 Twineag2Init()
 	interrupt_ultrax = 1;
 	watchdog_disable = 1;
 
-	return DrvCommonInit(Twineag2V60Map, NULL, 0, 0, 1, 0, 1, 0.80, 1);
+	return DrvCommonInit(Twineag2V60Map, NULL, 0, 0, 1, 0, 1, 1.80);
 }
 
 struct BurnDriver BurnDrvTwineag2 = {
@@ -4468,9 +4532,13 @@ static void Drifto94V60Map()
 static INT32 Drifto94Init()
 {
 	watchdog_disable = 1;
-	vbl_invert = 1;
+	use_hblank = 1;
 
-	return DrvCommonInit(Drifto94V60Map, NULL, 0, 0, 1, -1, -1, 0.80, 0);
+	if (DrvDips[2] & 1) {
+		BurnSetRefreshRate(60.186);
+	}
+
+	return DrvCommonInit(Drifto94V60Map, NULL, 0, 0, 1, -1, -1, 1.80);
 }
 
 struct BurnDriver BurnDrvDrifto94 = {
@@ -4518,7 +4586,7 @@ static void MeosismV60Map()
 
 static INT32 MeosismInit()
 {
-	return DrvCommonInit(MeosismV60Map, NULL, 0, -1, -1, 2, -1, 0.80, 0);
+	return DrvCommonInit(MeosismV60Map, NULL, 0, -1, -1, 2, -1, 0.80);
 }
 
 struct BurnDriver BurnDrvMeosism = {
@@ -4566,14 +4634,14 @@ static void CairbladV60Map()
 
 static INT32 CairbladInit()
 {
-	return DrvCommonInit(CairbladV60Map, NULL, 1, 0, -1, -1, -1, 0.80, 1);
+	return DrvCommonInit(CairbladV60Map, NULL, 1, 0, -1, -1, -1, 0.80);
 }
 
 struct BurnDriver BurnDrvCairblad = {
 	"cairblad", NULL, NULL, NULL, "1999",
 	"Change Air Blade (Japan)\0", NULL, "Sammy", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
 	NULL, cairbladRomInfo, cairbladRomName, NULL, NULL, NULL, NULL, DrvInputInfo, CairbladDIPInfo,
 	CairbladInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	240, 338, 3, 4
@@ -4620,7 +4688,7 @@ static INT32 UltraxInit()
 {
 	interrupt_ultrax = 1;
 
-	return DrvCommonInit(UltraxV60Map, NULL, 0, 0, 1, 0, 1, 0.80, 1);
+	return DrvCommonInit(UltraxV60Map, NULL, 0, 0, 1, 0, 1, 1.80);
 }
 
 struct BurnDriver BurnDrvUltrax = {
@@ -4713,16 +4781,15 @@ static void StmbladeV60Map()
 static INT32 StmbladeInit()
 {
 	watchdog_disable = 1;
-	vbl_invert = 1;
 
-	return DrvCommonInit(StmbladeV60Map, NULL, 0, 0, -1, -1, -1, 0.80, 0);
+	return DrvCommonInit(StmbladeV60Map, NULL, 0, 0, -1, -1, -1, 1.80);
 }
 
 struct BurnDriver BurnDrvStmblade = {
 	"stmblade", NULL, NULL, NULL, "1996",
 	"Storm Blade (US)\0", NULL, "Visco", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
 	NULL, stmbladeRomInfo, stmbladeRomName, NULL, NULL, NULL, NULL, DrvInputInfo, StmbladeDIPInfo,
 	StmbladeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	240, 352, 3, 4
@@ -4758,7 +4825,7 @@ struct BurnDriver BurnDrvStmbladej = {
 	"stmbladej", "stmblade", NULL, NULL, "1996",
 	"Storm Blade (Japan)\0", NULL, "Visco", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_VERSHOOT, 0,
 	NULL, stmbladejRomInfo, stmbladejRomName, NULL, NULL, NULL, NULL, DrvInputInfo, StmbladeDIPInfo,
 	StmbladeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	240, 352, 3, 4
@@ -4789,7 +4856,7 @@ STD_ROM_FN(ryorioh)
 
 static INT32 RyoriohInit()
 {
-	return DrvCommonInit(VasaraV60Map, NULL, 0, 0, -1, -1, -1, 0.80, 0);
+	return DrvCommonInit(VasaraV60Map, NULL, 0, 0, -1, -1, -1, 0.80);
 }
 
 struct BurnDriver BurnDrvRyorioh = {
@@ -4841,14 +4908,14 @@ static INT32 MsliderInit()
 {
 	watchdog_disable = 1;
 
-	return DrvCommonInit(MsliderV60Map, NULL, 0, 0, -1, -1, -1, 2.80, 1);
+	return DrvCommonInit(MsliderV60Map, NULL, 0, 0, -1, -1, -1, 3.30);
 }
 
 struct BurnDriver BurnDrvMslider = {
 	"mslider", NULL, NULL, NULL, "1997",
 	"Monster Slider (Japan)\0", NULL, "Visco / Datt Japan", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SETA_SSV, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_PUZZLE, 0,
 	NULL, msliderRomInfo, msliderRomName, NULL, NULL, NULL, NULL, DrvInputInfo, MsliderDIPInfo,
 	MsliderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	352, 240, 4, 3
@@ -4927,8 +4994,9 @@ static INT32 GdfsInit()
 	is_gdfs = 1;
 	st0020GfxROMLen = 0x1000000;
 	watchdog_disable = 1;
+	BurnGunInit(2, false);
 
-	return DrvCommonInit(GdfsV60Map, GdfsRomLoadCallback, 0, 0, 0, 0, 0, 0.80, 1);
+	return DrvCommonInit(GdfsV60Map, GdfsRomLoadCallback, 0, 0, 0, 0, 0, 1.80);
 }
 
 struct BurnDriver BurnDrvGdfs = {
@@ -4988,7 +5056,7 @@ static INT32 Janjans1Init()
 {
 	watchdog_disable = 1;
 
-	return DrvCommonInit(Janjans1V60Map, NULL, 0, 0, 1, 0, 1, 0.80, 0);
+	return DrvCommonInit(Janjans1V60Map, NULL, 0, 0, 1, 0, 1, 0.80);
 }
 
 struct BurnDriver BurnDrvJanjans1 = {
@@ -5028,7 +5096,7 @@ STD_ROM_FN(janjans2)
 
 static INT32 Janjans2Init()
 {
-	return DrvCommonInit(Janjans1V60Map, NULL, 0, 0, 1, 0, 1, 0.80, 0);
+	return DrvCommonInit(Janjans1V60Map, NULL, 0, 0, 1, 0, 1, 0.80);
 }
 
 struct BurnDriver BurnDrvJanjans2 = {
@@ -5081,7 +5149,7 @@ static void Koikois2V60Map()
 
 static INT32 Koikois2Init()
 {
-	return DrvCommonInit(Koikois2V60Map, NULL, 0, 0, 1, 0, 1, 1.40, 0);
+	return DrvCommonInit(Koikois2V60Map, NULL, 0, 0, 1, 0, 1, 1.40);
 }
 
 struct BurnDriver BurnDrvKoikois2 = {
@@ -5138,7 +5206,7 @@ static void Srpm4RomLoadCallback()
 
 static INT32 Srmp4Init()
 {
-	return DrvCommonInit(Srmp4V60Map, Srpm4RomLoadCallback, 0, 0, 1, 0, 1, 0.80, 0);
+	return DrvCommonInit(Srmp4V60Map, Srpm4RomLoadCallback, 0, 0, 1, 0, 1, 0.80);
 }
 
 struct BurnDriver BurnDrvSrmp4 = {
@@ -5212,7 +5280,7 @@ static INT32 HypreactInit()
 {
 	watchdog_disable = 1;
 
-	return DrvCommonInit(Srmp4V60Map, NULL, 0, 0, 1, 0, 1, 0.10, 0);
+	return DrvCommonInit(Srmp4V60Map, NULL, 0, 0, 1, 0, 1, 0.10);
 }
 
 struct BurnDriver BurnDrvHypreact = {
@@ -5272,7 +5340,7 @@ static INT32 Hypreac2Init()
 {
 	watchdog_disable = 1;
 
-	return DrvCommonInit(Hypreac2V60Map, NULL, 1, 0, 1, 2, -1, 0.10, 0);
+	return DrvCommonInit(Hypreac2V60Map, NULL, 1, 0, 1, 2, -1, 0.10);
 }
 
 struct BurnDriver BurnDrvHypreac2 = {
@@ -5348,7 +5416,7 @@ static void Srmp7ROMCallback()
 
 static INT32 Srmp7Init()
 {
-	return DrvCommonInit(Srmp7V60Map, Srmp7ROMCallback, 0, 0, 1, 2, 3, 0.80, 0);
+	return DrvCommonInit(Srmp7V60Map, Srmp7ROMCallback, 0, 0, 1, 2, 3, 0.80);
 }
 
 struct BurnDriver BurnDrvSrmp7 = {
@@ -5415,7 +5483,7 @@ static INT32 SxyreactInit()
 {
 	sxyreact_kludge = 1;
 
-	return DrvCommonInit(SxyreactV60Map, SexyreactRomLoadCallback, 1, 0, 1, 2, -1, 0.10, 0);
+	return DrvCommonInit(SxyreactV60Map, SexyreactRomLoadCallback, 1, 0, 1, 2, -1, 0.10);
 }
 
 struct BurnDriver BurnDrvSxyreact = {
@@ -5453,14 +5521,14 @@ static INT32 Sxyreac2Init()
 {
 	sxyreact_kludge = 1;
 
-	return DrvCommonInit(SxyreactV60Map, SexyreactRomLoadCallback, 1, 0, 1, 2, -1, 0.10, 0);
+	return DrvCommonInit(SxyreactV60Map, SexyreactRomLoadCallback, 1, 0, 1, 2, -1, 0.10);
 }
 
 struct BurnDriver BurnDrvSxyreac2 = {
 	"sxyreac2", NULL, NULL, NULL, "1999",
 	"Pachinko Sexy Reaction 2 (Japan)\0", NULL, "Sammy", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SETA_SSV, GBF_CASINO, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_CASINO, 0,
 	NULL, sxyreac2RomInfo, sxyreac2RomName, NULL, NULL, NULL, NULL, SxyreactInputInfo, SxyreactDIPInfo,
 	Sxyreac2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x8000,
 	336, 240, 4, 3
@@ -5541,14 +5609,14 @@ static void EaglshotV60Map()
 
 static INT32 EaglshotInit()
 {
-	return DrvCommonInit(EaglshotV60Map, NULL, 0, 0, 0, 0, 0, 0.80, 0);
+	return DrvCommonInit(EaglshotV60Map, NULL, 0, 0, 0, 0, 0, 0.80);
 }
 
 struct BurnDriver BurnDrvEaglshot = {
 	"eaglshot", NULL, NULL, NULL, "1994",
 	"Eagle Shot Golf (US)\0", NULL, "Sammy", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SETA_SSV, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_SPORTSMISC, 0,
 	NULL, eaglshotRomInfo, eaglshotRomName, NULL, NULL, NULL, NULL, EaglshotInputInfo, EaglshotDIPInfo,
 	EaglshotInit, DrvExit, DrvFrame, DrvDraw, eaglshtScan, &DrvRecalc, 0x8000,
 	320, 224, 4, 3
@@ -5579,7 +5647,7 @@ struct BurnDriver BurnDrvEaglshotj = {
 	"eaglshotj", "eaglshot", NULL, NULL, "1994",
 	"Eagle Shot Golf (Japan, bootleg?)\0", NULL, "Sammy", "SSV",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SETA_SSV, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SETA_SSV, GBF_SPORTSMISC, 0,
 	NULL, eaglshotjRomInfo, eaglshotjRomName, NULL, NULL, NULL, NULL, EaglshotInputInfo, EaglshotDIPInfo,
 	EaglshotInit, DrvExit, DrvFrame, DrvDraw, eaglshtScan, &DrvRecalc, 0x8000,
 	320, 224, 4, 3

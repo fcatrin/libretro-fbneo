@@ -387,10 +387,10 @@ static struct BurnRomInfo EndurordRomDesc[] = {
 	
 	{ "epr-7633.ic1",     0x08000, 0x6f146210, SYS16_ROM_ROAD | BRF_GRA },
 
-	{ "epr-7682.rom",     0x08000, 0xc4efbf48, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	{ "epr-7682.ic58",    0x08000, 0xc4efbf48, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
 	
-	{ "epr-7681.rom",     0x08000, 0xbc0c4d12, SYS16_ROM_PCMDATA | BRF_SND },
-	{ "epr-7680.rom",     0x08000, 0x627b3c8c, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-7681.ic8",     0x08000, 0xbc0c4d12, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-7680.ic7",     0x08000, 0x627b3c8c, SYS16_ROM_PCMDATA | BRF_SND },
 	
 	{ "epr-6844.ic123",   0x02000, 0xe3ec7bd6, SYS16_ROM_PROM | BRF_GRA },
 };
@@ -554,10 +554,10 @@ static struct BurnRomInfo EnduroraRomDesc[] = {
 		
 	{ "epr-7633.ic1",     0x08000, 0x6f146210, SYS16_ROM_ROAD | BRF_GRA },
 
-	{ "epr-7682.rom",     0x08000, 0xc4efbf48, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	{ "epr-7682.ic58",    0x08000, 0xc4efbf48, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
 	
-	{ "epr-7681.rom",     0x08000, 0xbc0c4d12, SYS16_ROM_PCMDATA | BRF_SND },
-	{ "epr-7680.rom",     0x08000, 0x627b3c8c, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-7681.ic8",     0x08000, 0xbc0c4d12, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "epr-7680.ic7",     0x08000, 0x627b3c8c, SYS16_ROM_PCMDATA | BRF_SND },
 	
 	{ "epr-6844.ic123",   0x02000, 0xe3ec7bd6, SYS16_ROM_PROM | BRF_GRA },
 	
@@ -833,6 +833,60 @@ static struct BurnRomInfo Hangon2RomDesc[] = {
 STD_ROM_PICK(Hangon2)
 STD_ROM_FN(Hangon2)
 
+static struct BurnRomInfo HangonvfRomDesc[] = {
+	{ "9.3n",   		  0x08000, 0x20b1c2b0, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "11.1n",    		  0x08000, 0x7d9db1bf, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "8.3k",   		  0x08000, 0xfea12367, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	{ "10.1k",    		  0x08000, 0xac883240, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
+	
+	{ "6.6l",    		  0x08000, 0x1c95013e, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+	{ "7.5l",    		  0x08000, 0x6ca30d69, SYS16_ROM_PROG2 | BRF_ESS | BRF_PRG },
+
+	{ "2.3j",    		  0x08000, 0x255a3a58, SYS16_ROM_TILES | BRF_GRA },
+	{ "3.2j",    		  0x08000, 0x88b9ffd9, SYS16_ROM_TILES | BRF_GRA },
+	{ "4.1j",     		  0x08000, 0x18882328, SYS16_ROM_TILES | BRF_GRA },
+
+	{ "19.5b",    		  0x08000, 0x469dad07, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "25.6b",    		  0x08000, 0x87cbc6de, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "18.5c",    		  0x08000, 0x15792969, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "24.6c",    		  0x08000, 0xe9718de5, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "17.5d",    		  0x08000, 0x49422691, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "23.6d",    		  0x08000, 0x701deaa4, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "16.5e",    		  0x08000, 0xf003a000, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "22.6e",    		  0x08000, 0x08b007e2, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "15.5f",    		  0x08000, 0x7fa1bfb6, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "21.6f",    		  0x08000, 0x8e880c93, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "14.5h",    		  0x08000, 0x47e63dd1, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "20.6h",    		  0x08000, 0x33d1aa6e, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "12.3f",    		  0x08000, 0x22fc088e, SYS16_ROM_SPRITES | BRF_GRA },
+	{ "13.4f",    		  0x08000, 0x032738ba, SYS16_ROM_SPRITES | BRF_GRA },
+	
+	{ "5.9r",   		  0x08000, 0x581230e3, SYS16_ROM_ROAD | BRF_GRA },
+
+	{ "28.12h",    		  0x04000, 0x3b942f5f, SYS16_ROM_Z80PROG | BRF_ESS | BRF_PRG },
+	
+	{ "26.1e",     		  0x08000, 0xcfef5481, SYS16_ROM_PCMDATA | BRF_SND },
+	{ "27.1g",     		  0x08000, 0x4165aea5, SYS16_ROM_PCMDATA | BRF_SND },
+	
+	{ "1.9d",   		  0x02000, 0xe3ec7bd6, SYS16_ROM_PROM | BRF_GRA },
+	
+	{ "a_pal16r4a.9e",    0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "b_pls153an.9f",    0x000eb, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "c_pal16r6a.7m",    0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "d_pal16r6a.7r",    0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "e_pal16r6a.7s",    0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "f_pls153n.6s",     0x000eb, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "g_pal16l8a.3r",    0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	// no PLD marked 'H'
+	{ "i_pls153n_snd.6f", 0x000eb, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "j_pal16l8a_db.bin",0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "k_pal16r4a_db.bin",0x00104, 0x00000000, BRF_OPT | BRF_NODUMP },
+};
+
+
+STD_ROM_PICK(Hangonvf)
+STD_ROM_FN(Hangonvf)
+
 static struct BurnRomInfo ShangonroRomDesc[] = {
 	{ "epr-10842.22",     0x08000, 0x24289138, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
 	{ "epr-10839.8",      0x08000, 0x70f92d5e, SYS16_ROM_PROG | BRF_ESS | BRF_PRG },
@@ -1077,7 +1131,7 @@ static struct BurnRomInfo SharrierRomDesc[] = {
 	
 	{ "epr-6844.ic123",   0x02000, 0xe3ec7bd6, SYS16_ROM_PROM | BRF_GRA },
 	
-	{ "315-5163a.ic32",   0x01000, 0x00000000, BRF_NODUMP },
+	{ "315-5163a.ic32",   0x01000, 0x203dffeb, SYS16_ROM_I8751 | BRF_PRG | BRF_ESS },
 };
 
 
@@ -1144,7 +1198,7 @@ static struct BurnRomInfo Sharrier1RomDesc[] = {
 	
 	{ "epr-6844.ic123",   0x02000, 0xe3ec7bd6, SYS16_ROM_PROM | BRF_GRA },
 	
-	{ "315-5163.ic32",    0x01000, 0x00000000, BRF_NODUMP },
+	{ "315-5163.ic32",    0x01000, 0x52b0c81a, SYS16_ROM_I8751 | BRF_PRG | BRF_ESS },
 };
 
 
@@ -1154,6 +1208,19 @@ STD_ROM_FN(Sharrier1)
 /*====================================================
 Memory Handlers
 ====================================================*/
+
+static INT32 dontrecurse = 0;
+
+// we must sync audiocpu before all ppi #0's reads/writes -dink
+static void sys16_sync_audiocpu()
+{
+	ZetCPUPush(0);
+	INT32 todo = ((double)SekTotalCycles(0) * 4000000 / System16ClockSpeed);
+	if (todo > 0) {
+		BurnTimerUpdate(todo);
+	}
+	ZetCPUPop();
+}
 
 void HangonPPI0WritePortA(UINT8 data)
 {
@@ -1165,19 +1232,17 @@ void HangonPPI0WritePortB(UINT8 data)
 	System16VideoEnable = data & 0x10;
 	System16SpriteShadow = ~data & 0x40;
 	System16ScreenFlip = data & 0x80;
+
+	ZetSetRESETLine(0, (~data & 0x20) ? 1 : 0);
 }
 
 void HangonPPI0WritePortC(UINT8 data)
 {
 	System16ColScroll = ~data & 0x04;
 	System16RowScroll = ~data & 0x02;
-	
-	if (!(data & 0x80)) {
-		ZetOpen(0);
-		ZetNmi();
-		nSystem16CyclesDone[2] += ZetRun(100);
-		ZetClose();
-	}
+	System16SoundMute = ~data & 0x01;
+
+	ZetSetIRQLine(0, 0x20, (data & 0x80) ? CPU_IRQSTATUS_NONE : CPU_IRQSTATUS_ACK);
 }
 
 UINT8 HangonPPI1ReadPortC()
@@ -1188,23 +1253,12 @@ UINT8 HangonPPI1ReadPortC()
 void HangonPPI1WritePortA(UINT8 data)
 {
 	System16AnalogSelect = (data >> 2) & 3;
-	
-	if (!(data & 0x40)) {
-		INT32 nLastCPU = nSekActive;
-		SekClose();
-		SekOpen(1);
-		SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
-		SekClose();
-		SekOpen(nLastCPU);
+
+	if (~data & 0x40) {
+		SekSetIRQLine(1, 4, CPU_IRQSTATUS_AUTO);
 	}
-	if (data & 0x20) {
-		INT32 nLastCPU = nSekActive;
-		SekClose();
-		SekOpen(1);
-		SekReset();
-		SekClose();
-		SekOpen(nLastCPU);
-	}
+
+	SekSetRESETLine(1, (data & 0x20) ? 1 : 0);
 }
 
 UINT16 __fastcall HangonReadWord(UINT32 a)
@@ -1214,7 +1268,8 @@ UINT16 __fastcall HangonReadWord(UINT32 a)
 		case 0xe00002:
 		case 0xe00004:
 		case 0xe00006: {
-			return ppi8255_r(0, (a - 0xe00000) >> 1);
+			sys16_sync_audiocpu();
+			return ppi8255_r(0, (a & 7) >> 1);
 		}
 	
 		case 0xe01000: {
@@ -1227,6 +1282,13 @@ UINT16 __fastcall HangonReadWord(UINT32 a)
 		
 		case 0xe0100c: {
 			return System16Dip[1];
+		}
+
+		case 0xe03000:
+		case 0xe03002:
+		case 0xe03004:
+		case 0xe03006: {
+			return ppi8255_r(1, (a & 7) >> 1);
 		}
 	}
 	
@@ -1244,7 +1306,8 @@ UINT8 __fastcall HangonReadByte(UINT32 a)
 		case 0xe00003:
 		case 0xe00005:
 		case 0xe00007: {
-			return ppi8255_r(0, (a - 0xe00000) >> 1);
+			sys16_sync_audiocpu();
+			return ppi8255_r(0, (a & 7) >> 1);
 		}
 		
 		case 0xe01001: {
@@ -1263,7 +1326,7 @@ UINT8 __fastcall HangonReadByte(UINT32 a)
 		case 0xe03003:
 		case 0xe03005:
 		case 0xe03007: {
-			return ppi8255_r(1, (a - 0xe03000) >> 1);
+			return ppi8255_r(1, (a & 7) >> 1);
 		}
 		
 		case 0xe03021: {
@@ -1291,7 +1354,8 @@ void __fastcall HangonWriteByte(UINT32 a, UINT8 d)
 		case 0xe00003: 
 		case 0xe00005: 
 		case 0xe00007: {
-			ppi8255_w(0, (a - 0xe00000) >> 1, d & 0xff);
+			sys16_sync_audiocpu();
+			ppi8255_w(0, (a & 7) >> 1, d & 0xff);
 			return;
 		}
 		
@@ -1299,7 +1363,7 @@ void __fastcall HangonWriteByte(UINT32 a, UINT8 d)
 		case 0xe03003:
 		case 0xe03005:
 		case 0xe03007: {
-			ppi8255_w(1, (a - 0xe03000) >> 1, d & 0xff);
+			ppi8255_w(1, (a & 7) >> 1, d & 0xff);
 			return;
 		}
 		
@@ -1331,7 +1395,16 @@ void __fastcall HangonWriteWord(UINT32 a, UINT16 d)
 		case 0xe00002: 
 		case 0xe00004: 
 		case 0xe00006: {
-			ppi8255_w(0, (a - 0xe00000) >> 1, d & 0xff);
+			sys16_sync_audiocpu();
+			ppi8255_w(0, (a & 7) >> 1, d & 0xff);
+			return;
+		}
+
+		case 0xe03000:
+		case 0xe03002:
+		case 0xe03004:
+		case 0xe03006: {
+			ppi8255_w(1, (a & 7) >> 1, d & 0xff);
 			return;
 		}
 	}
@@ -1343,7 +1416,20 @@ void __fastcall HangonWriteWord(UINT32 a, UINT16 d)
 
 static UINT16 __fastcall SharrierReadWord(UINT32 a)
 {
+	if (a >= 0x40000 && a <= 0x43fff) {
+		if (dontrecurse == 0) sys16_sync_mcu();
+		return *(UINT16*)(System16Ram + (a & 0x3fff));
+	}
+
 	switch (a) {
+		case 0x140000:
+		case 0x140002:
+		case 0x140004:
+		case 0x140006: {
+			sys16_sync_audiocpu();
+			return ppi8255_r(0, (a & 7) >> 1);
+		}
+
 		case 0x140010: {
 			return (UINT16)(0xff - System16Input[0]);
 		}
@@ -1359,6 +1445,13 @@ static UINT16 __fastcall SharrierReadWord(UINT32 a)
 		case 0x140016: {
 			return (UINT16)System16Dip[1];
 		}
+
+		case 0x140020:
+		case 0x140022:
+		case 0x140024:
+		case 0x140026: {
+			return ppi8255_r(1, (a & 7) >> 1);
+		}
 	}
 
 	return 0;
@@ -1366,12 +1459,18 @@ static UINT16 __fastcall SharrierReadWord(UINT32 a)
 
 static UINT8 __fastcall SharrierReadByte(UINT32 a)
 {
+	if (a >= 0x40000 && a <= 0x43fff) {
+		if (dontrecurse == 0) sys16_sync_mcu();
+		return System16Ram[(a & 0x3fff) ^ 1];
+	}
+
 	switch (a) {
 		case 0x140001:
 		case 0x140003:
 		case 0x140005:
 		case 0x140007: {
-			return ppi8255_r(0, (a - 0x140000) >> 1);
+			sys16_sync_audiocpu();
+			return ppi8255_r(0, (a & 7) >> 1);
 		}
 		
 		case 0x140011: {
@@ -1386,7 +1485,7 @@ static UINT8 __fastcall SharrierReadByte(UINT32 a)
 		case 0x140023:
 		case 0x140025:
 		case 0x140027: {
-			return ppi8255_r(1, (a - 0x140020) >> 1);
+			return ppi8255_r(1, (a & 7) >> 1);
 		}
 		
 		case 0x140031: {
@@ -1400,6 +1499,19 @@ static UINT8 __fastcall SharrierReadByte(UINT32 a)
 
 static void __fastcall SharrierWriteByte(UINT32 a, UINT8 d)
 {
+	if (a >= 0x40000 && a <= 0x43fff) {
+		if (dontrecurse == 0) sys16_sync_mcu();
+#if 0
+		// 0x40385 issue mcu debug (for later)
+		INT32 z = a&0x3fff;
+		if ((z& ~1) == 0x384) {
+			bprintf(0, _T("[68k.b] frame: %d / cyc: %d  -  addr  %x   data %x\n"), nCurrentFrame, SekTotalCycles(), a, d);
+		}
+#endif
+		System16Ram[(a & 0x3fff) ^ 1] = d;
+		return;
+	}
+
 	if (a >= 0x100000 && a <= 0x107fff) {
 		System16ATileByteWrite((a - 0x100000) ^ 1, d);
 		return;
@@ -1410,7 +1522,8 @@ static void __fastcall SharrierWriteByte(UINT32 a, UINT8 d)
 		case 0x140003: 
 		case 0x140005: 
 		case 0x140007: {
-			ppi8255_w(0, (a - 0x140000) >> 1, d & 0xff);
+			sys16_sync_audiocpu();
+			ppi8255_w(0, (a & 7) >> 1, d & 0xff);
 			return;
 		}
 		
@@ -1418,7 +1531,7 @@ static void __fastcall SharrierWriteByte(UINT32 a, UINT8 d)
 		case 0x140023:
 		case 0x140025:
 		case 0x140027: {
-			ppi8255_w(1, (a - 0x140020) >> 1, d & 0xff);
+			ppi8255_w(1, (a & 7) >> 1, d & 0xff);
 			return;
 		}
 		
@@ -1430,9 +1543,41 @@ static void __fastcall SharrierWriteByte(UINT32 a, UINT8 d)
 
 static void __fastcall SharrierWriteWord(UINT32 a, UINT16 d)
 {
+	if (a >= 0x40000 && a <= 0x43fff) {
+		if (dontrecurse == 0) sys16_sync_mcu();
+#if 0
+		// 0x40385 issue mcu debug (for later)
+		INT32 z = a&0x3fff;
+		if ((z& ~1) == 0x384) {
+			bprintf(0, _T("[68k.b] frame: %d / cyc: %d  -  addr  %x   data %x\n"), nCurrentFrame, SekTotalCycles(), a, d);
+		}
+#endif
+		*(UINT16*)(System16Ram + (a & 0x3fff)) = d;
+		return;
+	}
+
 	if (a >= 0x100000 && a <= 0x107fff) {
 		System16ATileWordWrite(a - 0x100000, d);
 		return;
+	}
+
+	switch (a) {
+		case 0x140000:
+		case 0x140002:
+		case 0x140004:
+		case 0x140006: {
+			sys16_sync_audiocpu();
+			ppi8255_w(0, (a & 7) >> 1, d & 0xff);
+			return;
+		}
+		
+		case 0x140020:
+		case 0x140022:
+		case 0x140024:
+		case 0x140026: {
+			ppi8255_w(1, (a & 7) >> 1, d & 0xff);
+			return;
+		}
 	}
 }
 
@@ -1521,13 +1666,70 @@ static UINT8 SharrierProcessAnalogControls(UINT16 value)
 	return 0;
 }
 
+UINT8 Hangon_I8751ReadPort(INT32 port)
+{
+	if (port >= 0x0000 && port <= 0xffff) {
+		SekCPUPush(0);
+		dontrecurse = 1; // 68k read handler syncs mcu, we don't want to do that here!
+		UINT8 b = SekReadByte((System16MCUData << 16) | (port ^ 1));
+		dontrecurse = 0;
+		SekCPUPop();
+
+		mcs51RunEnd(); // break out of mcu so 68k can catch up
+
+		return b;
+	}
+
+	return 0xff;
+}
+
+void Hangon_I8751WritePort(INT32 port, UINT8 data)
+{
+	if (port >= 0x0000 && port <= 0xffff) {
+		UINT32 addr = (System16MCUData << 16) | (port ^ 1);
+
+		if (addr == 0x40385) { // enabling writes here breaks inputs(!)
+			//bprintf(0, _T("[mcu] frame: %d / cyc: %d  -  port  %x   addr  %x   data %x\n"), nCurrentFrame, mcs51TotalCycles(), port, addr, data);
+			return;
+		}
+
+		SekCPUPush(0);
+		dontrecurse = 1;
+		SekWriteByte(addr, data);
+		dontrecurse = 0;
+		SekCPUPop();
+
+		mcs51RunEnd(); // break out of mcu so 68k can catch up
+
+		return;
+	}
+
+	switch (port) {
+		case MCS51_PORT_P1: {
+			System16MCUData = (BIT(data, 6) << 4) | ((data & 0x38) >> 3);
+			INT32 irq_line = ~data & 0x07;
+			if (irq_line) {
+				//bprintf(0, _T("mcu -> 68k irq line %d\tframe: %d\n"), irq_line, nCurrentFrame);
+				SekSetIRQLine(0, irq_line, CPU_IRQSTATUS_AUTO);
+			}
+			break;
+		}
+		default: {
+			//bprintf(0, _T("unmapped port   %x    %x\n"), port, data);
+		}
+	}
+}
+
+
 static void SharrierMap68K()
 {
 	SekInit(0, 0x68000);
 	SekOpen(0);
 	SekMapMemory(System16Rom             , 0x000000, 0x03ffff, MAP_READ);
 	SekMapMemory(System16Code            , 0x000000, 0x03ffff, MAP_FETCH);
-	SekMapMemory(System16Ram             , 0x040000, 0x043fff, MAP_RAM);
+	// RAM (40000 - 43fff) is written/read through handlers
+	// because we need mega-tight sync w/mcu -dink
+	//SekMapMemory(System16Ram             , 0x040000, 0x043fff, MAP_RAM); // in handler
 	SekMapMemory(System16TileRam         , 0x100000, 0x107fff, MAP_READ);
 	SekMapMemory(System16TextRam         , 0x108000, 0x108fff, MAP_RAM);
 	SekMapMemory(System16PaletteRam      , 0x110000, 0x110fff, MAP_RAM);
@@ -1644,19 +1846,11 @@ static INT32 ShangonrbInit()
 	return nRet;
 }
 
-static void Sharrier_Sim8751()
-{
-	*((UINT16*)(System16Ram + 0x00f0)) = 0;
-	
-	// Inputs
-	*((UINT16*)(System16Ram + 0x0492)) = BURN_ENDIAN_SWAP_INT16((UINT16)((SharrierProcessAnalogControls(0) << 8) | SharrierProcessAnalogControls(1)));
-}
-
 static INT32 SharrierInit()
 {	
-	Simulate8751 = Sharrier_Sim8751;
-	
 	System16Map68KDo = SharrierMap68K;
+
+	System16ProcessAnalogControlsDo = SharrierProcessAnalogControls;
 	
 	System16ClockSpeed = 10000000;
 	
@@ -1671,7 +1865,7 @@ struct BurnDriver BurnDrvEnduror = {
 	"enduror", NULL, NULL, NULL, "1986",
 	"Enduro Racer (Rev A, YM2151, FD1089B 317-0013A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
 	NULL, EndurorRomInfo, EndurorRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	EndurorInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1681,7 +1875,7 @@ struct BurnDriver BurnDrvEndurord = {
 	"endurord", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (bootleg of Rev A, YM2151, FD1089B 317-0013A set)\0", NULL, "bootleg", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32, GBF_RACING, 0,
 	NULL, EndurordRomInfo, EndurordRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	EndurorInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1691,7 +1885,7 @@ struct BurnDriver BurnDrvEnduror1 = {
 	"enduror1", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (YM2203, FD1089B 317-0013A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, Enduror1RomInfo, Enduror1RomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	Enduror1Init, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1701,7 +1895,7 @@ struct BurnDriver BurnDrvEnduror1d = {
 	"enduror1d", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (bootleg of YM2203, FD1089B 317-0013A set)\0", NULL, "bootleg", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, Enduror1dRomInfo, Enduror1dRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	Enduror1Init, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1711,7 +1905,7 @@ struct BurnDriver BurnDrvEndurora = {
 	"endurora", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (Rev A, YM2151, mask ROM sprites, FD1089B 317-0013A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, EnduroraRomInfo, EnduroraRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	EndurorInit, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1721,7 +1915,7 @@ struct BurnDriver BurnDrvEndurorb = {
 	"endurorb", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (YM2151, FD1089B 317-0013A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1089B_ENC | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, EndurorbRomInfo, EndurorbRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	EndurorInit, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1731,7 +1925,7 @@ struct BurnDriver BurnDrvEndurobl = {
 	"endurobl", "enduror", NULL, NULL, "1986",
 	"Enduro Racer (bootleg set 1)\0", NULL, "bootleg", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, EnduroblRomInfo, EnduroblRomName, NULL, NULL, NULL, NULL, EndurorInputInfo, EndurorDIPInfo,
 	EnduroblInit, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1741,7 +1935,7 @@ struct BurnDriver BurnDrvHangon = {
 	"hangon", NULL, NULL, NULL, "1985",
 	"Hang-On (rev A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, HangonRomInfo, HangonRomName, NULL, NULL, NULL, NULL, HangonInputInfo, HangonDIPInfo,
 	HangonInit, System16Exit, HangonYM2203Frame, HangonAltRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1751,7 +1945,7 @@ struct BurnDriver BurnDrvHangon1 = {
 	"hangon1", "hangon", NULL, NULL, "1985",
 	"Hang-On\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, Hangon1RomInfo, Hangon1RomName, NULL, NULL, NULL, NULL, HangonInputInfo, HangonDIPInfo,
 	HangonInit, System16Exit, HangonYM2203Frame, HangonAltRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1759,10 +1953,20 @@ struct BurnDriver BurnDrvHangon1 = {
 
 struct BurnDriver BurnDrvHangon2 = {
 	"hangon2", "hangon", NULL, NULL, "1985",
-	"Hang-On (ride-on)\0", NULL, "Sega", "Hang-On",
+	"Hang-On (Rev A, ride-on)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
 	NULL, Hangon2RomInfo, Hangon2RomName, NULL, NULL, NULL, NULL, HangonInputInfo, HangonDIPInfo,
+	HangonInit, System16Exit, HangonYM2203Frame, HangonAltRender, System16Scan,
+	NULL, 0x1800, 320, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvHangonvf = {
+	"hangonvf", "hangon", NULL, NULL, "1985",
+	"VF (bootleg of Hang-On)\0", NULL, "bootleg", "Hang-On",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_YM2203, GBF_RACING, 0,
+	NULL, HangonvfRomInfo, HangonvfRomName, NULL, NULL, NULL, NULL, HangonInputInfo, HangonDIPInfo,
 	HangonInit, System16Exit, HangonYM2203Frame, HangonAltRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
 };
@@ -1771,7 +1975,7 @@ struct BurnDriverD BurnDrvShangonro = {
 	"shangonro", "shangon", NULL, NULL, "1992",
 	"Super Hang-On (Hang-On conversion, ride-on, Japan, FD1094 317-0038)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1094_ENC_CPU2, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1094_ENC_CPU2, GBF_RACING, 0,
 	NULL, ShangonroRomInfo, ShangonroRomName, NULL, NULL, NULL, NULL, ShangonrbInputInfo, ShangonrbDIPInfo,
 	ShangonrbInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1781,7 +1985,7 @@ struct BurnDriverD BurnDrvShangonho = {
 	"shangonho", "shangon", NULL, NULL, "1992",
 	"Super Hang-On (Hang-On conversion, Japan, FD1094 317-0039)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1094_ENC_CPU2, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_FD1094_ENC_CPU2, GBF_RACING, 0,
 	NULL, ShangonhoRomInfo, ShangonhoRomName, NULL, NULL, NULL, NULL, ShangonrbInputInfo, ShangonrbDIPInfo,
 	ShangonrbInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1791,7 +1995,7 @@ struct BurnDriverD BurnDrvShangonrb = {
 	"shangonrb", "shangon", NULL, NULL, "1992",
 	"Super Hang-On (Hang-On conversion, bootleg)\0", NULL, "bootleg", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_HANGON, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON, GBF_RACING, 0,
 	NULL, ShangonrbRomInfo, ShangonrbRomName, NULL, NULL, NULL, NULL, ShangonrbInputInfo, ShangonrbDIPInfo,
 	ShangonrbInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1801,7 +2005,7 @@ struct BurnDriverD BurnDrvShangonrb2 = {
 	"shangonrb2", "shangon", NULL, NULL, "1992",
 	"Super Hang-On (Hang-On conversion, Beta bootleg)\0", NULL, "bootleg (Beta)", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_HANGON, GBF_RACING, 0,
+	BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON, GBF_RACING, 0,
 	NULL, Shangonrb2RomInfo, Shangonrb2RomName, NULL, NULL, NULL, NULL, ShangonrbInputInfo, ShangonrbDIPInfo,
 	ShangonrbInit, System16Exit, HangonFrame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1811,7 +2015,7 @@ struct BurnDriver BurnDrvSharrier = {
 	"sharrier", NULL, NULL, NULL, "1985",
 	"Space Harrier (Rev A, 8751 315-5163A)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_SHOOT, 0,
 	NULL, SharrierRomInfo, SharrierRomName, NULL, NULL, NULL, NULL, SharrierInputInfo, SharrierDIPInfo,
 	SharrierInit, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3
@@ -1821,7 +2025,7 @@ struct BurnDriver BurnDrvSharrier1 = {
 	"sharrier1", "sharrier", NULL, NULL, "1985",
 	"Space Harrier (8751 315-5163)\0", NULL, "Sega", "Hang-On",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_HANGON | HARDWARE_SEGA_SPRITE_LOAD32 | HARDWARE_SEGA_YM2203, GBF_SHOOT, 0,
 	NULL, Sharrier1RomInfo, Sharrier1RomName, NULL, NULL, NULL, NULL, SharrierInputInfo, SharrierDIPInfo,
 	SharrierInit, System16Exit, HangonYM2203Frame, HangonRender, System16Scan,
 	NULL, 0x1800, 320, 224, 4, 3

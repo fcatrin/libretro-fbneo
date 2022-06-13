@@ -1190,7 +1190,7 @@ static UINT16 __fastcall toaplan1_tilemap_read_word(UINT32 address)
 
 		case 0x0004:
 		{
-			UINT16 ret = *((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4)));
+			UINT16 ret = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4))));
 
 			// rallybik (doesn't seem to affect other games)
 			ret |= ((ret & 0xf000) >> 4);
@@ -1200,7 +1200,7 @@ static UINT16 __fastcall toaplan1_tilemap_read_word(UINT32 address)
 		}
 
 		case 0x0006:
-			return *((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4) + (address & 2)));
+			return BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4) + (address & 2))));
 
 		case 0x0010:
 		case 0x0012:
@@ -1236,7 +1236,7 @@ static void __fastcall toaplan1_tilemap_write_word(UINT32 address, UINT16 data)
 
 		case 0x0004:
 		case 0x0006:
-			*((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4) + (address & 2))) = data;
+			*((UINT16*)(DrvVidRAM + ((tileram_offs & 0x3fff) * 4) + (address & 2))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x0010:
@@ -1267,7 +1267,7 @@ static UINT16 __fastcall toaplan1_spriteram_read_word(UINT32 address)
 		case 0x0004:
 		{
 			UINT16 *spriteram = (UINT16*)DrvSprRAM;
-			UINT16 ret = spriteram[spriteram_offset & 0x7ff];
+			UINT16 ret = BURN_ENDIAN_SWAP_INT16(spriteram[spriteram_offset & 0x7ff]);
 			spriteram_offset++;
 			return ret;
 		}
@@ -1275,7 +1275,7 @@ static UINT16 __fastcall toaplan1_spriteram_read_word(UINT32 address)
 		case 0x0006:
 		{
 			UINT16 *spritesizeram = (UINT16*)DrvSprSizeRAM;
-			UINT16 ret = spritesizeram[spriteram_offset & 0x3f];
+			UINT16 ret = BURN_ENDIAN_SWAP_INT16(spritesizeram[spriteram_offset & 0x3f]);
 			spriteram_offset++;
 			return ret;
 		}
@@ -1308,7 +1308,7 @@ static void __fastcall toaplan1_spriteram_write_word(UINT32 address, UINT16 data
 		case 0x0004:
 		{
 			UINT16 *spriteram = (UINT16*)DrvSprRAM;
-			spriteram[spriteram_offset & 0x7ff] = data;
+			spriteram[spriteram_offset & 0x7ff] = BURN_ENDIAN_SWAP_INT16(data);
 			spriteram_offset++;
 		}
 		return;
@@ -1316,7 +1316,7 @@ static void __fastcall toaplan1_spriteram_write_word(UINT32 address, UINT16 data
 		case 0x0006:
 		{
 			UINT16 *spritesizeram = (UINT16*)DrvSprSizeRAM;
-			spritesizeram[spriteram_offset & 0x3f] = data;
+			spritesizeram[spriteram_offset & 0x3f] = BURN_ENDIAN_SWAP_INT16(data);
 			spriteram_offset++;
 		}
 		return;
@@ -1330,7 +1330,7 @@ static void __fastcall toaplan1_spriteram_write_byte(UINT32 address, UINT8 data)
 
 static inline void update_palette(INT32 offset)
 {
-	UINT16 p = *((UINT16*)(DrvPalRAM + offset * 2));
+	UINT16 p = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvPalRAM + offset * 2)));
 
 	UINT8 r = (p >>  0) & 0x1f;
 	UINT8 g = (p >>  5) & 0x1f;
@@ -1347,7 +1347,7 @@ static void __fastcall toaplan1_palette_write_word(UINT32 address, UINT16 data)
 {
 	UINT16 *p = (UINT16*)DrvPalRAM;
 	INT32 offset = ((address & 0x7ff) / 2) + ((address & 0x2000) >> 3);
-	p[offset] = data;
+	p[offset] = BURN_ENDIAN_SWAP_INT16(data);
 	update_palette(offset);
 }
 
@@ -1713,8 +1713,8 @@ static UINT8 __fastcall demonwld_sound_read_port(UINT16 port)
 
 #define tilemap_cb(layer)					\
 	UINT16 *ram = (UINT16*)(DrvVidRAM + (layer*0x4000));	\
-	UINT16 attr = ram[offs * 2 + 0];			\
-	UINT16 code = ram[offs * 2 + 1];			\
+	UINT16 attr = BURN_ENDIAN_SWAP_INT16(ram[offs * 2 + 0]);			\
+	UINT16 code = BURN_ENDIAN_SWAP_INT16(ram[offs * 2 + 1]);			\
 	UINT8 color = attr & 0x3f;				\
 	INT32 flags = (code & 0x8000) ? TILE_SKIP : 0;		\
 	if (DrvTransTable[code]) flags |= TILE_SKIP;		\
@@ -2336,9 +2336,9 @@ static void DrvPaletteUpdate()
 
 	for (INT32 i = 0; i < BurnDrvGetPaletteEntries(); i++)
 	{
-		UINT8 r = (p[i] >>  0) & 0x1f;
-		UINT8 g = (p[i] >>  5) & 0x1f;
-		UINT8 b = (p[i] >> 10) & 0x1f;
+		UINT8 r = (BURN_ENDIAN_SWAP_INT16(p[i]) >>  0) & 0x1f;
+		UINT8 g = (BURN_ENDIAN_SWAP_INT16(p[i]) >>  5) & 0x1f;
+		UINT8 b = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 10) & 0x1f;
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
@@ -2357,17 +2357,17 @@ static void rallybik_draw_sprites()
 
 	for (INT32 offs = (0x1000/2)-4; offs >= 0; offs -= 4)
 	{
-		UINT16 attr = spriteram[offs + 1];
+		UINT16 attr = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 1]);
 		UINT16 priority = (attr & 0x0c00)>>8;
 		if (!priority) continue;
 
-		INT32 sy = spriteram[offs + 3] >> 7;
+		INT32 sy = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 3]) >> 7;
 
 		if (sy != 0x0100)
 		{
-			UINT16 code  = spriteram[offs] & 0x7ff;
+			UINT16 code  = BURN_ENDIAN_SWAP_INT16(spriteram[offs]) & 0x7ff;
 			UINT16 color = ((attr & 0x3f) << 4) | 0x400;
-			INT32  sx    = spriteram[offs + 2] >> 7;
+			INT32  sx    = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 2]) >> 7;
 			INT32 flipx  = attr & 0x100;
 			INT32 flipy  = attr & 0x200;
 			
@@ -2543,22 +2543,22 @@ static void draw_sprites()
 
 	for (INT32 offs = 0x1000/2 - 4; offs >= 0; offs -= 4)
 	{
-		if (!(source[offs] & 0x8000))
+		if (!(BURN_ENDIAN_SWAP_INT16(source[offs]) & 0x8000))
 		{
 			INT32 sx, sy;
 
-			INT32 attrib = source[offs+1];
+			INT32 attrib = BURN_ENDIAN_SWAP_INT16(source[offs+1]);
 			INT32 priority = (attrib & 0xf000) >> 12;
 
-			INT32 sprite = source[offs] & 0x7fff;
+			INT32 sprite = BURN_ENDIAN_SWAP_INT16(source[offs]) & 0x7fff;
 			INT32 color = attrib & 0x3f;
 
 			INT32 sizeram_ptr = (attrib >> 6) & 0x3f;
-			INT32 sprite_sizex = ( size[sizeram_ptr]       & 0x0f) * 8;
-			INT32 sprite_sizey = ((size[sizeram_ptr] >> 4) & 0x0f) * 8;
+			INT32 sprite_sizex = (BURN_ENDIAN_SWAP_INT16(size[sizeram_ptr])       & 0x0f) * 8;
+			INT32 sprite_sizey = ((BURN_ENDIAN_SWAP_INT16(size[sizeram_ptr]) >> 4) & 0x0f) * 8;
 
-			INT32 sx_base = (source[offs + 2] >> 7) & 0x1ff;
-			INT32 sy_base = (source[offs + 3] >> 7) & 0x1ff;
+			INT32 sx_base = (BURN_ENDIAN_SWAP_INT16(source[offs + 2]) >> 7) & 0x1ff;
+			INT32 sy_base = (BURN_ENDIAN_SWAP_INT16(source[offs + 3]) >> 7) & 0x1ff;
 
 			if (sx_base >= 0x180) sx_base -= 0x200;
 			if (sy_base >= 0x180) sy_base -= 0x200;
@@ -2652,10 +2652,9 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		if (m68k_halt) {
-			SekIdle(nCyclesTotal[0] / nInterleave);
-			nCyclesDone[0] += nCyclesTotal[0] / nInterleave;
+			CPU_IDLE(0, Sek);
 		} else {
-			nCyclesDone[0] += SekRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+			CPU_RUN(0, Sek);
 		}
 
 		if (i == nVBlankLine) {
@@ -2676,7 +2675,9 @@ static INT32 DrvFrame()
 
 		BurnTimerUpdateYM3812((i + 1) * (nCyclesTotal[1] / nInterleave));
 
-		if (has_dsp && dsp_on) tms32010_execute(nCyclesTotal[2] / nInterleave);
+		if (has_dsp && dsp_on) {
+			CPU_RUN(2, tms32010);
+		}
 	}
 
 	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
@@ -2781,23 +2782,23 @@ struct BurnDriver BurnDrvRallybik = {
 // Truxton / Tatsujin
 
 static struct BurnRomInfo truxtonRomDesc[] = {
-	{ "b65_11.bin",			0x20000, 0x1a62379a, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "b65_10.bin",			0x20000, 0xaff5195d, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "b65_11.7k",			0x20000, 0x1a62379a, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "b65_10.7l",			0x20000, 0xaff5195d, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "b65_09.bin",			0x04000, 0x1bdd4ddc, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
+	{ "b65_09.2f",			0x04000, 0x1bdd4ddc, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
 
-	{ "b65_08.bin",			0x20000, 0xd2315b37, 3 | BRF_GRA },           //  3 Layer Tiles
-	{ "b65_07.bin",			0x20000, 0xfb83252a, 3 | BRF_GRA },           //  4
-	{ "b65_06.bin",			0x20000, 0x36cedcbe, 3 | BRF_GRA },           //  5
-	{ "b65_05.bin",			0x20000, 0x81cd95f1, 3 | BRF_GRA },           //  6
+	{ "b65_08.13e",			0x20000, 0xd2315b37, 3 | BRF_GRA },           //  3 Layer Tiles
+	{ "b65_07.11e",			0x20000, 0xfb83252a, 3 | BRF_GRA },           //  4
+	{ "b65_06.10e",			0x20000, 0x36cedcbe, 3 | BRF_GRA },           //  5
+	{ "b65_05.8e",			0x20000, 0x81cd95f1, 3 | BRF_GRA },           //  6
 
-	{ "b65_04.bin",			0x20000, 0x8c6ff461, 5 | BRF_GRA },           //  7 Sprites
-	{ "b65_03.bin",			0x20000, 0x58b1350b, 5 | BRF_GRA },           //  8
-	{ "b65_02.bin",			0x20000, 0x1dd55161, 5 | BRF_GRA },           //  9
-	{ "b65_01.bin",			0x20000, 0xe974937f, 5 | BRF_GRA },           // 10
+	{ "b65_04.20c",			0x20000, 0x8c6ff461, 5 | BRF_GRA },           //  7 Sprites
+	{ "b65_03.20b",			0x20000, 0x58b1350b, 5 | BRF_GRA },           //  8
+	{ "b65_02.20ab",		0x20000, 0x1dd55161, 5 | BRF_GRA },           //  9
+	{ "b65_01.20a",			0x20000, 0xe974937f, 5 | BRF_GRA },           // 10
 
-	{ "b65_12.bpr",			0x00020, 0xbc88cced, 0 | BRF_OPT },           // 11 PROMs
-	{ "b65_13.bpr",			0x00020, 0xa1e17492, 0 | BRF_OPT },           // 12
+	{ "b65_12.7c",			0x00020, 0xbc88cced, 0 | BRF_OPT },           // 11 PROMs
+	{ "b65_13.6d",			0x00020, 0xa1e17492, 0 | BRF_OPT },           // 12
 };
 
 STD_ROM_PICK(truxton)

@@ -1,4 +1,4 @@
-#	Main Makefile for FB Neo, execute an appropriate system-specific makefile
+#	Main Makefile for FBNeo, execute an appropriate system-specific makefile
 
 export
 
@@ -24,6 +24,9 @@ UNICODE = 1
 # Include x86 Assembly routines
 BUILD_X86_ASM = 1
 
+# Include GCC optmisations for your CPU e.g use -march=native. WARNING: This might mean that the generated binaries will not run on other peoples (older) machines!
+#BUILD_NATIVE = 1
+
 # Build for x64 targets (MinGW64 and MSVC only, this will undefine BUILD_A68K and BUILD_X86_ASM)
 #BUILD_X64_EXE = 1
 
@@ -35,6 +38,9 @@ INCLUDE_7Z_SUPPORT = 1
 
 # Include AVI recording support (uses Video For Windows)
 INCLUDE_AVI_RECORDING = 1
+
+# Include LUA support (on Windows Standalone, LUA is enabled regardless)
+#INCLUDE_LUA_SUPPORT = 1
 
 # Include symbols and other debug information in the executable
 #SYMBOL = 1
@@ -65,6 +71,8 @@ LSB_FIRST = 1
 # Include png.h from burner.h
 INCLUDE_LIB_PNGH = 1
 
+# Enable CRT resolution switching
+# INCLUDE_SWITCHRES = 1
 
 #
 #	execute an appropriate system-specific makefile
@@ -75,18 +83,34 @@ mingw345: FORCE
 
 mingw452: FORCE
 	@$(MAKE) -s -f makefile.mingw GCC452=1
-	
+
 mingw471: FORCE
 	@$(MAKE) -s -f makefile.mingw GCC471=1
-	
+
 mingw510: FORCE
 	@$(MAKE) -s -f makefile.mingw GCC510=1
 
+# MinGW w/gcc 5.1.x to gcc 11.x (present)
+# note: BORKYCRT fixes swprintf() which MSYS2 broke some time 2021
+mingw: FORCE
+	@$(MAKE) -s -f makefile.mingw GCC510=1 BORKYCRT=1
+
+# Cross compile a 32 bits windows binary from linux
+mingwcc: FORCE
+	@$(MAKE) -s -f makefile.mingw GCC510=1 BORKYCRT=1 HOST_CC=gcc HOST_CXX=g++ CC=i686-w64-mingw32-gcc CXX=i686-w64-mingw32-g++ WINDRES=i686-w64-mingw32-windres
+
+# Cross compile a 64 bits windows binary from linux
+mingwcc64: FORCE
+	@$(MAKE) -s -f makefile.mingw BUILD_X64_EXE=1 GCC510=1 BORKYCRT=1 HOST_CC=gcc HOST_CXX=g++ CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ WINDRES=x86_64-w64-mingw32-windres
+
 mamemingw: FORCE
-	@$(MAKE) -s -f makefile.mamemingw 
+	@$(MAKE) -s -f makefile.mamemingw
 
 sdl: FORCE
 	@$(MAKE) -s -f makefile.sdl
+
+sdl2: FORCE
+	@$(MAKE) -s -f makefile.sdl2
 
 vc: FORCE
 	@$(MAKE) -s -f makefile.vc

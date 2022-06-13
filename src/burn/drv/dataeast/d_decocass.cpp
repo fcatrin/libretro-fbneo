@@ -12,7 +12,7 @@ cflyball, cpsoccer, coozumou, & zeroize overload bios (glitches normal)
 #include "m6502_intf.h"
 #include "bitswap.h"
 #include "flt_rc.h"
-#include "i8x41.h"
+#include "mcs48.h"
 #include "ay8910.h"
 
 static UINT8 *AllMem;
@@ -154,27 +154,27 @@ static INT32 fourway_mode = 0;
 // analog inputs - not emulated - unused by games in this system.
 
 static struct BurnInputInfo DecocassInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 	{"Bios setting",	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
@@ -216,11 +216,12 @@ static struct BurnDIPInfo DecocassDIPList[]=
 	{0x12, 0x01, 0xe0, 0x60, "E"			},
 	{0x12, 0x01, 0xe0, 0x40, "F"			},
 
-	{0   , 0xfe, 0   ,    4, "Bios Version"		},
-	{0x13, 0x01, 0x03, 0x00, "Japan A, Newer"	},
-	{0x13, 0x01, 0x03, 0x01, "Japan A, Older"	},
-	{0x13, 0x01, 0x03, 0x02, "USA B, Newer"		},
-	{0x13, 0x01, 0x03, 0x03, "USA B, Older"		},
+	{0   , 0xfe, 0   ,    5, "Bios Version"		},
+	{0x13, 0x01, 0x07, 0x00, "Japan A, Newer"	},
+	{0x13, 0x01, 0x07, 0x01, "Japan A, Older"	},
+	{0x13, 0x01, 0x07, 0x02, "USA B, Newer"		},
+	{0x13, 0x01, 0x07, 0x03, "USA B, Older"		},
+	{0x13, 0x01, 0x07, 0x04, "Bios D (Europe?)" },
 };
 
 STDDIPINFO(Decocass)
@@ -365,8 +366,109 @@ static struct BurnDIPInfo CtislandDIPList[]=
 
 STDDIPINFOEXT(Ctisland, Decocass, Ctisland)
 
+static struct BurnDIPInfo Ctisland3DIPList[]=
+{
+	{0x12, 0xff, 0xff, 0xef, NULL			},
+	{0x13, 0xff, 0xff, 0x04, NULL			},
+
+	{0   , 0xfe, 0   ,    2, "Lives"		},
+	{0x12, 0x01, 0x01, 0x01, "3"			},
+	{0x12, 0x01, 0x01, 0x00, "5"			},
+
+	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
+	{0x12, 0x01, 0x06, 0x06, "15000"		},
+	{0x12, 0x01, 0x06, 0x04, "20000"		},
+	{0x12, 0x01, 0x06, 0x02, "25000"		},
+	{0x12, 0x01, 0x06, 0x00, "30000"		},
+};
+
+STDDIPINFOEXT(Ctisland3, Decocass, Ctisland3)
+
+static struct BurnInputInfo CtowerInputList[] = {
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p1 start"	},
+	{"P1 Left Stick Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Left Stick Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left Stick Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left Stick Right",     BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
+	{"P1 Right Stick Up",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 up 2"	},
+	{"P1 Right Stick Down",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 down 2"	},
+	{"P1 Right Stick Left",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 left 2"	},
+	{"P1 Right Stick Right",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 right 2"},
+
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 start"	},
+	{"P2 Left Stick Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Left Stick Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left Stick Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left Stick Right",     BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
+	{"P2 Right Stick Up",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up 2"	},
+	{"P2 Right Stick Down",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down 2"	},
+	{"P2 Right Stick Left",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 left 2"	},
+	{"P2 Right Stick Right",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right 2"},
+
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Bios setting",	BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+};
+
+STDINPUTINFO(Ctower)
+
+static struct BurnDIPInfo CtowerDIPList[]=
+{
+	DIP_OFFSET(0x15)
+	{0x00, 0xff, 0xff, 0xff, NULL			},
+	{0x01, 0xff, 0xff, 0x81, NULL			},
+	{0x02, 0xff, 0xff, 0x04, NULL			},
+
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0x00, 0x01, 0x03, 0x00, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x03, 0x03, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x03, 0x02, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x03, 0x01, "1 Coin  3 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0x00, 0x01, 0x0c, 0x00, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x0c, 0x0c, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x0c, 0x08, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x0c, 0x04, "1 Coin  3 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Type of Tape"		},
+	{0x00, 0x01, 0x30, 0x00, "MT (Big)"		},
+	{0x00, 0x01, 0x30, 0x10, "invalid?"		},
+	{0x00, 0x01, 0x30, 0x20, "invalid?"		},
+	{0x00, 0x01, 0x30, 0x30, "MD (Small)"		},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x00, 0x01, 0x40, 0x00, "Upright"		},
+	{0x00, 0x01, 0x40, 0x40, "Cocktail"		},
+
+	{0   , 0xfe, 0   ,    2, "Lives"			},
+	{0x01, 0x01, 0x01, 0x01, "2"				},
+	{0x01, 0x01, 0x01, 0x00, "4"				},
+
+	{0   , 0xfe, 0   ,    6, "Country Code"		},
+	{0x01, 0x01, 0xe0, 0xe0, "A"			},
+	{0x01, 0x01, 0xe0, 0xc0, "B"			},
+	{0x01, 0x01, 0xe0, 0xa0, "C"			},
+	{0x01, 0x01, 0xe0, 0x80, "D"			},
+	{0x01, 0x01, 0xe0, 0x60, "E"			},
+	{0x01, 0x01, 0xe0, 0x40, "F"			},
+
+	{0   , 0xfe, 0   ,    5, "Bios Version"		},
+	{0x02, 0x01, 0x07, 0x00, "Japan A, Newer"	},
+	{0x02, 0x01, 0x07, 0x01, "Japan A, Older"	},
+	{0x02, 0x01, 0x07, 0x02, "USA B, Newer"		},
+	{0x02, 0x01, 0x07, 0x03, "USA B, Older"		},
+	{0x02, 0x01, 0x07, 0x04, "Bios D (Europe?)" },
+};
+
+STDDIPINFO(Ctower)
+
 static struct BurnDIPInfo Cocean1aDIPList[]=
 {
+	{0x11, 0xff, 0xff, 0x3f, NULL			},
 	{0x12, 0xff, 0xff, 0xff, NULL			},
 	{0x13, 0xff, 0xff, 0x00, NULL			},
 
@@ -384,6 +486,16 @@ static struct BurnDIPInfo Cocean1aDIPList[]=
 	{0x11, 0x01, 0x08, 0x08, "Off"			},
 	{0x11, 0x01, 0x08, 0x00, "None"			},
 
+	{0   , 0xfe, 0   ,    4, "Type of Tape"		},
+	{0x11, 0x01, 0x30, 0x00, "MT (Big)"		},
+	{0x11, 0x01, 0x30, 0x10, "invalid?"		},
+	{0x11, 0x01, 0x30, 0x20, "invalid?"		},
+	{0x11, 0x01, 0x30, 0x30, "MD (Small)"		},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x11, 0x01, 0x40, 0x00, "Upright"		},
+	{0x11, 0x01, 0x40, 0x40, "Cocktail"		},
+
 	{0   , 0xfe, 0   ,    4, "Key Switch Credit"	},
 	{0x12, 0x01, 0x03, 0x03, "1 Coin 10 Credits"	},
 	{0x12, 0x01, 0x03, 0x02, "1 Coin 20 Credits"	},
@@ -401,12 +513,27 @@ static struct BurnDIPInfo Cocean1aDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Pay Out %"		},
 	{0x12, 0x01, 0x10, 0x10, "Payout 75%"		},
 	{0x12, 0x01, 0x10, 0x00, "Payout 85%"		},
+
+	{0   , 0xfe, 0   ,    6, "Country Code"		},
+	{0x12, 0x01, 0xe0, 0xe0, "A"			},
+	{0x12, 0x01, 0xe0, 0xc0, "B"			},
+	{0x12, 0x01, 0xe0, 0xa0, "C"			},
+	{0x12, 0x01, 0xe0, 0x80, "D"			},
+	{0x12, 0x01, 0xe0, 0x60, "E"			},
+	{0x12, 0x01, 0xe0, 0x40, "F"			},
+
+	{0   , 0xfe, 0   ,    4, "Bios Version"		},
+	{0x13, 0x01, 0x03, 0x00, "Japan A, Newer"	},
+	{0x13, 0x01, 0x03, 0x01, "Japan A, Older"	},
+	{0x13, 0x01, 0x03, 0x02, "USA B, Newer"		},
+	{0x13, 0x01, 0x03, 0x03, "USA B, Older"		},
 };
 
-STDDIPINFOEXT(Cocean1a,	Decocass,	Cocean1a)
+STDDIPINFO(Cocean1a)
 
 static struct BurnDIPInfo Cocean6bDIPList[]=
 {
+	{0x11, 0xff, 0xff, 0x3f, NULL			},
 	{0x12, 0xff, 0xff, 0xff, NULL			},
 	{0x13, 0xff, 0xff, 0x02, NULL			},
 
@@ -424,6 +551,16 @@ static struct BurnDIPInfo Cocean6bDIPList[]=
 	{0x11, 0x01, 0x08, 0x08, "Off"			},
 	{0x11, 0x01, 0x08, 0x00, "None"			},
 
+	{0   , 0xfe, 0   ,    4, "Type of Tape"		},
+	{0x11, 0x01, 0x30, 0x00, "MT (Big)"		},
+	{0x11, 0x01, 0x30, 0x10, "invalid?"		},
+	{0x11, 0x01, 0x30, 0x20, "invalid?"		},
+	{0x11, 0x01, 0x30, 0x30, "MD (Small)"		},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x11, 0x01, 0x40, 0x00, "Upright"		},
+	{0x11, 0x01, 0x40, 0x40, "Cocktail"		},
+
 	{0   , 0xfe, 0   ,    4, "Key Switch Credit"	},
 	{0x12, 0x01, 0x03, 0x03, "1 Coin 10 Credits"	},
 	{0x12, 0x01, 0x03, 0x02, "1 Coin 20 Credits"	},
@@ -441,9 +578,23 @@ static struct BurnDIPInfo Cocean6bDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Pay Out %"		},
 	{0x12, 0x01, 0x10, 0x10, "Payout 75%"		},
 	{0x12, 0x01, 0x10, 0x00, "Payout 85%"		},
+
+	{0   , 0xfe, 0   ,    6, "Country Code"		},
+	{0x12, 0x01, 0xe0, 0xe0, "A"			},
+	{0x12, 0x01, 0xe0, 0xc0, "B"			},
+	{0x12, 0x01, 0xe0, 0xa0, "C"			},
+	{0x12, 0x01, 0xe0, 0x80, "D"			},
+	{0x12, 0x01, 0xe0, 0x60, "E"			},
+	{0x12, 0x01, 0xe0, 0x40, "F"			},
+
+	{0   , 0xfe, 0   ,    4, "Bios Version"		},
+	{0x13, 0x01, 0x03, 0x00, "Japan A, Newer"	},
+	{0x13, 0x01, 0x03, 0x01, "Japan A, Older"	},
+	{0x13, 0x01, 0x03, 0x02, "USA B, Newer"		},
+	{0x13, 0x01, 0x03, 0x03, "USA B, Older"		},
 };
 
-STDDIPINFOEXT(Cocean6b,	Decocass,	Cocean6b)
+STDDIPINFO(Cocean6b)
 
 static struct BurnDIPInfo ClocknchDIPList[]=
 {
@@ -1159,60 +1310,60 @@ STDDIPINFOEXT(Cflyball,	Decocass,	Cflyball)
 
 static struct BurnInputInfo CdsteljnInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p1 start"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy3 + 3,	"p1 start"	},
 	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
 	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
-	{"A",			BIT_DIGITAL,	DrvJoy5 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy5 + 1,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy5 + 5,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy5 + 6,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy6 + 0,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy6 + 4,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy6 + 5,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy6 + 6,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy7 + 1,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy7 + 2,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy7 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah reach"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy5 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy5 + 6,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy6 + 0,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy6 + 5,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy6 + 6,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy7 + 2,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy7 + 4,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy7 + 3,	"mah reach"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 start"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy3 + 4,	"p2 start"	},
 	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
 	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
 	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
-	{"A",			BIT_DIGITAL,	DrvJoy9 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy9 + 1,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy9 + 2,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy9 + 3,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy9 + 4,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy9 + 5,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy9 + 6,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy10 + 0,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy10 + 1,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy10 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy10 + 3,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy10 + 4,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy10 + 5,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy10 + 6,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy11 + 1,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy11 + 0,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy11 + 2,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy11 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy11 + 3,	"mah reach"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 A",		BIT_DIGITAL,	DrvJoy9 + 0,	"mah a"		},
+	{"P2 B",		BIT_DIGITAL,	DrvJoy9 + 1,	"mah b"		},
+	{"P2 C",		BIT_DIGITAL,	DrvJoy9 + 2,	"mah c"		},
+	{"P2 D",		BIT_DIGITAL,	DrvJoy9 + 3,	"mah d"		},
+	{"P2 E",		BIT_DIGITAL,	DrvJoy9 + 4,	"mah e"		},
+	{"P2 F",		BIT_DIGITAL,	DrvJoy9 + 5,	"mah f"		},
+	{"P2 G",		BIT_DIGITAL,	DrvJoy9 + 6,	"mah g"		},
+	{"P2 H",		BIT_DIGITAL,	DrvJoy10 + 0,	"mah h"		},
+	{"P2 I",		BIT_DIGITAL,	DrvJoy10 + 1,	"mah i"		},
+	{"P2 J",		BIT_DIGITAL,	DrvJoy10 + 2,	"mah j"		},
+	{"P2 K",		BIT_DIGITAL,	DrvJoy10 + 3,	"mah k"		},
+	{"P2 L",		BIT_DIGITAL,	DrvJoy10 + 4,	"mah l"		},
+	{"P2 M",		BIT_DIGITAL,	DrvJoy10 + 5,	"mah m"		},
+	{"P2 N",		BIT_DIGITAL,	DrvJoy10 + 6,	"mah n"		},
+	{"P2 Pon",		BIT_DIGITAL,	DrvJoy11 + 1,	"mah pon"	},
+	{"P2 Chi",		BIT_DIGITAL,	DrvJoy11 + 0,	"mah chi"	},
+	{"P2 Kan",		BIT_DIGITAL,	DrvJoy11 + 2,	"mah kan"	},
+	{"P2 Ron",		BIT_DIGITAL,	DrvJoy11 + 4,	"mah ron"	},
+	{"P2 Reach",	BIT_DIGITAL,	DrvJoy11 + 3,	"mah reach"	},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
@@ -1288,16 +1439,14 @@ static INT32 tape_speed = 0;
 static INT32 tape_timer = 0;
 static INT32 tape_dir = 0;
 
-static INT64 tape_freerun = 0; // continuously counts up from mcu clock
-
 static double tapetimer()
 {
-	return tape_freerun * (1.0 / 500000);
+	return mcs48TotalCycles() * (1.0 / 500000);
 }
 
 static void tapetimer_reset()
 {
-	tape_freerun = 0;
+	mcs48NewFrame();
 }
 
 static INT32 firsttime = 1;
@@ -1540,7 +1689,7 @@ static UINT8 decocass_type1_read(UINT16 offset)
 	if (1 == (offset & 1))
 	{
 		if (0 == (offset & E5XX_MASK))
-			data = i8x41_get_register(I8X41_STAT);
+			data = mcs48_master_r(1);
 		else
 			data = 0xff;
 
@@ -1559,7 +1708,7 @@ static UINT8 decocass_type1_read(UINT16 offset)
 		}
 
 		if (0 == (offset & E5XX_MASK))
-			data = i8x41_get_register(I8X41_DATA);
+			data = mcs48_master_r(0);
 		else
 			data = 0xff;
 
@@ -1593,7 +1742,7 @@ static UINT8 decocass_nodongle_read(UINT16 offset)
 {
 	if ((offset & 0x02) == 0)
 	{
-		return i8x41_get_register((offset & 1) ? I8X41_STAT : I8X41_DATA);
+		return mcs48_master_r(offset & 1);
 	}
 
 	return 0xff;
@@ -1611,7 +1760,7 @@ static UINT8 decocass_type2_read(UINT16 offset)
 	else
 	{
 		if ((offset & 0x02) == 0)
-			return i8x41_get_register((offset & 1) ? I8X41_STAT : I8X41_DATA);
+			return mcs48_master_r(offset & 1);
 
 		return offset;
 	}
@@ -1639,7 +1788,7 @@ static void decocass_type2_write(UINT16 offset, UINT8 data)
 		}
 	}
 
-	i8x41_set_register((offset & 1) ? I8X41_CMND : I8X41_DATA, data);
+	mcs48_master_w(offset & 1, data);
 }
 
 static UINT8 decocass_type3_read(UINT16 offset)
@@ -1659,7 +1808,7 @@ static UINT8 decocass_type3_read(UINT16 offset)
 		{
 			if (0 == (offset & E5XX_MASK))
 			{
-				data = i8x41_get_register(1 ? I8X41_STAT : I8X41_DATA);
+				data = mcs48_master_r(1);
 			}
 			else
 			{
@@ -1677,7 +1826,7 @@ static UINT8 decocass_type3_read(UINT16 offset)
 		{
 			if (0 == (offset & E5XX_MASK))
 			{
-				save = i8x41_get_register(0 ? I8X41_STAT : I8X41_DATA);
+				save = mcs48_master_r(0);
 
 				switch (type3_swap)
 				{
@@ -1848,7 +1997,7 @@ static void decocass_type3_write(UINT16 offset,UINT8 data)
 			type3_pal_19 = 1;
 	}
 
-	i8x41_set_register((offset & 1) ? I8X41_CMND : I8X41_DATA, data);
+	mcs48_master_w(offset & 1, data);
 }
 
 static UINT8 decocass_type4_read(UINT16 offset)
@@ -1857,7 +2006,7 @@ static UINT8 decocass_type4_read(UINT16 offset)
 	{
 		if ((offset & E5XX_MASK) == 0)
 		{
-			return i8x41_get_register(I8X41_STAT);
+			return mcs48_master_r(1);
 		}
 	}
 	else
@@ -1872,7 +2021,7 @@ static UINT8 decocass_type4_read(UINT16 offset)
 		{
 			if ((offset & E5XX_MASK) == 0)
 			{
-				return i8x41_get_register(I8X41_DATA);
+				return mcs48_master_r(0);
 			}
 		}
 	}
@@ -1903,7 +2052,7 @@ static void decocass_type4_write(UINT16 offset, UINT8 data)
 		}
 	}
 
-	i8x41_set_register((offset & 1) ? I8X41_CMND : I8X41_DATA, data);
+	mcs48_master_w(offset & 1, data);
 }
 
 static UINT8 decocass_e5xx_read(UINT8 offset)
@@ -1941,7 +2090,7 @@ static void decocass_e5xx_write(UINT8 offset, UINT8 data)
 
 	if (0 == (offset & E5XX_MASK))
 	{
-		i8x41_set_register((offset & 1) ? I8X41_CMND : I8X41_DATA, data);
+		mcs48_master_w(offset & 1, data);
 	}
 }
 
@@ -2030,6 +2179,14 @@ static void set_gfx_bank(INT32 bank)
 	M6502MapMemory(ptr, 0x6000, 0xafff, MAP_ROM);
 }
 
+static void sync_sound()
+{
+	INT32 cyc = (M6502TotalCycles(0) * 510000 / 750000) - M6502TotalCycles(1);
+	if (cyc > 0) {
+		M6502Run(1, cyc);
+	}
+}
+
 static void decocass_main_write(UINT16 address, UINT8 data)
 {
 	//bprintf (0, _T("MW %4.4x, %2.2x\n"), address, data);
@@ -2110,20 +2267,16 @@ static void decocass_main_write(UINT16 address, UINT8 data)
 
 			if (data & 1)
 			{
-				M6502Close();
-				M6502Open(1);
-				M6502Reset();
-				M6502Close();
-				M6502Open(0);
+				M6502Reset(1);
 
 				audio_nmi_enabled = 0;
 
-				M6502SetIRQLine(0x20, (audio_nmi_enabled && audio_nmi_state) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
+				M6502SetIRQLine(1, 0x20, (audio_nmi_enabled && audio_nmi_state) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 			}
 
 			if ((data & 8) ^ 8)
 			{
-				i8x41_reset();
+				mcs48Reset();
 			}
 		}
 		return;
@@ -2171,14 +2324,11 @@ static void decocass_main_write(UINT16 address, UINT8 data)
 
 		case 0xe414:
 		{
+			sync_sound();
 			soundlatch = data;
 			sound_ack |= 0x80;
 			sound_ack &= ~0x40;
-			M6502Close();
-			M6502Open(1);
-			M6502SetIRQLine(0, CPU_IRQSTATUS_ACK);
-			M6502Close();
-			M6502Open(0);
+			M6502SetIRQLine(1, 0, CPU_IRQSTATUS_HOLD);
 		}
 		return;
 
@@ -2273,9 +2423,11 @@ static UINT8 decocass_main_read(UINT16 address)
 			return 0xc0; // sound command (0xc0 ok)
 
 		case 0xe700:
+			sync_sound();
 			return soundlatch2;
 
 		case 0xe701:
+			sync_sound();
 			return sound_ack;
 	}
 
@@ -2374,7 +2526,7 @@ static UINT8 decocass_sound_read(UINT16 address)
 	switch (address & 0xf000)
 	{
 		case 0xa000:
-			M6502SetIRQLine(0, CPU_IRQSTATUS_NONE);
+
 			sound_ack &= ~0x80;
 			return soundlatch;
 	}
@@ -2463,29 +2615,29 @@ static UINT8 i8041_p2_read()
 	return i8041_p2;
 }
 
-static UINT8 i8x41_read_ports(UINT16 port)
+static UINT8 mcs48_read_ports(UINT32 port)
 {
 	switch (port)
 	{
-		case 0x01:
+		case MCS48_P1:
 			return i8041_p1_read();
 
-		case 0x02:
+		case MCS48_P2:
 			return i8041_p2_read();
 	}
 
 	return 0;
 }
 
-static void i8x41_write_ports(UINT16 port, UINT8 data)
+static void mcs48_write_ports(UINT32 port, UINT8 data)
 {
 	switch (port)
 	{
-		case 0x01:
+		case MCS48_P1:
 			i8041_p1_write(data);
 		return;
 
-		case 0x02:
+		case MCS48_P2:
 			i8041_p2_write(data);
 		return;
 	}
@@ -2516,7 +2668,7 @@ static INT32 DrvDoReset()
 	// call before cpu resets to catch vectors!
 	if (DrvDips[2] != 0xff) // widel multi
 	{
-		INT32 bios_sets = 4; // total bios sets supported
+		INT32 bios_sets = 5; // total bios sets supported
 		INT32 bios_select = ((DrvDips[2] % bios_sets) * 8) + 0x80;
 
 		if (BurnLoadRom(DrvMainBIOS, bios_select + 0, 1)) return 1; // main m6502 bios
@@ -2543,7 +2695,9 @@ static INT32 DrvDoReset()
 	M6502Reset();
 	M6502Close();
 
-	i8x41_reset();
+	mcs48Open(0);
+	mcs48Reset();
+	mcs48Close();
 
 	AY8910Reset(0);
 	AY8910Reset(1);
@@ -2585,11 +2739,10 @@ static INT32 MemIndex()
 	UINT8 *Next; Next = AllMem;
 
 	DrvMainBIOS		= Next; Next += 0x001000;
-	DrvSoundBIOS		= Next; Next += 0x001000;
+	DrvSoundBIOS	= Next; Next += 0x001000;
 	DrvCassette		= Next; Next += 0x0020000;
 	DrvGfxData		= Next; Next += 0x00a0000;
 	DrvDongle		= Next; Next += 0x0100000; // 1mb (needed for widel multi)
-	I8x41Mem		= Next;
 	DrvMCUROM		= Next; Next += 0x0009000; // 0x400 + 0x500 for ram, for now
 
 	DrvCharExp		= Next; Next += 0x0100000;
@@ -2734,15 +2887,17 @@ static INT32 DecocassInit(UINT8 (*read)(UINT16),void (*write)(UINT16,UINT8))
 	M6502SetReadHandler(decocass_sound_read);
 	M6502Close();
 
-	i8x41_init(NULL);
-	i8x41_set_read_port(i8x41_read_ports);
-	i8x41_set_write_port(i8x41_write_ports);
+	mcs48Init(0, 8041, DrvMCUROM);
+	mcs48Open(0);
+	mcs48_set_read_port(mcs48_read_ports);
+	mcs48_set_write_port(mcs48_write_ports);
+	mcs48Close();
 
 	AY8910Init(0, 1500000, 0);
 	AY8910Init(1, 1500000, 1);
-	AY8910SetAllRoutes(0, 0.20, BURN_SND_ROUTE_BOTH);
-	AY8910SetAllRoutes(1, 0.20, BURN_SND_ROUTE_BOTH);
-    AY8910SetBuffered(M6502TotalCycles, 500000);
+	AY8910SetAllRoutes(0, 0.15, BURN_SND_ROUTE_BOTH);
+	AY8910SetAllRoutes(1, 0.15, BURN_SND_ROUTE_BOTH);
+    AY8910SetBuffered(M6502TotalCycles, 510000);
 
 	GenericTilesInit();
 	GenericTilemapInit(2, fg_map_scan, fg_map_callback, 8, 8, 32, 32);
@@ -2760,7 +2915,7 @@ static INT32 DrvExit()
 	GenericTilesExit();
 
 	M6502Exit();
-	i8x41_exit();
+	mcs48Exit();
 
 	AY8910Exit(0);
 	AY8910Exit(1);
@@ -3158,13 +3313,8 @@ static INT32 DrvFrame()
 
 	watchdog++;
 	if (watchdog > 180) {
-		M6502Open(0);
-		M6502Reset();
-		M6502Close();
-
-		M6502Open(1);
-		M6502Reset();
-		M6502Close();
+		M6502Reset(0);
+		M6502Reset(1);
 
 		watchdog = 0;
 	}
@@ -3207,23 +3357,24 @@ static INT32 DrvFrame()
 		}
 
 		if (prev != (DrvInputs[2] & 0xc0) && (DrvInputs[2] & 0xc0) == 0xc0) {
-			M6502Open(0);
-			M6502SetIRQLine(0x20, CPU_IRQSTATUS_ACK);
-			M6502Close();
+			M6502SetIRQLine(0, 0x20, CPU_IRQSTATUS_ACK);
 		}
 	}
 
+	// need to run 10khz extra cycles on the sound-cpu (510000) to make up for
+	// division loss (1 cycle per line).  some games make bad sounds (cocean1a, wheel spinning noise)
+
 	INT32 nInterleave = 272;
-	INT32 nCyclesTotal[3] = { (INT32)((double)750000 / 57.444853), (INT32)((double)500000 / 57.444853), (INT32)((double)500000 / 57.444853) }; //1.5mhz -> .75mhz?
+	INT32 nCyclesTotal[3] = { (INT32)((double)750000 / 57.444853), (INT32)((double)510000 / 57.444853), (INT32)((double)500000 / 57.444853) };
 	INT32 nCyclesDone[3]  = { 0, 0, 0 };
 
 	vblank = 1;
 
+	mcs48Open(0);
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6502Open(0);
-		INT32 nSegment = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += M6502Run(nSegment - nCyclesDone[0]);
+		CPU_RUN(0, M6502);
 		M6502Close();
 
 		if (i == 248) vblank = 1;
@@ -3239,17 +3390,14 @@ static INT32 DrvFrame()
 		M6502Open(1);
 		if (decocass_reset & 1)
 		{
-			nSegment = (i + 1) * nCyclesTotal[1] / nInterleave;
-			nCyclesDone[1] += nSegment - nCyclesDone[1];
+			CPU_IDLE(1, M6502);
 		}
 		else
-		{	
-			nSegment = (i + 1) * nCyclesTotal[1] / nInterleave;
-			nCyclesDone[1] += M6502Run(nSegment - nCyclesDone[1]);
+		{
+			CPU_RUN(1, M6502);
 
-			if ((i+1)%8 == 7)
-			{
-				audio_nmi_state = (i+1) & 8;
+			if ((i&7) == 0) {
+				audio_nmi_state = i & 8;
 				M6502SetIRQLine(0x20, (audio_nmi_enabled && audio_nmi_state) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 			}
 		}
@@ -3257,20 +3405,14 @@ static INT32 DrvFrame()
 
 		if (decocass_reset & 0x08)
 		{
-			nSegment = (i + 1) * nCyclesTotal[2] / nInterleave;
-			INT32 derp = nSegment - nCyclesDone[2];
-			nCyclesDone[2] += derp;
-			tape_freerun += derp;
+			CPU_IDLE(2, mcs48);
 		}
 		else
 		{
-			nSegment = (i + 1) * nCyclesTotal[2] / nInterleave;
-			INT32 derp = i8x41_run(nSegment - nCyclesDone[2]);
-			nCyclesDone[2] += derp;
-			tape_freerun += derp;
-
+			CPU_RUN(2, mcs48);
 		}
 	}
+	mcs48Close();
 
 	if (pBurnSoundOut) {
         AY8910Render(pBurnSoundOut, nBurnSoundLen);
@@ -3294,17 +3436,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		ba.nLen	  = RamEnd-AllRam;
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
-
-		memset(&ba, 0, sizeof(ba));
-		ba.Data	  = I8x41Mem;
-		ba.nLen	  = 0x900;
-		ba.szName = "MCU Ram";
-		BurnAcb(&ba);
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
 		M6502Scan(nAction);
-		i8x41_scan(nAction);
+		mcs48Scan(nAction);
 
 		AY8910Scan(nAction, pnMin);
 
@@ -3355,8 +3491,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(tape_speed);
 		SCAN_VAR(tape_timer);
 		SCAN_VAR(tape_dir);
-
-		SCAN_VAR(tape_freerun);
 
 		SCAN_VAR(firsttime);
 		SCAN_VAR(tape_bot_eot);
@@ -3428,11 +3562,19 @@ static struct BurnRomInfo decocassRomDesc[] = {
 	{ "",             	0x0000, 0x00000000, 0                  }, // 0x9e
 	{ "",             	0x0000, 0x00000000, 0                  }, // 0x9f
 
-	{ "cassmcu.1c", 	0x0400, 0xa6df18fd, BRF_BIOS | BRF_PRG }, // 0xa0 - MCU BIOS (Shared)
+	{ "v0d-.7e",		0x1000, 0x1e0c22b1, BRF_BIOS | BRF_PRG }, // 0xa0 - BIOS "D" - ctisland3, ctower (Main M6502)
+	{ "",             	0x0000, 0x00000000, 0                  }, // 0xa1
 
-#ifdef ROM_VERIFY
-	{ "v0d-.7e",		0x1000, 0x1e0c22b1, BRF_BIOS | BRF_PRG }, // 0xa1 - handcrafted (single byte changed) because ctisland3 requires region D
-#endif
+	{ "v1-.5a",     	0x0800, 0xb66b2c2a, BRF_BIOS | BRF_PRG }, // 0xa2 - BIOS "D" (Sound M6502)
+
+	{ "v2.3m",			0x0020, 0x238fdb40, BRF_BIOS | BRF_OPT }, // 0xa3 - BIOS "D" (prom)
+	{ "v4.10d",			0x0020, 0x3b5836b4, BRF_BIOS | BRF_OPT }, // 0xa4 - BIOS "D" (prom)
+	{ "v3.3j",			0x0020, 0x51eef657, BRF_BIOS | BRF_OPT }, // 0xa5 - BIOS "D" (prom)
+
+	{ "",             	0x0000, 0x00000000, 0                  }, // 0xa6
+	{ "",             	0x0000, 0x00000000, 0                  }, // 0xa7
+
+	{ "cassmcu.1c", 	0x0400, 0xa6df18fd, BRF_BIOS | BRF_PRG }, // 0xa8 - MCU BIOS (Shared)
 };
 
 STD_ROM_PICK(decocass)
@@ -4005,14 +4147,10 @@ struct BurnDriver BurnDrvCtisland2 = {
 };
 
 
-// Treasure Island (DECO Cassette) (unk)
+// Treasure Island (DECO Cassette) (Europe?)
 
 static struct BurnRomInfo ctisland3RomDesc[] = {
-#ifdef ROM_VERIFY
 	{ "ctisland3.pro",	0x0020, 0xb87b56a7, 1 | BRF_PRG | BRF_ESS }, //  0 Dongle data
-#else
-	{ "de-0061.pro",	0x0020, 0xe09ae5de, 1 | BRF_PRG | BRF_ESS }, //  0 Dongle data
-#endif
 
 	{ "ctislnd3.cas",	0x8000, 0x45464e1e, 2 | BRF_PRG | BRF_ESS }, //  1 Cassette data
 
@@ -4025,16 +4163,49 @@ static struct BurnRomInfo ctisland3RomDesc[] = {
 STDROMPICKEXT(ctisland3, ctisland3, decocass)
 STD_ROM_FN(ctisland3)
 
+static UINT8 type1_latch_ctisland3[8] = { T1LATCHINV,T1PROM,T1PROM,T1DIRECT,T1PROM, T1PROM,T1LATCH,T1PROM };
+
+static INT32 Ctisland3Init()
+{
+	type1_map = type1_latch_ctisland3;
+	type1_inmap = MAKE_MAP(0,1,2,3,4,5,6,7);
+	type1_outmap = MAKE_MAP(0,1,2,3,4,5,6,7);
+
+	e900_enable = 1;
+
+	fourway_mode = 1;
+
+	return DecocassInit(decocass_type1_read,NULL);
+}
+
 struct BurnDriver BurnDrvCtisland3 = {
 	"ctisland3", "ctisland", "decocass", NULL, "1981",
-	"Treasure Island (DECO Cassette) (unk)\0", NULL, "Data East Corporation", "Cassette System",
+	"Treasure Island (DECO Cassette) (Europe?)\0", NULL, "Data East Corporation", "Cassette System",
 	NULL, NULL, NULL, NULL,
-	BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
-	NULL, ctisland3RomInfo, ctisland3RomName, NULL, NULL, NULL, NULL, DecocassInputInfo, CtislandDIPInfo,
-	CtislandInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	NULL, ctisland3RomInfo, ctisland3RomName, NULL, NULL, NULL, NULL, DecocassInputInfo, Ctisland3DIPInfo,
+	Ctisland3Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	240, 256, 3, 4
 };
 
+static struct BurnRomInfo ctowerRomDesc[] = {
+	{ "ctower.pro",	0x0020, 0x32e9dcd7, 1 | BRF_PRG | BRF_ESS }, //  0 Dongle data
+
+	{ "ctower.cas",	0x6900, 0x94ad1dd6, 2 | BRF_PRG | BRF_ESS }, //  1 Cassette data
+};
+
+STDROMPICKEXT(ctower, ctower, decocass)
+STD_ROM_FN(ctower)
+
+struct BurnDriver BurnDrvCtower = {
+	"ctower", NULL, "decocass", NULL, "1981",
+	"The Tower (DECO Cassette) (Europe?)\0", NULL, "Data East Corporation", "Cassette System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM, 0,
+	NULL, ctowerRomInfo, ctowerRomName, NULL, NULL, NULL, NULL, CtowerInputInfo, CtowerDIPInfo,
+	Cfboy0a1Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
+	240, 256, 3, 4
+};
 
 // Explorer (DECO Cassette) (US)
 
@@ -4973,7 +5144,7 @@ static UINT8 decocass_widel_read(UINT16 offset)
 		{
 			if (widel_latch) widel_ctrs = (widel_ctrs + 0x100) & 0xfffff;
 
-			return i8x41_get_register(I8X41_STAT);
+			return mcs48_master_r(1);
 		}
 	}
 	else
@@ -4986,7 +5157,7 @@ static UINT8 decocass_widel_read(UINT16 offset)
 		}
 		else if ((offset & E5XX_MASK) == 0)
 		{
-			return i8x41_get_register(I8X41_DATA);
+			return mcs48_master_r(0);
 		}
 	}
 
@@ -5016,7 +5187,7 @@ static void decocass_widel_write(UINT16 offset, UINT8 data)
 		}
 	}
 
-	i8x41_set_register((offset & 1) ? I8X41_CMND : I8X41_DATA, data);
+	mcs48_master_w(offset & 1, data);
 }
 
 

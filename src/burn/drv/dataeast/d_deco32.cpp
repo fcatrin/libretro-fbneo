@@ -63,10 +63,10 @@ static UINT8 DrvReset;
 static UINT16 DrvInputs[3];
 
 static INT32 uses_gun = 0;
-static INT32 DrvGun0 = 0;
-static INT32 DrvGun1 = 0;
-static INT32 DrvGun2 = 0;
-static INT32 DrvGun3 = 0;
+static INT16 DrvGun0 = 0;
+static INT16 DrvGun1 = 0;
+static INT16 DrvGun2 = 0;
+static INT16 DrvGun3 = 0;
 
 static INT32 game_select = 0; // 0 capt, 1 fhist, 2 nslasher, 3 tattass, 4 dragngun
 static INT32 has_ace = 0;
@@ -209,36 +209,36 @@ static struct BurnDIPInfo CaptavenDIPList[]=
 STDDIPINFO(Captaven)
 
 static struct BurnInputInfo FghthistInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
-	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy2 + 8,	"p1 fire 4"	},
-	{"P1 Button 5",		BIT_DIGITAL,	DrvJoy2 + 9,	"p1 fire 5"	},
-	{"P1 Button 6",		BIT_DIGITAL,	DrvJoy2 + 10,	"p1 fire 6"	},
+	{"P1 Weak Punch",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Medium Punch",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Strong Punch",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
+	{"P1 Weak Kick",	BIT_DIGITAL,	DrvJoy2 + 8,	"p1 fire 4"	},
+	{"P1 Medium Kick",	BIT_DIGITAL,	DrvJoy2 + 9,	"p1 fire 5"	},
+	{"P1 Strong Kick",	BIT_DIGITAL,	DrvJoy2 + 10,	"p1 fire 6"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
-	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy2 + 12,	"p2 fire 4"	},
-	{"P2 Button 5",		BIT_DIGITAL,	DrvJoy2 + 13,	"p2 fire 5"	},
-	{"P2 Button 6",		BIT_DIGITAL,	DrvJoy2 + 14,	"p2 fire 6"	},
+	{"P2 Weak Punch",	BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
+	{"P2 Medium Punch",	BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
+	{"P2 Strong Punch",	BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
+	{"P2 Weak Kick",	BIT_DIGITAL,	DrvJoy2 + 12,	"p2 fire 4"	},
+	{"P2 Medium Kick",	BIT_DIGITAL,	DrvJoy2 + 13,	"p2 fire 5"	},
+	{"P2 Strong Kick",	BIT_DIGITAL,	DrvJoy2 + 14,	"p2 fire 6"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 3,	"dip"		}, // +3!
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		}, // +3!
 };
 
 STDINPUTINFO(Fghthist)
@@ -496,8 +496,7 @@ static UINT8 __fastcall deco32_z80_sound_read(UINT16 address)
 
 static UINT8 __fastcall deco32_z80_sound_read_port(UINT16 port)
 {
-	if (port > 0xffff) return 0;
-	return deco32_sound_rom[port];
+	return deco32_sound_rom[port & 0xffff];
 }
 
 void deco32_z80_sound_reset()
@@ -984,7 +983,7 @@ static void fghthist_write_long(UINT32 address, UINT32 data)
 	switch (address & ~3)
 	{
 		case 0x1201fc: deco32_soundlatch_write(data); return;
-		case 0x12002c: if (game_select != 1) return; // fghthist only
+		case 0x12002c: if (game_select != 1) return; // fghthist only (ignore compiler warning -dink)
 		case 0x150000: // fghthist / nslasher
 			if (game_select == 3) {
 				tattass_control_write(data);
@@ -1457,6 +1456,8 @@ static INT32 DrvDoReset()
 	lightgun_irq = 0;
 	raster_irq_scanline = 0;
 	lightgun_latch = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -2364,9 +2365,9 @@ static void DrvPaletteUpdate()
 
 	for (INT32 i = 0; i < 0x2000/4; i++)
 	{
-		UINT8 r = p[i] >> 0;
-		UINT8 g = p[i] >> 8;
-		UINT8 b = p[i] >> 16;
+		UINT8 r = BURN_ENDIAN_SWAP_INT32(p[i]) >> 0;
+		UINT8 g = BURN_ENDIAN_SWAP_INT32(p[i]) >> 8;
+		UINT8 b = BURN_ENDIAN_SWAP_INT32(p[i]) >> 16;
 
 		if (i > 255 && has_ace == 1)
 		{
@@ -2433,8 +2434,8 @@ static void draw_sprites_common(UINT16 *bitmap, UINT8* ram, UINT8 *gfx, INT32 co
 
 		if (!m_alt_format)
 		{
-			sprite = spriteram[offs + 1];
-			y = spriteram[offs];
+			sprite = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 1]);
+			y = BURN_ENDIAN_SWAP_INT16(spriteram[offs]);
 
 			flash = y & 0x1000;
 
@@ -2442,7 +2443,7 @@ static void draw_sprites_common(UINT16 *bitmap, UINT8* ram, UINT8 *gfx, INT32 co
 
 			if (!(flash && (nCurrentFrame & 1)))
 			{
-				x = spriteram[offs + 2];
+				x = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 2]);
 
 				if (bitmap_is_null)
 				{
@@ -2528,7 +2529,7 @@ static void draw_sprites_common(UINT16 *bitmap, UINT8* ram, UINT8 *gfx, INT32 co
 
 						//if (counter && layerID && sprite) bprintf(0, _T("%X - %X (%X:%X), "), sprite, colour, global_priority, ace_ram[0]);
 						if (layerID && (sprite == 0x3cd || sprite == 0x3d0) && !(colour&0x80))
-							colour |= (ace_ram[0] == 0x17) ? 0xa0 : 0xc0; // black message boxes (ace_ram[0] == 0x10), shadow on character selection screen (ace_ram[0] == 0x17)
+							colour |= (BURN_ENDIAN_SWAP_INT32(ace_ram[0]) == 0x17) ? 0xa0 : 0xc0; // black message boxes (ace_ram[0] == 0x10), shadow on character selection screen (ace_ram[0] == 0x17)
 						if (layerID && (sprite >= 0x82a && sprite <= 0x8b1) && !(colour&0x80))
 							colour |= 0xe0; // level 2 carriage buggy
 						if (layerID && (sprite == 0x7e0 || sprite == 0x7e4 || sprite == 0x7e8 || sprite == 0x7ec ||
@@ -2597,24 +2598,24 @@ static void draw_sprites_common(UINT16 *bitmap, UINT8* ram, UINT8 *gfx, INT32 co
 		else // m_alt_format
 		{
 			INT32 h=0;
-			y = spriteram[offs+0];
-			sprite = spriteram[offs+3] & 0xffff;
+			y = BURN_ENDIAN_SWAP_INT16(spriteram[offs+0]);
+			sprite = BURN_ENDIAN_SWAP_INT16(spriteram[offs+3]) & 0xffff;
 
 			if (m_pri_cb)
-				pri = m_pri_cb(spriteram[offs+2]&0x00ff, 0);
+				pri = m_pri_cb(BURN_ENDIAN_SWAP_INT16(spriteram[offs+2])&0x00ff, 0);
 			else
 				pri = 0;
 
-			x = spriteram[offs+1];
+			x = BURN_ENDIAN_SWAP_INT16(spriteram[offs+1]);
 
 			if (!((y&0x2000) && (nCurrentFrame & 1)))
 			{
-				colour = (spriteram[offs+2] >>0) & 0x1f;
+				colour = (BURN_ENDIAN_SWAP_INT16(spriteram[offs+2]) >>0) & 0x1f;
 
-				h = (spriteram[offs+2]&0xf000)>>12;
-				w = (spriteram[offs+2]&0x0f00)>> 8;
-				fx = !(spriteram[offs+0]&0x4000);
-				fy = !(spriteram[offs+0]&0x8000);
+				h = (BURN_ENDIAN_SWAP_INT16(spriteram[offs+2])&0xf000)>>12;
+				w = (BURN_ENDIAN_SWAP_INT16(spriteram[offs+2])&0x0f00)>> 8;
+				fx = !(BURN_ENDIAN_SWAP_INT16(spriteram[offs+0])&0x4000);
+				fy = !(BURN_ENDIAN_SWAP_INT16(spriteram[offs+0])&0x8000);
 
 				if (!flipscreen) {
 					x = x & 0x01ff;
@@ -3007,7 +3008,7 @@ static void mixDualAlphaSprites(INT32 mixAlphaTilemap, INT32 drawAlphaTilemap)
 
 						if (game_select == 2 && (pri1 == 1 || pri1 == 3)) { // nslasher: carriage buggy wheels behind / in front of object
 							UINT32 *m_ace_ram = (UINT32*)DrvAceRAM;
-							alpha = (mixAlphaTilemap) ? ((m_ace_ram[0x17 + (((priColAlphaPal1&0xf0)>>4)/2)]) * 8)-1 : 0x7f;
+							alpha = (mixAlphaTilemap) ? ((BURN_ENDIAN_SWAP_INT32(m_ace_ram[0x17 + (((priColAlphaPal1&0xf0)>>4)/2)])) * 8)-1 : 0x7f;
 							if (alpha<0)
 								alpha=0;
 						}
@@ -3045,7 +3046,7 @@ static void mixDualAlphaSprites(INT32 mixAlphaTilemap, INT32 drawAlphaTilemap)
 						&& ((priColAlphaPal1&0xff)==0 || (pri1&0x3)==2 || (pri1&0x3)==3 || alpha1))
 					{
 						/* Alpha values are tied to ACE ram */
-						INT32 alpha=((m_ace_ram[0x17 + (((p&0xf0)>>4)/2)]) * 8)-1;
+						INT32 alpha=((BURN_ENDIAN_SWAP_INT32(m_ace_ram[0x17 + (((p&0xf0)>>4)/2)])) * 8)-1;
 						if (alpha<0)
 							alpha=0;
 
@@ -3336,46 +3337,46 @@ static void dragngun_draw_sprites()
 	{
 		INT32 xpos,ypos;
 
-		INT32 scalex = spritedata[offs+4] & 0x3ff;
-		INT32 scaley = spritedata[offs+5] & 0x3ff;
+		INT32 scalex = BURN_ENDIAN_SWAP_INT32(spritedata[offs+4]) & 0x3ff;
+		INT32 scaley = BURN_ENDIAN_SWAP_INT32(spritedata[offs+5]) & 0x3ff;
 		if (!scalex || !scaley)
 			continue;
 
-		INT32 layoutram_offset = (spritedata[offs + 0] & 0x1ff) * 4;
+		INT32 layoutram_offset = (BURN_ENDIAN_SWAP_INT32(spritedata[offs + 0]) & 0x1ff) * 4;
 
-		if (spritedata[offs + 0] & 0x400)
+		if (BURN_ENDIAN_SWAP_INT32(spritedata[offs + 0]) & 0x400)
 			layout_ram = dragngun_sprite_layout_1_ram;
 		else
 			layout_ram = dragngun_sprite_layout_0_ram;
-		INT32 h = (layout_ram[layoutram_offset + 1]>>0)&0xf;
-		INT32 w = (layout_ram[layoutram_offset + 1]>>4)&0xf;
+		INT32 h = (BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 1])>>0)&0xf;
+		INT32 w = (BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 1])>>4)&0xf;
 		if (!h || !w)
 			continue;
 
-		INT32 sx = spritedata[offs+2] & 0x3ff;
-		INT32 sy = spritedata[offs+3] & 0x3ff;
-		INT32 bx = layout_ram[layoutram_offset + 2] & 0x1ff;
-		INT32 by = layout_ram[layoutram_offset + 3] & 0x1ff;
+		INT32 sx = BURN_ENDIAN_SWAP_INT32(spritedata[offs+2]) & 0x3ff;
+		INT32 sy = BURN_ENDIAN_SWAP_INT32(spritedata[offs+3]) & 0x3ff;
+		INT32 bx = BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 2]) & 0x1ff;
+		INT32 by = BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 3]) & 0x1ff;
 		if (bx&0x100) bx=1-(bx&0xff);
 		if (by&0x100) by=1-(by&0xff);
 		if (sx >= 512) sx -= 1024;
 		if (sy >= 512) sy -= 1024;
 
-		INT32 color = spritedata[offs+6]&0x1f;
+		INT32 color = BURN_ENDIAN_SWAP_INT32(spritedata[offs+6])&0x1f;
 
-		INT32 priority = (spritedata[offs + 6] & 0x60) >> 5;
+		INT32 priority = (BURN_ENDIAN_SWAP_INT32(spritedata[offs + 6]) & 0x60) >> 5;
 		INT32 priority_orig = priority;
 		// pri hacking: follow priority_orig
 		priority = 7;
 
-		INT32 alpha = (spritedata[offs+6] & 0x80) ? 0x80 : 0xff;
+		INT32 alpha = (BURN_ENDIAN_SWAP_INT32(spritedata[offs+6]) & 0x80) ? 0x80 : 0xff;
 
-		INT32 fx = spritedata[offs+4] & 0x8000;
-		INT32 fy = spritedata[offs+5] & 0x8000;
+		INT32 fx = BURN_ENDIAN_SWAP_INT32(spritedata[offs+4]) & 0x8000;
+		INT32 fy = BURN_ENDIAN_SWAP_INT32(spritedata[offs+5]) & 0x8000;
 
-		INT32 lookupram_offset = layout_ram[layoutram_offset + 0] & 0x1fff;
+		INT32 lookupram_offset = BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 0]) & 0x1fff;
 
-		if (layout_ram[layoutram_offset + 0] & 0x2000)
+		if (BURN_ENDIAN_SWAP_INT32(layout_ram[layoutram_offset + 0]) & 0x2000)
 			lookup_ram = dragngun_sprite_lookup_1_ram;
 		else
 			lookup_ram = dragngun_sprite_lookup_0_ram;
@@ -3395,7 +3396,7 @@ static void dragngun_draw_sprites()
 				xpos=(sx<<16) + (bx*zoomx) - (16*zoomx);
 
 			for (INT32 x=0; x<w; x++) {
-				INT32 sprite = lookup_ram[lookupram_offset] & 0x3fff;
+				INT32 sprite = BURN_ENDIAN_SWAP_INT32(lookup_ram[lookupram_offset]) & 0x3fff;
 
 				lookupram_offset++;
 
@@ -3536,8 +3537,8 @@ static INT32 DrvFrame()
 		}
 
 		if (uses_gun) {
-			BurnGunMakeInputs(0, (INT16)DrvGun0, (INT16)DrvGun1);
-			BurnGunMakeInputs(1, (INT16)DrvGun2, (INT16)DrvGun3);
+			BurnGunMakeInputs(0, DrvGun0, DrvGun1);
+			BurnGunMakeInputs(1, DrvGun2, DrvGun3);
 		}
 	}
 
@@ -3557,8 +3558,8 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += ArmRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += h6280Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Arm);
+		CPU_RUN(1, h6280);
 
 		deco_irq_scanline_callback(i); // iq_132 - ok?
 
@@ -3640,8 +3641,8 @@ static INT32 DrvZ80Frame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += ArmRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Arm);
+		CPU_RUN(1, Zet);
 
 		deco_irq_scanline_callback(i); // iq_132 - ok?
 
@@ -3708,10 +3709,10 @@ static INT32 DrvBSMTFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += ArmRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Arm);
 		if (bsmt_in_reset == 0) {
 			M6809Open(0);
-			nCyclesDone[1] += M6809Run(nCyclesTotal[1] / nInterleave);
+			CPU_RUN(1, M6809);
 
 			if (nCurrentFrame&1) { // needs 8.43 firq's per frame, to simplify, we'll do an extra firq every other frame.
 				if ((i%34) == 33) decobsmt_firq_interrupt(); // 8 (per frame)
@@ -3719,7 +3720,7 @@ static INT32 DrvBSMTFrame()
 				if ((i%30) == 29) decobsmt_firq_interrupt(); // 9
 			}
 
-			nCyclesDone[2] += tms32010_execute(nCyclesTotal[2] / nInterleave);
+			CPU_RUN(2, tms32010);
 			M6809Close();
 		}
 
@@ -3772,6 +3773,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		if (game_select == 3) {
 			tattass_eeprom_scan();
 			decobsmt_scan(nAction, pnMin);
+		} else {
+			EEPROMScan(nAction, pnMin);
 		}
 
 		if (game_select == 4) {
@@ -4665,7 +4668,7 @@ struct BurnDriver BurnDrvNslasher = {
 	"nslasher", NULL, NULL, NULL, "1994",
 	"Night Slashers (Korea Rev 1.3, DE-0397-0 PCB)\0", NULL, "Data East Corporation", "DECO 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
 	NULL, nslasherRomInfo, nslasherRomName, NULL, NULL, NULL, NULL, NslasherInputInfo, NslasherDIPInfo,
 	NslasherInit, DrvExit, DrvZ80Frame, NslasherDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -4718,7 +4721,7 @@ struct BurnDriver BurnDrvNslasherj = {
 	"nslasherj", "nslasher", NULL, NULL, "1994",
 	"Night Slashers (Japan Rev 1.2, DE-0397-0 PCB)\0", NULL, "Data East Corporation", "DECO 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
 	NULL, nslasherjRomInfo, nslasherjRomName, NULL, NULL, NULL, NULL, NslasherInputInfo, NslasherDIPInfo,
 	NslasherjInit, DrvExit, DrvZ80Frame, NslasherDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -4765,7 +4768,7 @@ struct BurnDriver BurnDrvNslashers = {
 	"nslashers", "nslasher", NULL, NULL, "1994",
 	"Night Slashers (Over Sea Rev 1.2, DE-0397-0 PCB)\0", NULL, "Data East Corporation", "DECO 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
 	NULL, nslashersRomInfo, nslashersRomName, NULL, NULL, NULL, NULL, NslasherInputInfo, NslasherDIPInfo,
 	NslasherInit, DrvExit, DrvZ80Frame, NslasherDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
@@ -4817,7 +4820,7 @@ struct BurnDriver BurnDrvNslasheru = {
 	"nslasheru", "nslasher", NULL, NULL, "1994",
 	"Night Slashers (US Rev 1.2, DE-0395-1 PCB)\0", NULL, "Data East Corporation", "DECO 32",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 3, HARDWARE_PREFIX_DATAEAST, GBF_SCRFIGHT, 0,
 	NULL, nslasheruRomInfo, nslasheruRomName, NULL, NULL, NULL, NULL, NslasherInputInfo, NslasherDIPInfo,
 	NslasheruInit, DrvExit, DrvFrame, NslasherDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3

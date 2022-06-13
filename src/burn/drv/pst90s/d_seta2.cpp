@@ -22,7 +22,7 @@ static UINT8 *RamUnknown;
 static UINT8 *RamNV;
 
 static UINT16 *RamSpr;
-static UINT16 *RamSprBak;
+static UINT16 *RamSprPriv;
 static UINT16 *RamPal;
 static UINT32 *CurPal;
 static UINT16 *RamTMP68301;
@@ -35,22 +35,29 @@ static UINT8 DrvJoy3[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvJoy4[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvJoy5[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-static INT32 DrvAxis[4];
+static INT16 DrvAxis[4];
 static UINT8 DrvAnalogInput[4];
 
 static UINT8 DrvReset = 0;
 static UINT8 bRecalcPalette = 0;
 
-static UINT32 gfx_code_mask;
 //static UINT8 bMahjong = 0;
 static UINT8 Mahjong_keyboard = 0;
 static UINT8 HasNVRam = 0;
 
-static INT32 yoffset;
-static INT32 sva_x;
-static INT32 sva_y;
+static INT32 nRomGfxLen;
 
-#define M68K_CYCS	50000000 / 3
+static INT32 is_samshoot;
+
+static INT32 nExtraCycles = 0;
+
+static INT32 raster_extra;
+static INT32 raster_latch;
+static INT32 raster_pos;
+static INT32 raster_en;
+static INT32 current_scanline;
+
+static INT32 M68K_CYCS = 50000000 / 3;
 
 #define A(a, b, c, d) { a, b, (UINT8*)(c), d }
 
@@ -98,9 +105,9 @@ static struct BurnDIPInfo grdiansDIPList[] = {
 	{0x15,	0x01, 0x03, 0x00, "Normal"},
 	{0x15,	0x01, 0x03, 0x02, "Hard"},
 	{0x15,	0x01, 0x03, 0x03, "Hardest"},
-//	{0,		0xFE, 0,	2,	  "Unknown"},
-//	{0x15,	0x01, 0x04,	0x00, "Off"},
-//	{0x15,	0x01, 0x04,	0x04, "On"},
+	{0,		0xFE, 0,	2,	  "Bonus Life"},
+	{0x15,	0x01, 0x04,	0x00, "500,000"},
+	{0x15,	0x01, 0x04,	0x04, "300,000"},
 	{0,		0xFE, 0,	2,	  "Title"},
 	{0x15,	0x01, 0x08,	0x00, "Guardians"},
 	{0x15,	0x01, 0x08,	0x08, "Denjin Makai II"},
@@ -156,45 +163,45 @@ static struct BurnDIPInfo grdiansDIPList[] = {
 STDDIPINFO(grdians)
 
 static struct BurnInputInfo mj4simaiInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 0,	"p1 coin"},
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 1,	"p2 coin"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvButton + 0,	"p1 coin"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvButton + 1,	"p2 coin"},
 
-	{"A",			BIT_DIGITAL,	DrvJoy1 + 0,	"mah a"},
-	{"E",			BIT_DIGITAL,	DrvJoy1 + 1,	"mah e"},
-	{"I",			BIT_DIGITAL,	DrvJoy1 + 2,	"mah i"},
-	{"M",			BIT_DIGITAL,	DrvJoy1 + 3,	"mah m"},
-	{"Kan",			BIT_DIGITAL,	DrvJoy1 + 4,	"mah kan"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"},
+	{"P1 A",			BIT_DIGITAL,	DrvJoy1 + 0,	"mah a"},
+	{"P1 E",			BIT_DIGITAL,	DrvJoy1 + 1,	"mah e"},
+	{"P1 I",			BIT_DIGITAL,	DrvJoy1 + 2,	"mah i"},
+	{"P1 M",			BIT_DIGITAL,	DrvJoy1 + 3,	"mah m"},
+	{"P1 Kan",			BIT_DIGITAL,	DrvJoy1 + 4,	"mah kan"},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"},
 
-	{"B",			BIT_DIGITAL,	DrvJoy2 + 0,	"mah b"},
-	{"F",			BIT_DIGITAL,	DrvJoy2 + 1,	"mah f"},
-	{"J",			BIT_DIGITAL,	DrvJoy2 + 2,	"mah j"},
-	{"N",			BIT_DIGITAL,	DrvJoy2 + 3,	"mah n"},
-	{"Reach",		BIT_DIGITAL,	DrvJoy2 + 4,	"mah reach"},
-	{"Bet",			BIT_DIGITAL,	DrvJoy2 + 5,	"mah bet"},
+	{"P1 B",			BIT_DIGITAL,	DrvJoy2 + 0,	"mah b"},
+	{"P1 F",			BIT_DIGITAL,	DrvJoy2 + 1,	"mah f"},
+	{"P1 J",			BIT_DIGITAL,	DrvJoy2 + 2,	"mah j"},
+	{"P1 N",			BIT_DIGITAL,	DrvJoy2 + 3,	"mah n"},
+	{"P1 Reach",		BIT_DIGITAL,	DrvJoy2 + 4,	"mah reach"},
+	{"P1 Bet",			BIT_DIGITAL,	DrvJoy2 + 5,	"mah bet"},
 
-	{"C",			BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"},
-	{"G",			BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"},
-	{"K",			BIT_DIGITAL,	DrvJoy3 + 2,	"mah k"},
-	{"Chi",			BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"},
-	{"Ron",			BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"},
+	{"P1 C",			BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"},
+	{"P1 G",			BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"},
+	{"P1 K",			BIT_DIGITAL,	DrvJoy3 + 2,	"mah k"},
+	{"P1 Chi",			BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"},
+	{"P1 Ron",			BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"},
 
-	{"D",			BIT_DIGITAL,	DrvJoy4 + 0,	"mah d"},
-	{"H",			BIT_DIGITAL,	DrvJoy4 + 1,	"mah h"},
-	{"L",			BIT_DIGITAL,	DrvJoy4 + 2,	"mah l"},
-	{"Pon",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah pon"},
+	{"P1 D",			BIT_DIGITAL,	DrvJoy4 + 0,	"mah d"},
+	{"P1 H",			BIT_DIGITAL,	DrvJoy4 + 1,	"mah h"},
+	{"P1 L",			BIT_DIGITAL,	DrvJoy4 + 2,	"mah l"},
+	{"P1 Pon",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah pon"},
 
-	{"LastChange",	BIT_DIGITAL,	DrvJoy5 + 0,	"mah lc"},
-	{"Score",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah score"},
-	{"DoubleUp",	BIT_DIGITAL,	DrvJoy5 + 2,	"mah du"},		// ????
-	{"FlipFlop",	BIT_DIGITAL,	DrvJoy5 + 3,	"mah ff"},
-	{"Big",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah big"},		// ????
-	{"Smaill",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah small"},	// ????
+	{"P1 LastChange",	BIT_DIGITAL,	DrvJoy5 + 0,	"mah lc"},
+	{"P1 Score",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah score"},
+	{"P1 DoubleUp",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah du"},		// ????
+	{"P1 FlipFlop",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah ff"},
+	{"P1 Big",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah big"},		// ????
+	{"P1 Smaill",		BIT_DIGITAL,	DrvJoy5 + 5,	"mah small"},	// ????
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Service",		BIT_DIGITAL, DrvButton + 2,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"},
+	{"Service",			BIT_DIGITAL, DrvButton + 2,	"service"},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
 };
 
 STDINPUTINFO(mj4simai)
@@ -608,7 +615,7 @@ STDINPUTINFO(Deerhunt)
 static struct BurnDIPInfo DeerhuntDIPList[]=
 {
 	{0x0a, 0xff, 0xff, 0xff, NULL		},
-	{0x0b, 0xff, 0xff, 0xff, NULL		},
+	{0x0b, 0xff, 0xff, 0x7f, NULL		},
 
 	{0   , 0xfe, 0   ,    8, "Coin A"		},
 	{0x0a, 0x01, 0x07, 0x05, "4 Coins 1 Credits "		},
@@ -675,7 +682,7 @@ STDDIPINFO(Deerhunt)
 static struct BurnDIPInfo TurkhuntDIPList[]=
 {
 	{0x0a, 0xff, 0xff, 0xff, NULL		},
-	{0x0b, 0xff, 0xff, 0xff, NULL		},
+	{0x0b, 0xff, 0xff, 0x7f, NULL		},
 
 	{0   , 0xfe, 0   ,    8, "Coin A"		},
 	{0x0a, 0x01, 0x07, 0x05, "4 Coins 1 Credits "		},
@@ -772,7 +779,7 @@ STDINPUTINFO(Wschamp)
 static struct BurnDIPInfo WschampDIPList[]=
 {
 	{0x12, 0xff, 0xff, 0xff, NULL		},
-	{0x13, 0xff, 0xff, 0xff, NULL		},
+	{0x13, 0xff, 0xff, 0x7f, NULL		},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"		},
 	{0x12, 0x01, 0x0f, 0x09, "4 Coins Start, 4 Coins Continue"		},
@@ -828,7 +835,7 @@ STDDIPINFO(Wschamp)
 static struct BurnDIPInfo TrophyhDIPList[]=
 {
 	{0x12, 0xff, 0xff, 0xff, NULL		},
-	{0x13, 0xff, 0xff, 0xff, NULL		},
+	{0x13, 0xff, 0xff, 0x7f, NULL		},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"		},
 	{0x12, 0x01, 0x0f, 0x09, "4 Coins Start, 4 Coins Continue"		},
@@ -902,12 +909,116 @@ static struct BurnRomInfo grdiansRomDesc[] = {
 	{ "u17.bin",	  0x400000, 0x0fad0629,	BRF_GRA },
 	{ "u21.bin",	  0x400000, 0x6f95e466,	BRF_GRA },
 
-	{ "u32.bin",    0x100000, 0xcf0f3017, BRF_SND },				// PCM
+	{ "u32.bin",      0x100000, 0xcf0f3017, BRF_SND },				// PCM
 
 };
 
 STD_ROM_PICK(grdians)
 STD_ROM_FN(grdians)
+
+// Denjin Makai II (Shen Yue Edition, Hack)
+// Hacked by Gu Shen Gan Yue
+// GOTVG 2022/01/26
+
+static struct BurnRomInfo grdianssyRomDesc[] = {
+	{ "u2_sy.bin",		0x080000, 0x676e0c2e, BRF_ESS | BRF_PRG },	// 68000 code
+	{ "u3_sy.bin",		0x080000, 0x9b9a885b, BRF_ESS | BRF_PRG },
+	{ "u4.bin",			0x080000, 0xbb52447b, BRF_ESS | BRF_PRG },
+	{ "u5.bin",			0x080000, 0x9c164a3b, BRF_ESS | BRF_PRG },
+
+	{ "u16.bin",		0x400000, 0x6a65f265,	BRF_GRA },			// GFX
+	{ "u20.bin",		0x400000, 0xa7226ab7,	BRF_GRA },
+	{ "u15.bin",		0x400000, 0x01672dcd,	BRF_GRA },
+	{ "u19.bin",		0x400000, 0xc0c998a0,	BRF_GRA },
+	{ "u18.bin",		0x400000, 0x967babf4,	BRF_GRA },
+	{ "u22.bin",		0x400000, 0x6239997a,	BRF_GRA },
+	{ "u17.bin",		0x400000, 0x0fad0629,	BRF_GRA },
+	{ "u21.bin",		0x400000, 0x6f95e466,	BRF_GRA },
+
+	{ "u32.bin",		0x100000, 0xcf0f3017, BRF_SND },			// PCM
+
+};
+
+STD_ROM_PICK(grdianssy)
+STD_ROM_FN(grdianssy)
+
+// Denjin Makai II (LBS Edition, Hack)
+// Hack by Bindi
+// GOTVG 2022/04/10
+
+static struct BurnRomInfo grdianslbsRomDesc[] = {
+	{ "u2_lbs.bin",		0x080000, 0x6d5b355c, BRF_ESS | BRF_PRG },	// 68000 code
+	{ "u3_lbs.bin",		0x080000, 0x5a462d7c, BRF_ESS | BRF_PRG },
+	{ "u4.bin",			0x080000, 0xbb52447b, BRF_ESS | BRF_PRG },
+	{ "u5.bin",			0x080000, 0x9c164a3b, BRF_ESS | BRF_PRG },
+
+	{ "u16.bin",		0x400000, 0x6a65f265,	BRF_GRA },			// GFX
+	{ "u20.bin",		0x400000, 0xa7226ab7,	BRF_GRA },
+	{ "u15.bin",		0x400000, 0x01672dcd,	BRF_GRA },
+	{ "u19.bin",		0x400000, 0xc0c998a0,	BRF_GRA },
+	{ "u18.bin",		0x400000, 0x967babf4,	BRF_GRA },
+	{ "u22.bin",		0x400000, 0x6239997a,	BRF_GRA },
+	{ "u17.bin",		0x400000, 0x0fad0629,	BRF_GRA },
+	{ "u21.bin",		0x400000, 0x6f95e466,	BRF_GRA },
+
+	{ "u32.bin",		0x100000, 0xcf0f3017, BRF_SND },			// PCM
+
+};
+
+STD_ROM_PICK(grdianslbs)
+STD_ROM_FN(grdianslbs)
+
+// Denjin Makai II (Field Edition, Hack)
+// Hack by Bindi
+// GOTVG 2021/04/29
+
+static struct BurnRomInfo grdianslbssRomDesc[] = {
+	{ "u2_lbss.bin",	0x080000, 0xe8c9fb0f, BRF_ESS | BRF_PRG },	// 68000 code
+	{ "u3_lbss.bin",	0x080000, 0xd4dac047, BRF_ESS | BRF_PRG },
+	{ "u4.bin",			0x080000, 0xbb52447b, BRF_ESS | BRF_PRG },
+	{ "u5.bin",			0x080000, 0x9c164a3b, BRF_ESS | BRF_PRG },
+
+	{ "u16.bin",		0x400000, 0x6a65f265,	BRF_GRA },			// GFX
+	{ "u20.bin",		0x400000, 0xa7226ab7,	BRF_GRA },
+	{ "u15.bin",		0x400000, 0x01672dcd,	BRF_GRA },
+	{ "u19.bin",		0x400000, 0xc0c998a0,	BRF_GRA },
+	{ "u18.bin",		0x400000, 0x967babf4,	BRF_GRA },
+	{ "u22.bin",		0x400000, 0x6239997a,	BRF_GRA },
+	{ "u17.bin",		0x400000, 0x0fad0629,	BRF_GRA },
+	{ "u21.bin",		0x400000, 0x6f95e466,	BRF_GRA },
+
+	{ "u32.bin",		0x100000, 0xcf0f3017, BRF_SND },			// PCM
+
+};
+
+STD_ROM_PICK(grdianslbss)
+STD_ROM_FN(grdianslbss)
+
+// Denjin Makai II (Kerron Edition)
+// Hack by Bindi
+// GOTVG 2022/02/18
+
+static struct BurnRomInfo grdianskeRomDesc[] = {
+	{ "u2_ke.bin",		0x080000, 0x4df70687, BRF_ESS | BRF_PRG },	// 68000 code
+	{ "u3_ke.bin",		0x080000, 0x24353274, BRF_ESS | BRF_PRG },
+	{ "u4.bin",			0x080000, 0xbb52447b, BRF_ESS | BRF_PRG },
+	{ "u5.bin",			0x080000, 0x9c164a3b, BRF_ESS | BRF_PRG },
+
+	{ "u16.bin",		0x400000, 0x6a65f265,	BRF_GRA },			// GFX
+	{ "u20.bin",		0x400000, 0xa7226ab7,	BRF_GRA },
+	{ "u15.bin",		0x400000, 0x01672dcd,	BRF_GRA },
+	{ "u19.bin",		0x400000, 0xc0c998a0,	BRF_GRA },
+	{ "u18.bin",		0x400000, 0x967babf4,	BRF_GRA },
+	{ "u22.bin",		0x400000, 0x6239997a,	BRF_GRA },
+	{ "u17.bin",		0x400000, 0x0fad0629,	BRF_GRA },
+	{ "u21.bin",		0x400000, 0x6f95e466,	BRF_GRA },
+
+	{ "u32.bin",		0x100000, 0xcf0f3017, BRF_SND },			// PCM
+
+};
+
+STD_ROM_PICK(grdianske)
+STD_ROM_FN(grdianske)
 
 static struct BurnRomInfo mj4simaiRomDesc[] = {
 	{ "ll.u2",		  0x080000, 0x7be9c781, BRF_ESS | BRF_PRG },	// 68000 code
@@ -973,15 +1084,15 @@ STD_ROM_PICK(myangel2)
 STD_ROM_FN(myangel2)
 
 static struct BurnRomInfo pzlbowlRomDesc[] = {
-	{ "kup-u06.i03",  0x080000, 0x314e03ac, BRF_ESS | BRF_PRG },	// 68000 code
-	{ "kup-u07.i03",  0x080000, 0xa0423a04, BRF_ESS | BRF_PRG },
+	{ "kup_u06_i03.u6",  0x080000, 0x314e03ac, BRF_ESS | BRF_PRG },	// 68000 code
+	{ "kup_u07_i03.u7",  0x080000, 0xa0423a04, BRF_ESS | BRF_PRG },
 
-	{ "kuc-u38.i00",  0x400000, 0x3db24172,	BRF_GRA },				// GFX
-	{ "kuc-u39.i00",  0x400000, 0x9b26619b,	BRF_GRA },
-	{ "kuc-u40.i00",  0x400000, 0x7e49a2cf,	BRF_GRA },
-	{ "kuc-u41.i00",  0x400000, 0x2febf19b,	BRF_GRA },
+	{ "kuc-u38-i00.u38", 0x400000, 0x3db24172,	BRF_GRA },				// GFX
+	{ "kuc-u39-i00.u39", 0x400000, 0x9b26619b,	BRF_GRA },
+	{ "kuc-u40-i00.u40", 0x400000, 0x7e49a2cf,	BRF_GRA },
+	{ "kuc-u41-i00.u41", 0x400000, 0x2febf19b,	BRF_GRA },
 
-	{ "kus-u18.i00",  0x400000, 0xe2b1dfcf, BRF_SND },				// PCM
+	{ "kus-u18-i00.u18", 0x400000, 0xe2b1dfcf, BRF_SND },				// PCM
 
 };
 
@@ -1319,9 +1430,10 @@ static void tmp68301_update_timer( INT32 i )
 			tmp68301_timer[i] = (INT32) (M68K_CYCS / duration);
 			//tmp68301_timer_counter[i] = 0;
 			//bprintf(PRINT_NORMAL, _T("Tmp68301: update timer #%d duration to %d (%8.3f)\n"), i, tmp68301_timer[i], duration);
-		} else
+		} else {
 			//logerror("CPU #0 PC %06X: TMP68301 error, timer %d duration is 0\n",activecpu_get_pc(),i);
-			bprintf(PRINT_ERROR, _T("Tmp68301: error timer %d duration is 0\n"), i, TCR, MAX1, MAX2);
+			//bprintf(PRINT_ERROR, _T("Tmp68301: error timer %d duration is 0\n"), i, TCR, MAX1, MAX2);
+		}
 	}
 }
 
@@ -1382,6 +1494,14 @@ static void tmp68301_update_irq_state(INT32 i)
 	}
 }
 
+static void Tmp68301Reset()
+{
+	for (INT32 i = 0x80/2; i < 0x94/2; i++) {
+		RamTMP68301[i] = 0x07;
+	}
+	RamTMP68301[0x94/2] = 0x07f7;
+}
+
 static void tmp68301_regs_w(UINT32 addr, UINT16 /*val*/ )
 {
 	//bprintf(PRINT_NORMAL, _T("Tmp68301: write val %04x to location %06x\n"), val, addr);
@@ -1409,6 +1529,21 @@ void __fastcall Tmp68301WriteWord(UINT32 sekAddress, UINT16 wordValue)
 //	bprintf(PRINT_NORMAL, _T("TMP68301 Reg %04X <- %04X & %04X   %04x\n"),sekAddress,wordValue,0xffff, RamTMP68301[sekAddress>>1]);
 }
 
+UINT8 __fastcall Tmp68301ReadByte(UINT32 sekAddress)
+{
+	sekAddress &= 0x0003ff;
+	UINT8 *p = (UINT8 *)RamTMP68301;
+	return p[sekAddress ^ 1];
+}
+
+UINT16 __fastcall Tmp68301ReadWord(UINT32 sekAddress)
+{
+	sekAddress &= 0x0003ff;
+	UINT16 val = BURN_ENDIAN_SWAP_INT16(RamTMP68301[ sekAddress >> 1 ]);
+	if (sekAddress == 0x010a)
+		val = 0xff00 | DrvInput[7]; // second dip read through parallel port of tmp68301
+	return val;
+}
 
 UINT8 __fastcall grdiansReadByte(UINT32 sekAddress)
 {
@@ -1472,18 +1607,19 @@ void __fastcall grdiansWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-UINT8 __fastcall setaSoundRegReadByte(UINT32 /*sekAddress*/)
+// d_seta.cpp
+//void __fastcall setaSoundRegWriteByte(UINT32 sekAddress, UINT8 byteValue);
+void __fastcall setaSoundRegWriteWord(UINT32 sekAddress, UINT16 wordValue);
+//UINT8 __fastcall setaSoundRegReadByte(UINT32 sekAddress);
+UINT16 __fastcall setaSoundRegReadWord(UINT32 sekAddress);
+
+static UINT8 __fastcall setaSoundRegReadByte(UINT32 /*sekAddress*/)
 {
 	//bprintf(PRINT_NORMAL, _T("x1-010 to read byte value of location %x\n"), sekAddress);
 	return 0;
 }
 
-UINT16 __fastcall setaSoundRegReadWord(UINT32 sekAddress)
-{
-	return x1010_sound_read_word((sekAddress & 0x3ffff) >> 1);
-}
-
-void __fastcall setaSoundRegWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall setaSoundRegWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	// bprintf(PRINT_NORMAL, _T("x1-010 to write byte value %x to location %x\n"), byteValue, sekAddress);
 	UINT32 offset = (sekAddress & 0x00003fff) >> 1;
@@ -1510,24 +1646,88 @@ void __fastcall setaSoundRegWriteByte(UINT32 sekAddress, UINT8 byteValue)
 
 }
 
-void __fastcall setaSoundRegWriteWord(UINT32 sekAddress, UINT16 wordValue)
+void __fastcall setaVideoRegWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
-	//bprintf(PRINT_NORMAL, _T("x1-010 to write word value %x to location %x\n"), wordValue, sekAddress);
-	UINT32 offset = (sekAddress & 0x00003fff) >> 1;
-	INT32 channel, reg;
+	sekAddress &= 0x3f;
 
-	x1_010_chip->HI_WORD_BUF[ offset ] = wordValue >> 8;
+	RamVReg[sekAddress >> 1] = BURN_ENDIAN_SWAP_INT16(wordValue);
 
-	offset ^= x1_010_chip->address;
+	switch (sekAddress)
+	{
+		case 0x1c:  // FLIP SCREEN (myangel)    <- this is actually zoom
+			break;
+		case 0x2a:  // FLIP X (pzlbowl)
+			break;
+		case 0x2c:  // FLIP Y (pzlbowl)
+			break;
+		case 0x30:  // BLANK SCREEN (pzlbowl, myangel)
+			break;
+		case 0x24: // funcube3 and staraudi write here instead, why? mirror or different meaning?
+		case 0x26: // something display list related? buffering control?
+			if (wordValue)
+			{
+				/* copy the base spritelist to a private (non-CPU visible buffer)
+				   copy the indexed sprites to 0 in spriteram, adjusting pointers in base sprite list as appropriate
+				   this at least gets the sprite data in the right place for the grdians raster effect to write the
+				   changed scroll values to the correct sprites, but is still nothing more than a guess
+				*/
+				INT32 current_sprite_entry = 0;
 
-	channel	= offset / sizeof(X1_010_CHANNEL);
-	reg		= offset % sizeof(X1_010_CHANNEL);
+				for (INT32 i = 0; i < 0x1000 / 2; i += 4)
+				{
+					UINT16 num = BURN_ENDIAN_SWAP_INT16(RamSpr[(0x3000 / 2) + i + 0]);
+					RamSprPriv[i + 0] = RamSpr[(0x3000 / 2) + i + 0];
+					RamSprPriv[i + 1] = RamSpr[(0x3000 / 2) + i + 1];
+					RamSprPriv[i + 2] = RamSpr[(0x3000 / 2) + i + 2];
 
-	if( channel < SETA_NUM_CHANNELS && reg == 0 && (x1_010_chip->reg[offset]&1) == 0 && (wordValue&1) != 0 ) {
-	 	x1_010_chip->smp_offset[channel] = 0;
-	 	x1_010_chip->env_offset[channel] = 0;
+					INT32 sprite = BURN_ENDIAN_SWAP_INT16(RamSpr[(0x3000 / 2) + i + 3]);
+					RamSprPriv[i + 3] = BURN_ENDIAN_SWAP_INT16(((current_sprite_entry / 4) & 0x7fff) | (sprite & 0x8000));
+
+					INT32 list2addr = (sprite & 0x7fff) * 4;
+
+					num &=0xff;
+
+					for (INT32 j = 0; j <= num; j++)
+					{
+						if (current_sprite_entry < 0x3000 / 2)
+						{
+							RamSpr[current_sprite_entry + 0] = RamSpr[(list2addr + (j * 4) + 0) & 0x1ffff];
+							RamSpr[current_sprite_entry + 1] = RamSpr[(list2addr + (j * 4) + 1) & 0x1ffff];
+							RamSpr[current_sprite_entry + 2] = RamSpr[(list2addr + (j * 4) + 2) & 0x1ffff];
+							RamSpr[current_sprite_entry + 3] = RamSpr[(list2addr + (j * 4) + 3) & 0x1ffff];
+							current_sprite_entry += 4;
+						}
+					}
+
+					if (BURN_ENDIAN_SWAP_INT16(RamSprPriv[i + 0]) & 0x8000) // end of list marker, mj4simai must draw the sprite this covers for the company logo, title screen etc.
+					{
+						// HACK: however penbros has a dummy sprite entry there which points to 0x0000 as the tile source, and causes garbage with the rearranged format,
+						// so change it to something that's invalid where we can filter it later.  This strongly indicates that the current approach is incorrect however.
+						if (sprite == 0x00)
+						{
+							RamSprPriv[i + 3] |= BURN_ENDIAN_SWAP_INT16(0x4000);
+						}
+
+						break;
+					}
+				}
+
+			}
+			break;
+		case 0x3c: // Raster IRQ enable/arm
+			raster_en = wordValue & 1;
+			raster_extra = 0;
+			raster_pos = raster_latch;
+			if (raster_pos == current_scanline) {
+				// the first scanline to start the raster chain is weird
+				raster_pos = (current_scanline + 1);
+				raster_extra = 1;
+			}
+			break;
+		case 0x3e: // Raster IRQ latch
+			raster_latch = wordValue;
+			break;
 	}
-	x1_010_chip->reg[offset] = wordValue & 0xff;
 }
 
 void __fastcall grdiansPaletteWriteByte(UINT32 sekAddress, UINT8 byteValue)
@@ -1556,9 +1756,13 @@ INT32 __fastcall grdiansSekIrqCallback(INT32 irq)
 static INT32 DrvDoReset()
 {
 	SekOpen(0);
-//	SekSetIRQLine(0, CPU_IRQSTATUS_NONE);
 	SekReset();
+	Tmp68301Reset();
 	SekClose();
+
+	x1010Reset();
+
+	nExtraCycles = 0;
 
 	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "gundamex")) {
 		EEPROMReset(); // gundam
@@ -1573,6 +1777,7 @@ static INT32 DrvDoReset()
 
 static INT32 MemIndex(INT32 CodeSize, INT32 GfxSize, INT32 PcmSize, INT32 ExtRamSize)
 {
+	nRomGfxLen = GfxSize;
 	UINT8 *Next; Next = Mem;
 	Rom68K 		= Next; Next += CodeSize;			// 68000 ROM
 	RomGfx		= Next; Next += GfxSize;			// GFX Rom
@@ -1584,7 +1789,7 @@ static INT32 MemIndex(INT32 CodeSize, INT32 GfxSize, INT32 PcmSize, INT32 ExtRam
 	RamUnknown	= Next; Next += ExtRamSize;
 	if (HasNVRam) { RamNV = Next; Next += 0x10000; }
 	RamSpr		= (UINT16 *) Next; Next += 0x020000 * sizeof(UINT16);
-	RamSprBak	= (UINT16 *) Next; Next += 0x020000 * sizeof(UINT16);
+	RamSprPriv	= (UINT16 *) Next; Next += 0x1000/2 * sizeof(UINT16);
 	RamPal		= (UINT16 *) Next; Next += 0x008000 * sizeof(UINT16);
 	RamTMP68301	= (UINT16 *) Next; Next += 0x000200 * sizeof(UINT16);
 
@@ -1661,14 +1866,15 @@ static INT32 grdiansInit()
 		SekMapMemory((UINT8 *)RamPal,
 									0xC40000, 0xC4FFFF, MAP_ROM);	// Palette
 		SekMapMemory((UINT8 *)RamVReg,
-									0xC60000, 0xC6003F, MAP_RAM);	// Video Registers
+									0xC60000, 0xC6003F, MAP_READ | MAP_FETCH);	// Video Registers
 		SekMapMemory((UINT8 *)RamTMP68301,
 									0xFFFC00, 0xFFFFFF, MAP_ROM);	// TMP68301 Registers
 
 		SekMapHandler(1,			0xB00000, 0xB03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xC40000, 0xC4FFFF, MAP_WRITE);	// Palette
 		SekMapHandler(3,			0xC50000, 0xC5FFFF, MAP_WRITE);
-		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(4,			0xC60000, 0xC6003F, MAP_WRITE);
+		SekMapHandler(5,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, grdiansReadWord);
 		SekSetReadByteHandler(0, grdiansReadByte);
@@ -1686,8 +1892,10 @@ static INT32 grdiansInit()
 		SekSetWriteWordHandler(3, grdiansClearWriteWord);
 		SekSetWriteByteHandler(3, grdiansClearWriteByte);
 
-		SekSetWriteWordHandler(4, Tmp68301WriteWord);
-		SekSetWriteByteHandler(4, Tmp68301WriteByte);
+		SekSetWriteWordHandler(4, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(5, Tmp68301WriteWord);
+		SekSetWriteByteHandler(5, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -1696,17 +1904,12 @@ static INT32 grdiansInit()
 	
 	GenericTilesInit();
 
-	yoffset = 0;
-	sva_x = 128;
-	sva_y = 128;
-
-	gfx_code_mask = 0x0800000 * 4 / 64;
-
-	x1010_sound_init(50000000 / 3, 0x0000);
+	M68K_CYCS = 32530470 / 2;
+	x1010_sound_init(M68K_CYCS, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	x1010_set_route(BURN_SND_X1010_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
-	DrvDoReset();	
+	DrvDoReset();
 
 	return 0;
 }
@@ -1834,7 +2037,8 @@ static INT32 mj4simaiInit()
 
 		SekMapHandler(1,			0xB00000, 0xB03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xC40000, 0xC4FFFF, MAP_WRITE);	// Palette
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(3,			0xC60000, 0xC6003F, MAP_WRITE);
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, mj4simaiReadWord);
 		SekSetReadByteHandler(0, mj4simaiReadByte);
@@ -1849,8 +2053,10 @@ static INT32 mj4simaiInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -1858,12 +2064,6 @@ static INT32 mj4simaiInit()
 	}
 
 	GenericTilesInit();
-
-	yoffset = 0;
-	sva_x = 64;
-	sva_y = 128;
-
-	gfx_code_mask = 0x0800000 * 4 / 64;
 
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
@@ -1986,7 +2186,8 @@ static INT32 myangelInit()
 
 		SekMapHandler(1,			0xB00000, 0xB03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xC40000, 0xC4FFFF, MAP_WRITE);	// Palette
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(3,			0xC60000, 0xC6003F, MAP_WRITE);	// Palette
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, myangelReadWord);
 		SekSetReadByteHandler(0, myangelReadByte);
@@ -2001,8 +2202,10 @@ static INT32 myangelInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -2010,12 +2213,6 @@ static INT32 myangelInit()
 	}
 
 	GenericTilesInit();
-
-	yoffset = 0x10;
-	sva_x = 0;
-	sva_y = 0;
-
-	gfx_code_mask = 0x0400000 * 4 / 64;
 
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
@@ -2136,7 +2333,8 @@ static INT32 myangel2Init()
 
 		SekMapHandler(1,			0xB00000, 0xB03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xD40000, 0xD4FFFF, MAP_WRITE);	// Palette
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(3,			0xD60000, 0xD6003F, MAP_WRITE);
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, myangel2ReadWord);
 		SekSetReadByteHandler(0, myangel2ReadByte);
@@ -2151,8 +2349,10 @@ static INT32 myangel2Init()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -2161,17 +2361,11 @@ static INT32 myangel2Init()
 
 	GenericTilesInit();
 
-	yoffset = 0x10;
-	sva_x = 0;
-	sva_y = 0;
-
-	gfx_code_mask = 0x0600000 * 4 / 64;
-
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	x1010_set_route(BURN_SND_X1010_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
-	DrvDoReset();	
+	DrvDoReset();
 
 	return 0;
 }
@@ -2208,7 +2402,7 @@ UINT16 __fastcall pzlbowlReadWord(UINT32 sekAddress)
 		case 0x700000: {
 			/*  The game checks for a specific value read from the ROM region.
     			The offset to use is stored in RAM at address 0x20BA16 */
-			UINT32 address = (*(UINT16 *)(Ram68K + 0x00ba16) << 16) | *(UINT16 *)(Ram68K + 0x00ba18);
+			UINT32 address = (BURN_ENDIAN_SWAP_INT16(*(UINT16 *)(Ram68K + 0x00ba16)) << 16) | BURN_ENDIAN_SWAP_INT16(*(UINT16 *)(Ram68K + 0x00ba18));
 			bprintf(PRINT_NORMAL, _T("pzlbowl Protection read address %08x [%02x %02x %02x %02x]\n"), address,
 			        Rom68K[ address - 2 ], Rom68K[ address - 1 ], Rom68K[ address - 0 ], Rom68K[ address + 1 ]);
 			return Rom68K[ address - 2 ]; }
@@ -2294,7 +2488,8 @@ static INT32 pzlbowlInit()
 
 		SekMapHandler(1,			0x900000, 0x903FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0x840000, 0x84FFFF, MAP_WRITE);	// Palette
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(3,			0x860000, 0x86003F, MAP_WRITE);
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, pzlbowlReadWord);
 		SekSetReadByteHandler(0, pzlbowlReadByte);
@@ -2309,8 +2504,10 @@ static INT32 pzlbowlInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -2318,12 +2515,6 @@ static INT32 pzlbowlInit()
 	}
 
 	GenericTilesInit();
-
-	yoffset = 0;
-	sva_x = 16;
-	sva_y = 256;
-
-	gfx_code_mask = 0x0400000 * 4 / 64;
 
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_BOTH);
@@ -2445,7 +2636,8 @@ static INT32 penbrosInit()
 
 		SekMapHandler(1,			0xA00000, 0xA03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xB40000, 0xB4FFFF, MAP_WRITE);	// Palette
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(3,			0xB60000, 0xB6003F, MAP_WRITE);
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
 
 		SekSetReadWordHandler(0, penbrosReadWord);
 		SekSetReadByteHandler(0, penbrosReadByte);
@@ -2460,8 +2652,10 @@ static INT32 penbrosInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -2469,12 +2663,6 @@ static INT32 penbrosInit()
 	}
 
 	GenericTilesInit();
-
-	yoffset = 0;
-	sva_x = 0;
-	sva_y = 128;
-
-	gfx_code_mask = 0x0400000 * 4 / 64;
 
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
@@ -2613,6 +2801,7 @@ static INT32 gundamexInit()
 
 		SekMapHandler(1,			0xb00000, 0xb03FFF, MAP_READ | MAP_WRITE);
 		SekMapHandler(2,			0xc40000, 0xc4FFFF, MAP_WRITE);
+		SekMapHandler(3,			0xc60000, 0xc6003F, MAP_WRITE);
 
 		SekSetReadWordHandler(0, gundamexReadWord);
 		//SekSetReadByteHandler(0, gundamexReadByte);
@@ -2627,6 +2816,8 @@ static INT32 gundamexInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
 		SekClose();
@@ -2634,22 +2825,14 @@ static INT32 gundamexInit()
 
 	GenericTilesInit();
 
-	// Hack to skip black screen on EEPROM failure
-	//*((UINT16*)(Rom68K + 0x00f98)) = 0x4e71;
-
-	yoffset = 0;
-	sva_x = 0;
-	sva_y = 256;
-
-	gfx_code_mask = 0x0800000 * 4 / 64;
-
-	x1010_sound_init(50000000 / 3, 0x0000);
+	M68K_CYCS = 32530470 / 2;
+	x1010_sound_init(M68K_CYCS, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	x1010_set_route(BURN_SND_X1010_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
 	EEPROMInit(&eeprom_interface_93C46);
 
-	DrvDoReset();	
+	DrvDoReset();
 
 	return 0;
 }
@@ -2699,11 +2882,12 @@ UINT16 __fastcall samshootReadWord(UINT32 address)
 	return 0;
 }
 
-static INT32 samshootInit()
+static INT32 samshootInit(INT32 game_id)
 {
 	INT32 nRet;
 	
 	HasNVRam = 1;
+	is_samshoot = game_id;
 
 	Mem = NULL;
 	MemIndex(0x0200000, 0x2000000, 0x0500000, 0x010000);
@@ -2743,12 +2927,13 @@ static INT32 samshootInit()
 
 		SekMapMemory((UINT8 *)RamSpr,		0x800000, 0x83FFFF, MAP_RAM);	// sprites
 		SekMapMemory((UINT8 *)RamPal,		0x840000, 0x84FFFF, MAP_ROM);	// Palette
-		SekMapMemory((UINT8 *)RamVReg,		0x860000, 0x86003F, MAP_RAM);	// Video Registers
+		SekMapMemory((UINT8 *)RamVReg,		0x860000, 0x86003F, MAP_READ | MAP_FETCH);	// Video Registers
 		SekMapMemory((UINT8 *)RamTMP68301,	0xFFFC00, 0xFFFFFF, MAP_ROM);	// TMP68301 Registers
 
-		SekMapHandler(2,			0x840000, 0x84FFFF, MAP_WRITE);	// Palette
 		SekMapHandler(1,			0x900000, 0x903FFF, MAP_READ | MAP_WRITE);
-		SekMapHandler(3,			0xFFFC00, 0xFFFFFF, MAP_WRITE);
+		SekMapHandler(2,			0x840000, 0x84FFFF, MAP_WRITE);	// Palette
+		SekMapHandler(3,			0x860000, 0x86003F, MAP_WRITE);
+		SekMapHandler(4,			0xFFFC00, 0xFFFFFF, MAP_RAM);
 
 		SekSetReadWordHandler(0, samshootReadWord);
 		SekSetWriteWordHandler(0, samshootWriteWord);
@@ -2761,8 +2946,12 @@ static INT32 samshootInit()
 		SekSetWriteWordHandler(2, grdiansPaletteWriteWord);
 		SekSetWriteByteHandler(2, grdiansPaletteWriteByte);
 
-		SekSetWriteWordHandler(3, Tmp68301WriteWord);
-		SekSetWriteByteHandler(3, Tmp68301WriteByte);
+		SekSetWriteWordHandler(3, setaVideoRegWriteWord);
+
+		SekSetWriteWordHandler(4, Tmp68301WriteWord);
+		SekSetWriteByteHandler(4, Tmp68301WriteByte);
+		SekSetReadWordHandler(4, Tmp68301ReadWord);
+		SekSetReadByteHandler(4, Tmp68301ReadByte);
 
 		SekSetIrqCallback( grdiansSekIrqCallback );
 
@@ -2771,21 +2960,37 @@ static INT32 samshootInit()
 
 	GenericTilesInit();
 
-	yoffset = 0;
-	sva_x = 64;
-	sva_y = 64;
-
-	gfx_code_mask = 0x0800000 * 4 / 64;
-
 	x1010_sound_init(50000000 / 3, 0x0000);
 	x1010_set_route(BURN_SND_X1010_ROUTE_1, 1.00, BURN_SND_ROUTE_LEFT);
 	x1010_set_route(BURN_SND_X1010_ROUTE_2, 1.00, BURN_SND_ROUTE_RIGHT);
 
 	BurnGunInit(2, true);
 
-	DrvDoReset();	
+	DrvDoReset();
 
 	return 0;
+}
+
+// is_samshoot = [0 deerhunt, 1 turkhunt, 2 trophyh, 3 wschamp]
+
+static INT32 deerhuntInit()
+{
+	return samshootInit(0);
+}
+
+static INT32 turkhuntInit()
+{
+	return samshootInit(1);
+}
+
+static INT32 trophyhInit()
+{
+	return samshootInit(2);
+}
+
+static INT32 wschampInit()
+{
+	return samshootInit(3);
 }
 
 
@@ -2805,337 +3010,580 @@ static INT32 grdiansExit()
 	if (nBurnGunNumPlayers) BurnGunExit();
 	
 	HasNVRam = 0;
+	is_samshoot = 0;
+
+	M68K_CYCS = 50000000 / 3;
 
 //	bMahjong = 0;
 
 	return 0;
 }
 
-
-#define	DRAWGFX( op )												\
-	code %= gfx_code_mask; /* I hate to use a modulo, but myangel2 needs it */	\
-	if (!code) return;												\
-	sx -= sva_x;													\
-	sy -= sva_y;													\
-																	\
-	if (sx <= -8) return;											\
-	if (sx >= nScreenWidth) return;										\
-	if (sy <= -8) return;											\
-	if (sy >= nScreenHeight) return;										\
-																	\
-	UINT16 * pd = pTransDraw;				\
-	UINT8 * ps = RomGfx + (code << 6); 						\
-																	\
-	if (sx < 0 || sx > nScreenWidth - 8 || sy < 0 || sy > nScreenHeight - 8) {		\
-		if ( flipy ) {												\
-			pd += (sy + 7) * nScreenWidth + sx;							\
-			if ( flipx ) {											\
-				for (INT32 i=7;i>=0;i--,pd-=nScreenWidth)					\
-					if ( sy+i < 0 || sy+i >= nScreenHeight )				\
-						ps += 8;									\
-					else											\
-						for (INT32 j=7;j>=0;j--,ps++) {				\
-							UINT8 c = op;					\
-							if ( c && sx+j >= 0 && sx+j < nScreenWidth ) 	\
-								*(pd + j) = c | color;				\
-						}											\
-			} else													\
-				for (INT32 i=7;i>=0;i--,pd-=nScreenWidth)					\
-					if ( sy+i < 0 || sy+i >= nScreenHeight )				\
-						ps += 8;									\
-					else											\
-						for (INT32 j=0;j<8;j++,ps++) {				\
-							UINT8 c = op;					\
-							if ( c && sx+j >= 0 && sx+j < nScreenWidth ) 	\
-								*(pd + j) = c | color;				\
-						}											\
-		} else {													\
-			pd += sy * nScreenWidth + sx;									\
-			if ( flipx ) {											\
-				for (INT32 i=0;i<8;i++,pd+=nScreenWidth)						\
-					if ( sy+i < 0 || sy+i >= nScreenHeight )				\
-						ps += 8;									\
-					else											\
-						for (INT32 j=7;j>=0;j--,ps++) {				\
-							UINT8 c = op;					\
-							if ( c && sx+j >= 0 && sx+j < nScreenWidth ) 	\
-								*(pd + j) = c | color;				\
-						}											\
-			} else													\
-				for (INT32 i=0;i<8;i++,pd+=nScreenWidth)						\
-					if ( sy+i < 0 || sy+i >= nScreenHeight )				\
-						ps += 8;									\
-					else											\
-						for (INT32 j=0;j<8;j++,ps++) {				\
-							UINT8 c = op;					\
-							if ( c && sx+j >= 0 && sx+j < nScreenWidth ) 	\
-								*(pd + j) = c | color;				\
-						}											\
-		}															\
-		return;														\
-	}																\
-																	\
-																	\
-	if ( flipy ) {													\
-		pd += (sy + 7) * nScreenWidth + sx;								\
-		if ( flipx ) 												\
-			for (INT32 i=0;i<8;i++,pd-=nScreenWidth)							\
-				for (INT32 j=7;j>=0;j--,ps++) {						\
-					UINT8 c = op;							\
-					if ( c ) *(pd + j) = c | color;					\
-				}													\
-		else														\
-			for (INT32 i=0;i<8;i++,pd-=nScreenWidth)							\
-				for (INT32 j=0;j<8;j++,ps++) {						\
-					UINT8 c = op;							\
-					if ( c ) *(pd + j) = c | color;					\
-				}													\
-	} else {														\
-		pd += sy * nScreenWidth + sx;										\
-		if ( flipx ) 												\
-			for (INT32 i=0;i<8;i++,pd+=nScreenWidth)							\
-				for (INT32 j=7;j>=0;j--,ps++) {						\
-					UINT8 c = op;							\
-					if ( c ) *(pd + j) = c | color;					\
-				}													\
-		else														\
-			for (INT32 i=0;i<8;i++,pd+=nScreenWidth)							\
-				for (INT32 j=0;j<8;j++,ps++) {						\
-					UINT8 c = op;							\
-					if ( c ) *(pd + j) = c | color;					\
-				}													\
-	}																\
-
-
-static void drawgfx0(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
+struct rectangle
 {
-	//	4bpp tiles (----3210)
-	DRAWGFX( *ps & 0x0f );
-}
+	INT32 min_x;
+	INT32 max_x;
+	INT32 min_y;
+	INT32 max_y;
+};
 
-static void drawgfx1(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
+inline static void drawgfx_line(const rectangle &cliprect, INT32 which_gfx, INT32 code, const UINT32 realcolor, INT32 flipx, INT32 flipy, INT32 base_sx, UINT32 xzoom, INT32 use_shadow, INT32 screenline, INT32 line, INT32 opaque)
 {
-	//	4bpp tiles (3210----)
-	DRAWGFX( *ps >> 4 );
-}
+	const UINT8 *addr = RomGfx + ((code * 8 * 8) % nRomGfxLen);
 
-static void drawgfx2(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
-{
-	// 6bpp tiles (--543210)
-	DRAWGFX( *ps & 0x3f );
-}
+	struct drawmodes
+	{
+		INT32 gfx_mask;
+		INT32 gfx_shift;
+		INT32 shadow;
+	};
 
-static void drawgfx3(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
-{
-	// 8bpp tiles (76543210)
-	DRAWGFX( *ps );
-}
+	// this is the same logic as ssv.cpp, although this has more known cases, but also some bugs with the handling
+	static const drawmodes BPP_MASK_TABLE[8] = {
+		{ 0xff, 0, 4 }, // 0: ultrax, twineag2 text - is there a local / global mixup somewhere, or is this an 'invalid' setting that just enables all planes?
+		{ 0x30, 4, 2 }, // 1: unverified case, mimic old driver behavior of only using lowest bit  (myangel2 question bubble, myangel endgame)
+		{ 0x07, 0, 3 }, // 2: unverified case, mimic old driver behavior of only using lowest bit  (myangel "Graduate Tests")
+		{ 0xff, 0, 0 }, // 3: unverified case, mimic old driver behavior of only using lowest bit  (staraudi question bubble: pen %00011000 with shadow on!)
+		{ 0x0f, 0, 3 }, // 4: eagle shot 4bpp birdie text
+		{ 0xf0, 4, 4 }, // 5: eagle shot 4bpp japanese text
+		{ 0x3f, 0, 5 }, // 6: common 6bpp case + keithlcy (logo), drifto94 (wheels) masking  ) (myangel sliding blocks test)
+		{ 0xff, 0, 8 }, // 7: common 8bpp case
+	};
 
-static void drawgfx4(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
-{
-	// 3bpp tiles?  (-----210)
-	DRAWGFX( *ps & 0x07 );
-}
+	INT32 shadow = BPP_MASK_TABLE[(which_gfx & 0x0700)>>8].shadow;
+	INT32 gfx_mask = BPP_MASK_TABLE[(which_gfx & 0x0700)>>8].gfx_mask;
+	INT32 gfx_shift = BPP_MASK_TABLE[(which_gfx & 0x0700)>>8].gfx_shift;
 
-static void drawgfx5(UINT32 code,UINT32 color,INT32 flipx,INT32 flipy,INT32 sx,INT32 sy)
-{
-	// 2bpp tiles??? (--10----)
-	DRAWGFX( (*ps >> 4) & 0x03 );
-}
+	if (!use_shadow)
+		shadow = 0;
 
-static void drawgfxN(UINT32,UINT32,INT32,INT32,INT32,INT32)
-{
-	// unknown 
-}
+	UINT16* dest = pTransDraw + (screenline * nScreenWidth);
 
-typedef void (*pDrawgfx)(UINT32,UINT32,INT32,INT32,INT32,INT32);
+	INT32 minx = cliprect.min_x << 16;
+	INT32 maxx = cliprect.max_x << 16;
 
-static INT32 DrvDraw()
-{
-	if (bRecalcPalette) {
-		for (INT32 i=0;i<0x08000; i++)
-			CurPal[i] = CalcCol( RamPal[i] );
-		bRecalcPalette = 0;	
+	if (xzoom < 0x10000) // shrink
+	{
+		INT32 x0 = flipx ? (base_sx + (8 * xzoom) - xzoom) : (base_sx);
+		INT32 x1 = flipx ? (base_sx - xzoom) : (x0 + (8 * xzoom));
+		const INT32 dx = flipx ? (-xzoom) : (xzoom);
+
+		const UINT8 *const source = flipy ? addr + (7 - line) * 8 : addr + line * 8;
+		INT32 column = 0;
+
+		for (INT32 sx = x0; sx != x1; sx += dx)
+		{
+			UINT8 pen = (source[column++] & gfx_mask) >> gfx_shift;
+
+			if (sx >= minx && sx <= maxx)
+			{
+				INT32 realsx = sx >> 16;
+
+				if (pen || opaque)
+				{
+					if (!shadow)
+					{
+						dest[realsx] = (realcolor + pen) & 0x7fff;
+					}
+					else
+					{
+						INT32 pen_shift = 15 - shadow;
+						INT32 pen_mask = (1 << pen_shift) - 1;
+						dest[realsx] = ((dest[realsx] & pen_mask) | (pen << pen_shift)) & 0x7fff;
+					}
+				}
+			}
+		}
 	}
+	else // enlarge or no zoom
+	{
+		const UINT8* const source = flipy ? addr + (7 - line) * 8 : addr + line * 8;
 
-//	memset(pBurnDraw, 0, nScreenWidth * nScreenHeight * 2);
-	BurnTransferClear();
+		INT32 x0 = (base_sx);
+		INT32 x1 = (x0 + (8 * xzoom));
 
-	if (BURN_ENDIAN_SWAP_INT16(RamVReg[0x30/2]) & 1) { // Blank Screen
-		memcpy(RamSprBak, RamSpr, 0x040000);
-		return 0;
+		INT32 column;
+		if (!flipx)
+		{
+			column = 0;
+		}
+		else
+		{
+			column = 7;
+		}
+
+		UINT32 countx = 0;
+		for (INT32 sx = x0; sx < x1; sx += 0x10000)
+		{
+			UINT8 pen = (source[column] & gfx_mask) >> gfx_shift;
+
+			if (sx >= minx && sx <= maxx)
+			{
+				INT32 realsx = sx >> 16;
+
+				if (pen || opaque)
+				{
+					if (!shadow)
+					{
+						dest[realsx] = (realcolor + pen) & 0x7fff;
+					}
+					else
+					{
+						INT32 pen_shift = 15 - shadow;
+						INT32 pen_mask = (1 << pen_shift) - 1;
+						dest[realsx] = ((dest[realsx] & pen_mask) | (pen << pen_shift)) & 0x7fff;
+					}
+				}
+			}
+
+			countx += 0x10000;
+			if (countx >= xzoom)
+			{
+				if (!flipx)
+				{
+					column++;
+				}
+				else
+				{
+					column--;
+				}
+
+				countx -= xzoom;
+			}
+		}
 	}
+}
 
-	UINT16 *s1  = RamSprBak + 0x3000 / 2;
-	UINT16 *end = RamSprBak + 0x040000 / 2;
+inline static void get_tile(UINT16 *spriteram, INT32 is_16x16, INT32 x, INT32 y, INT32 page, INT32& code, INT32& attr, INT32& flipx, INT32& flipy, INT32& color)
+{
+	INT32 xtile = x >> (is_16x16 ? 4 : 3);
+	INT32 ytile = y >> (is_16x16 ? 4 : 3);
 
-	for ( ; s1 < end; s1+=4 ) {
-		INT32 num		= BURN_ENDIAN_SWAP_INT16(s1[0]);
-		INT32 xoffs	= BURN_ENDIAN_SWAP_INT16(s1[1]);
-		INT32 yoffs	= BURN_ENDIAN_SWAP_INT16(s1[2]);
-		INT32 sprite	= BURN_ENDIAN_SWAP_INT16(s1[3]);
-		pDrawgfx drawgfx = drawgfxN;
+	// yes the tilemap in RAM is flipped?!
+	ytile ^= 0x1f;
+
+	//UINT16 *s3 = &spriteram[2 * ((page * 0x2000 / 4) + ((ytile & 0x1f) << 6) + ((xtile) & 0x03f))];
+	UINT16 *s3 = spriteram + ((page * 0x2000 / 4) + ((ytile & 0x1f) << 6) + ((xtile) & 0x03f)) * 2;
+	attr = BURN_ENDIAN_SWAP_INT16(s3[0]);
+	code = BURN_ENDIAN_SWAP_INT16(s3[1]) + ((attr & 0x0007) << 16);
+	flipx = (attr & 0x0010);
+	flipy = (attr & 0x0008);
+	color = (attr & 0xffe0) >> 5;
+	if (is_16x16)
+	{
+		code &= ~3;
+
+		if (!flipx)
+		{
+			if (x & 8)
+			{
+				code += 1;
+			}
+		}
+		else
+		{
+			if (!(x & 8))
+			{
+				code += 1;
+			}
+		}
+
+		if (!flipy)
+		{
+			if (y & 8)
+			{
+				code += 2;
+			}
+		}
+		else
+		{
+			if (!(y & 8))
+			{
+				code += 2;
+			}
+		}
+	}
+}
+
+static INT32 calculate_global_xoffset(INT32 nozoom_fixedpalette_fixedposition)
+{
+	INT32 global_xoffset = 0;
+
+	if (nozoom_fixedpalette_fixedposition)
+		global_xoffset = 0x80;
+
+	return global_xoffset;
+}
+
+static INT32 calculate_global_yoffset(INT32 nozoom_fixedpalette_fixedposition)
+{
+	INT32 global_yoffset = 0;
+
+	if (nozoom_fixedpalette_fixedposition)
+		global_yoffset = -0x90;
+
+	return global_yoffset;
+}
+
+static void draw_sprites_line(const rectangle &cliprect, INT32 scanline, INT32 realscanline, INT32 xoffset, UINT32 xzoom, bool xzoominverted)
+{
+	UINT16 *spriteram = RamSpr;
+
+	UINT16 *s1  = RamSprPriv;
+
+	INT32 sprite_debug_count = 0;
+
+	for ( ; s1 < RamSprPriv + 0x1000/2; s1+=4,sprite_debug_count++ ) {
+		INT32 num = BURN_ENDIAN_SWAP_INT16(s1[0]);
+
+		INT32 xoffs = BURN_ENDIAN_SWAP_INT16(s1[1]);
+		INT32 yoffs = BURN_ENDIAN_SWAP_INT16(s1[2]);
+		INT32 sprite = BURN_ENDIAN_SWAP_INT16(s1[3]);
 
 		// Single-sprite address
-		UINT16 *s2 = RamSprBak + (sprite & 0x7fff) * 4;
+		UINT16 *s2 = spriteram + (sprite & 0x7fff) * 4;
+		UINT16 *end = spriteram + 0x040000 / 2;
 
 		// Single-sprite tile size
-		INT32 global_sizex = xoffs & 0x0c00;
-		INT32 global_sizey = yoffs & 0x0c00;
+		INT32 global_sizex = xoffs & 0xfc00;
+		INT32 global_sizey = yoffs & 0xfc00;
 
+		INT32 nozoom_fixedpalette_fixedposition = num & 0x4000; // ignore various things including global offsets, zoom.  different palette selection too?
+		bool opaque = num & 0x2000;
 		INT32 use_global_size = num & 0x1000;
-
+		INT32 use_shadow = num & 0x0800;
+		INT32 which_gfx = num & 0x0700;
 		xoffs &= 0x3ff;
 		yoffs &= 0x3ff;
 
-		// Color depth
-		switch (num & 0x0700)
+		if (yoffs & 0x200)
+			yoffs -= 0x400;
+
+		INT32 global_xoffset = calculate_global_xoffset(nozoom_fixedpalette_fixedposition);
+		INT32 global_yoffset = calculate_global_yoffset(nozoom_fixedpalette_fixedposition);
+		INT32 usedscanline;
+		INT32 usedxoffset;
+		UINT32 usedxzoom;
+
+		if (nozoom_fixedpalette_fixedposition)
 		{
-			case 0x0700: 	// 8bpp tiles (76543210)
-				drawgfx = drawgfx3; break;
-			case 0x0600:	// 6bpp tiles (--543210) (myangel sliding blocks test)
-				drawgfx = drawgfx2; break;
-			case 0x0500:	// 4bpp tiles (3210----)
-				drawgfx = drawgfx1; break;
-			case 0x0400:	// 4bpp tiles (----3210)
-				drawgfx = drawgfx0; break;
-			case 0x0200:	// 3bpp tiles?  (-----210) (myangel "Graduate Tests")
-				drawgfx = drawgfx4; break;
-			case 0x0100:	// 2bpp tiles??? (--10----) (myangel2 question bubble, myangel endgame)
-				drawgfx = drawgfx5; break;
-			case 0x0000:	// no idea!
-				drawgfx = drawgfx0; break;
-			//default:
-				//bprintf(PRINT_NORMAL, _T("unknown gfxset %x\n"), (num & 0x0700)>>8 );
-			//	drawgfx = drawgfxN;
+			use_shadow = 0;
+		//  which_gfx = 4 << 8;
+			usedscanline = realscanline; // no zooming?
+			usedxzoom = 0x10000;
+			usedxoffset = 0;
+		}
+		else
+		{
+			usedscanline = scanline;
+			usedxzoom = xzoom;
+			usedxoffset = xoffset;
 		}
 
 		// Number of single-sprites
 		num = (num & 0x00ff) + 1;
 
-		for( ; num > 0; num--,s2+=4 ) {
-			if (s2 >= end)	break;
+		if ((sprite&0x7fff) < 0x3000 / 2 / 4)
+		{
 
-			if (sprite & 0x8000) {
-				// "tilemap" sprite
-				INT32 clip_min_y;
-				INT32 clip_max_y;
-				INT32 clip_min_x;
-				INT32 clip_max_x;
+			for( ; num > 0; num--,s2+=4 ) {
+				if (s2 >= end)	break;
 
-				INT32 dx,x,y;
-				INT32 flipx;
-				INT32 flipy;
-				INT32 sx       = BURN_ENDIAN_SWAP_INT16(s2[0]);
-				INT32 sy       = BURN_ENDIAN_SWAP_INT16(s2[1]);
-				INT32 scrollx  = BURN_ENDIAN_SWAP_INT16(s2[2]);
-				INT32 scrolly  = BURN_ENDIAN_SWAP_INT16(s2[3]);
-				INT32 tilesize = (scrollx & 0x8000) >> 15;
-				INT32 page     = (scrollx & 0x7c00) >> 10;
-				INT32 height   = ((sy & 0xfc00) >> 10) + 1;
+				if (sprite & 0x8000) {
+					INT32 sy       = BURN_ENDIAN_SWAP_INT16(s2[1]) & 0x3ff;
+					sy += global_yoffset;
+					sy &= 0x3ff;
+					if (sy & 0x200)
+						sy -= 0x400;
+					INT32 local_sizey = BURN_ENDIAN_SWAP_INT16(s2[1]) & 0xfc00;
+					INT32 height = use_global_size ? global_sizey : local_sizey;
+					height = ((height & 0xfc00) >> 10) + 1;
+					INT32 firstline = (sy + yoffs) & 0x3ff;
+					if (firstline & 0x200)
+						firstline -= 0x400;
+					INT32 endline = firstline + height * 0x10 - 1;
 
-				sx &= 0x3ff;
-				sy &= 0x1ff;
-				scrollx &= 0x3ff;
-				scrolly &= 0x1ff;
+					// if the sprite doesn't cover this scanline, bail now
+					if (endline & 0x200)
+						endline -= 0x400;
 
-				clip_min_y = (sy + yoffs) & 0x1ff;
-				clip_max_y = clip_min_y + height * 0x10 - 1;
-				if (clip_min_y > (sva_y + nScreenHeight - 1)) continue;
-				if (clip_max_y < sva_y) continue;
-
-				clip_min_x = sva_x;
-				clip_max_x = sva_x + nScreenWidth - 1;
-
-				if (clip_min_y < sva_y) clip_min_y = sva_y;
-				if (clip_max_y > (sva_y + nScreenHeight - 1)) clip_max_y = sva_y + nScreenHeight - 1;
-
-				dx = sx + (scrollx & 0x3ff) + xoffs + 0x10;
-
-				/* Draw the rows */
-				/* I don't think the following is entirely correct (when using 16x16
-                   tiles x should probably loop from 0 to 0x20) but it seems to work
-                   fine in all the games we have for now. */
-				for (y = 0; y < (0x40 >> tilesize); y++)
-				{
-					INT32 py = ((scrolly - (y+1) * (8 << tilesize) + 0x10) & 0x1ff) - 0x10 - yoffset;
-
-					if (py < clip_min_y - 0x10) continue;
-					if (py > clip_max_y) continue;
-
-					for (x = 0; x < 0x40;x++)
+					if (endline >= firstline)
 					{
-						INT32 px = ((dx + x * (8 << tilesize) + 0x10) & 0x3ff) - 0x10;
-						INT32 tx, ty;
-						INT32 attr, code, color;
-						UINT16 *s3;
+						if (firstline > usedscanline)    continue;
+						if (endline < usedscanline)    continue;
+					}
+					else
+					{
+						// cases where the sprite crosses 0
+						if ((usedscanline > endline) && (usedscanline < firstline))
+							continue;
+					}
 
-						if (px < clip_min_x - 0x10) continue;
-						if (px > clip_max_x) continue;
+					// get everything we need to calculate if sprite is actually within the x co-ordinates of the screen
+					INT32 sx = BURN_ENDIAN_SWAP_INT16(s2[0]);
+					INT32 local_sizex = sx & 0xfc00;
+					sx &= 0x3ff;
+					sx -= global_xoffset;
 
-						s3 = RamSprBak + 2 * ((page * 0x2000/4) + ((y & 0x1f) << 6) + (x & 0x03f));
+					INT32 width    = use_global_size ? global_sizex : local_sizex;
 
-						attr  = BURN_ENDIAN_SWAP_INT16(s3[0]);
-						code  = BURN_ENDIAN_SWAP_INT16(s3[1]) + ((attr & 0x0007) << 16);
-						flipx = (attr & 0x0010);
-						flipy = (attr & 0x0008);
-						color = (attr & 0xffe0) >> 5;
+					width  = ((width  & 0xfc00) >> 10)/* + 1*/;	// reelquak reels
+					if (!width)
+						continue;
 
-						if (tilesize) code &= ~3;
+					INT32 firstcolumn = (sx + xoffs);
+					firstcolumn = (firstcolumn & 0x1ff) - (firstcolumn & 0x200);
+					INT32 lastcolumn = firstcolumn + width * 0x10 - 1;
 
-						for (ty = 0; ty <= tilesize; ty++)
-							for (tx = 0; tx <= tilesize; tx++)
-								drawgfx(code ^ tx ^ (ty<<1), color << 4, flipx, flipy, px + (flipx ? tilesize-tx : tx) * 8, py + (flipy ? tilesize-ty : ty) * 8 );
+					// if the sprite isn't within the x-coordinates of the screen, bail
+					if (firstcolumn > cliprect.max_x)    continue;
+					if (lastcolumn < cliprect.min_x)    continue;
+
+					// otherwise get the rest of the things we need to draw
+					INT32 scrolly = BURN_ENDIAN_SWAP_INT16(s2[3]);
+					scrolly &= 0x1ff;
+					scrolly += global_yoffset;
+					INT32 sourceline = (usedscanline - scrolly) & 0x1ff;
+
+					INT32 scrollx = BURN_ENDIAN_SWAP_INT16(s2[2]);
+					INT32 is_16x16 = (scrollx & 0x8000) >> 15;
+					INT32 page = (scrollx & 0x7c00) >> 10;
+					scrollx &= 0x3ff;
+
+					// we treat 16x16 tiles as 4 8x8 tiles, so while the tilemap is 0x40 tiles wide in memory, that becomes 0x80 tiles in 16x16 mode, with the data wrapping in 8x8 mode
+					for (INT32 x = 0; x < 0x80; x++)
+					{
+						INT32 code, attr, flipx, flipy, color;
+						// tilemap data is NOT buffered?
+						get_tile(spriteram, is_16x16, x * 8, sourceline, page, code, attr, flipx, flipy, color);
+
+						INT32 tileline = sourceline & 0x07;
+						INT32 dx = sx + (scrollx & 0x3ff) + xoffs + 0x10;
+						INT32 px = (((dx + x * 8) + 0x10) & 0x3ff) - 0x10;
+						INT32 dst_x = px & 0x3ff;
+						dst_x = (dst_x & 0x1ff) - (dst_x & 0x200);
+
+						if ((dst_x >= firstcolumn - 8) && (dst_x <= lastcolumn)) // reelnquak reels are heavily glitched without this check
+						{
+							UINT32 realsx = dst_x;
+							realsx -= usedxoffset>>16; // need to refactor, this causes loss of lower 16 bits of offset which are important in zoomed cases for precision
+							realsx = realsx * usedxzoom;
+							drawgfx_line(cliprect, which_gfx, code, color << 4, flipx, flipy, realsx, usedxzoom, use_shadow, realscanline, tileline, opaque);
+						}
+					}
+
+				} else {
+					// "normal" sprite
+					INT32 sy    = BURN_ENDIAN_SWAP_INT16(s2[1]) & 0x1ff;
+
+					if (sy & 0x100)
+						sy -= 0x200;
+
+					sy += global_yoffset;
+					sy &= 0x3ff;
+
+					if (realscanline == 128)
+					{
+					//	printf("%04x %02x %d %d\n", sprite_debug_count, num, yoffs, sy);
+					}
+
+					INT32 sizey = use_global_size ? global_sizey : BURN_ENDIAN_SWAP_INT16(s2[1]) & 0xfc00;
+
+					sizey = (1 << ((sizey & 0x0c00) >> 10)) - 1;
+
+					INT32 firstline = (sy + yoffs) & 0x3ff;
+					INT32 endline = (firstline + (sizey + 1) * 8) - 1;
+
+					endline &= 0x3ff;
+
+					if (firstline & 0x200)
+						firstline -= 0x400;
+
+					if (endline & 0x200)
+						endline -= 0x400;
+
+					// if the sprite doesn't cover this scanline, bail now
+					if (endline >= firstline)
+					{
+						if (firstline > usedscanline)    continue;
+						if (endline < usedscanline)    continue;
+					}
+					else
+					{
+						// cases where the sprite crosses 0
+						if ((usedscanline > endline) && (usedscanline < firstline))
+							continue;
+					}
+
+					// otherwise get the rest of the things we need to draw
+					INT32 attr = BURN_ENDIAN_SWAP_INT16(s2[2]);
+					INT32 code = BURN_ENDIAN_SWAP_INT16(s2[3]) + ((attr & 0x0007) << 16);
+					INT32 flipx = (attr & 0x0010);
+					INT32 flipy = (attr & 0x0008);
+					INT32 color = (attr & 0xffe0) >> 5;
+
+					INT32 sx = BURN_ENDIAN_SWAP_INT16(s2[0]);
+					INT32 sizex = use_global_size ? global_sizex : sx;
+					sizex = (1 << ((sizex & 0x0c00) >> 10)) - 1;
+
+					sx += xoffs;
+					sx = (sx & 0x1ff) - (sx & 0x200);
+					sx -= global_xoffset;
+
+					INT32 basecode = code &= ~((sizex + 1) * (sizey + 1) - 1);   // see myangel, myangel2 and grdians
+
+
+					INT32 line = usedscanline - firstline;
+					INT32 y = (line >> 3);
+					line &= 0x7;
+
+					if (nozoom_fixedpalette_fixedposition)
+					{
+						// grdians map...
+						color = 0x7ff;
+					}
+
+					for (INT32 x = 0; x <= sizex; x++)
+					{
+						INT32 realcode = (basecode + (flipy ? sizey - y : y)*(sizex + 1)) + (flipx ? sizex - x : x);
+						UINT32 realsx = (sx + x * 8);
+						realsx -= usedxoffset>>16; // need to refactor, this causes loss of lower 16 bits of offset which are important in zoomed cases for precision
+						realsx = realsx * usedxzoom;
+						drawgfx_line(cliprect, which_gfx, realcode, color << 4, flipx, flipy, realsx, usedxzoom, use_shadow, realscanline, line, opaque);
 					}
 				}
-
-			} else {
-				// "normal" sprite	
-				INT32 sx    = BURN_ENDIAN_SWAP_INT16(s2[0]);
-				INT32 sy    = BURN_ENDIAN_SWAP_INT16(s2[1]);
-				INT32 attr  = BURN_ENDIAN_SWAP_INT16(s2[2]);
-				INT32 code  = BURN_ENDIAN_SWAP_INT16(s2[3]) + ((attr & 0x0007) << 16);
-				INT32 flipx = (attr & 0x0010);
-				INT32 flipy = (attr & 0x0008);
-				INT32 color = (attr & 0xffe0) >> 5;
-
-				INT32 sizex = use_global_size ? global_sizex : sx;
-				INT32 sizey = use_global_size ? global_sizey : sy;
-				INT32 x,y;
-				sizex = (1 << ((sizex & 0x0c00)>> 10))-1;
-				sizey = (1 << ((sizey & 0x0c00)>> 10))-1;
-
-
-				sx += xoffs;
-				sy += yoffs;
-
-				sx = (sx & 0x1ff) - (sx & 0x200);
-				sy &= 0x1ff;
-				sy -= yoffset;
-
-				code &= ~((sizex+1) * (sizey+1) - 1);	// see myangel, myangel2 and grdians
-
-				for (y = 0; y <= sizey; y++)
-					for (x = 0; x <= sizex; x++)
-						drawgfx( code++, color << 4, flipx, flipy, sx + (flipx ? sizex-x : x) * 8, sy + (flipy ? sizey-y : y) * 8 );
-
 			}
-
 		}
 		if (BURN_ENDIAN_SWAP_INT16(s1[0]) & 0x8000) break;	// end of list marker
 	}
+}
 
-	BurnTransferCopy(CurPal);
+static void draw_sprites(const rectangle &cliprect)
+{
+	UINT32 yoffset = (BURN_ENDIAN_SWAP_INT16(RamVReg[0x1a / 2]) << 16) | BURN_ENDIAN_SWAP_INT16(RamVReg[0x18 / 2]);
+	yoffset &= 0x07ffffff;
+	yoffset = 0x07ffffff - yoffset;
 
-	memcpy(RamSprBak, RamSpr, 0x040000);
+	// TODO the global yscroll should be applied here too as it can be sub-pixel for precision in zoomed cases
+	UINT32 yzoom = (BURN_ENDIAN_SWAP_INT16(RamVReg[0x1e / 2]) << 16) | BURN_ENDIAN_SWAP_INT16(RamVReg[0x1c / 2]);
+	yzoom &= 0x07ffffff;
+	bool yzoominverted = false;
+	bool xzoominverted = false;
+
+	if (yzoom & 0x04000000)
+	{
+		yzoom = 0x8000000 - yzoom;
+		yzoominverted = true;
+	}
+
+	INT32 xoffset = (BURN_ENDIAN_SWAP_INT16(RamVReg[0x12 / 2]) << 16) | BURN_ENDIAN_SWAP_INT16(RamVReg[0x10 / 2]);
+	xoffset &= 0x07ffffff;
+
+	if (xoffset & 0x04000000)
+		xoffset -= 0x08000000;
+
+	UINT32 xzoom = (BURN_ENDIAN_SWAP_INT16(RamVReg[0x16 / 2]) << 16) | BURN_ENDIAN_SWAP_INT16(RamVReg[0x14 / 2]);
+
+	if (xzoom & 0x04000000)
+	{
+		xzoom = 0x8000000 - xzoom;
+		xzoominverted = true;
+	}
+
+	if (!xzoom)
+		return;
+
+	UINT64 inc = 0x100000000ULL;
+
+	UINT32 inc2 = inc / xzoom;
+
+	for (INT32 y = cliprect.min_y; y <= cliprect.max_y; y++)
+	{
+		rectangle tempcliprect = cliprect;
+
+		tempcliprect.min_y = y;
+		tempcliprect.max_y = y;
+
+		INT32 yy;
+
+		if (!yzoominverted)
+		{
+			yy = y; // not handled yet (this is using negative yzoom to do flipscreen...)
+		}
+		else
+		{
+			yy = y * yzoom;
+			yy += yoffset;
+			yy &= 0x07ffffff;
+			yy >>= 16;
+
+			if (yy & 0x400)
+				yy -= 0x800;
+		}
+
+		draw_sprites_line(tempcliprect, yy, y, xoffset, inc2, xzoominverted);
+	}
+}
+
+static rectangle cliprect, defcliprect;
+
+static INT32 lastline = 0;
+
+static INT32 DrvDrawBegin()
+{
+	if (bRecalcPalette) {
+		for (INT32 i=0;i<0x08000; i++)
+			CurPal[i] = CalcCol( RamPal[i] );
+		bRecalcPalette = 0;
+	}
+
+	if (!pBurnDraw) return 0;
+	BurnTransferClear();
+	GenericTilesGetClip(&cliprect.min_x, &cliprect.max_x, &cliprect.min_y, &cliprect.max_y);
+	cliprect.max_x -= 1;
+	cliprect.max_y -= 1;
+	defcliprect = cliprect;
+
+	cliprect.max_y = 0;
+	lastline = 0;
 
 	return 0;
 }
 
+static INT32 DrvDrawScanline(INT32 drawto)
+{
+	if (drawto < 1) return 0;
+	cliprect.max_y = drawto;
+	cliprect.min_y = lastline;
+	lastline = drawto;
+	if (BURN_ENDIAN_SWAP_INT16(RamVReg[0x30/2]) == 0) { // 1 = Blank Screen
+		if (pBurnDraw)
+			draw_sprites(cliprect);
+	}
 
-#define M68K_CYCS_PER_FRAME	(M68K_CYCS / 60)
-#define	SETA2_INTER_LEAVE		32
-#define M68K_CYCS_PER_INTER	(M68K_CYCS_PER_FRAME / SETA2_INTER_LEAVE)
+	return 0;
+}
+
+static INT32 DrvDrawEnd()
+{
+	DrvDrawScanline(defcliprect.max_y);
+	BurnTransferCopy(CurPal);
+
+	return 0;
+}
+
+static INT32 DrvDraw()
+{
+	DrvDrawBegin();
+
+	if (BURN_ENDIAN_SWAP_INT16(RamVReg[0x30/2]) == 0) { // 1 = Blank Screen
+		draw_sprites(cliprect);
+	}
+
+	DrvDrawEnd();
+
+	return 0;
+}
 
 static INT32 grdiansFrame()
 {
@@ -3158,37 +3606,58 @@ static INT32 grdiansFrame()
 		DrvInput[6] |= (DrvJoy5[i] & 1) << i;
 	}
 
-	INT32 nCyclesDone = 0;
+	INT32 nInterleave = 256;
+	INT32 nCyclesTotal = (M68K_CYCS / 60) / nInterleave;
+	INT32 nCyclesDone = nExtraCycles;
 	INT32 nCyclesNext = 0;
 	INT32 nCyclesExec = 0;
 
 	SekNewFrame();
 
 	SekOpen(0);
-
-	for(INT32 i=0; i<SETA2_INTER_LEAVE; i++) {
-		nCyclesNext += M68K_CYCS_PER_INTER;
+	DrvDrawBegin();
+	for (INT32 i = 0; i < nInterleave; i++) {
+		nCyclesNext += nCyclesTotal;
 		nCyclesExec = SekRun( nCyclesNext - nCyclesDone );
 		nCyclesDone += nCyclesExec;
 
-		for (INT32 j=0;j<3;j++)
-		if (tmp68301_timer[j]) {
-			tmp68301_timer_counter[j] += nCyclesExec;
-			if (tmp68301_timer_counter[j] >= tmp68301_timer[j]) {
-				// timer[j] timeout !
-				tmp68301_timer[j] = 0;
-				tmp68301_timer_counter[j] = 0;
-				tmp68301_timer_callback(j);
+		current_scanline = i; // this should be _before_ the SekRun() above, but the
+		// raster chain won't kick-off.  probably something I overlooked.. -dink
+
+		if (raster_en && i == raster_pos) {
+			if (raster_extra) { // first raster line is "special"
+				INT32 c = SekRun( nCyclesTotal / 2 ); // run 1/2 line
+				nCyclesExec += c;
+				nCyclesDone += c;
+				raster_extra = 0;
+			}
+			tmp68301_update_irq_state(1);
+			DrvDrawScanline(i);
+		}
+
+		for (INT32 j=0;j<3;j++) {
+			if (tmp68301_timer[j]) {
+				tmp68301_timer_counter[j] += nCyclesExec;
+				if (tmp68301_timer_counter[j] >= tmp68301_timer[j]) {
+					// timer[j] timeout !
+					tmp68301_timer[j] = 0;
+					tmp68301_timer_counter[j] = 0;
+					nCyclesDone += SekRun(1); // avoid masking raster irq
+					tmp68301_timer_callback(j);
+				}
 			}
 		}
-	}
 
-	tmp68301_update_irq_state(0);
+		if (i == 232-1) {
+			if (pBurnDraw)
+				DrvDrawEnd();
+
+			tmp68301_update_irq_state(0);
+		}
+	}
+	nExtraCycles = SekTotalCycles() - (M68K_CYCS / 60);
 
 	SekClose();
-
-	if (pBurnDraw)
-		DrvDraw();
 
 	if (pBurnSoundOut)
 		x1010_sound_update();
@@ -3200,9 +3669,7 @@ static INT32 samshootDraw()
 {
 	DrvDraw();
 
-	for (INT32 i = 0; i < BurnDrvGetMaxPlayers(); i++) {
-		BurnGunDrawTarget(i, BurnGunX[i] >> 8, BurnGunY[i] >> 8);
-	}
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -3214,7 +3681,7 @@ static INT32 samshootFrame()
 
 	{
 		memset (DrvInput, 0xff, 5);
-	
+
 		for (INT32 i = 0; i < 8; i++) {
 			DrvInput[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInput[1] ^= (DrvJoy2[i] & 1) << i;
@@ -3223,52 +3690,80 @@ static INT32 samshootFrame()
 			DrvInput[4] ^= (DrvJoy5[i] & 1) << i;
 		}
 
-		BurnGunMakeInputs(0, (INT16)DrvAxis[0], (INT16)DrvAxis[1]);
-		BurnGunMakeInputs(1, (INT16)DrvAxis[2], (INT16)DrvAxis[3]);
+		BurnGunMakeInputs(0, DrvAxis[0], DrvAxis[1]);
+		BurnGunMakeInputs(1, DrvAxis[2], DrvAxis[3]);
 		
-		float x0 = (320 - ((float)((BurnGunX[0] >> 8) + 8))) / 320 * 160;
-		float y0 = (240 - ((float)((BurnGunY[0] >> 8) + 8))) / 240 * 240;
-		float x1 = (320 - ((float)((BurnGunX[1] >> 8) + 8))) / 320 * 160;
-		float y1 = (240 - ((float)((BurnGunY[1] >> 8) + 8))) / 240 * 240;
-		DrvAnalogInput[0] = (UINT8)x0 + 36;
-		DrvAnalogInput[1] = (UINT8)y0 + 22;
-		DrvAnalogInput[2] = (UINT8)x1 + 36;
-		DrvAnalogInput[3] = (UINT8)y1 + 22;
+		float x0 = (float)((BurnGunX[0] >> 8) + 8) / 320 * 160;
+		float y0 = (float)((BurnGunY[0] >> 8) + 8) / 240 * 240;
+		float x1 = (float)((BurnGunX[1] >> 8) + 8) / 320 * 160;
+		float y1 = (float)((BurnGunY[1] >> 8) + 8) / 240 * 240;
+
+		INT32 gun_offs[4][2] = { {0, 0}, {4, 15}, {0, 0}, {4, 14} };
+		// is_samshoot = [0 deerhunt, 1 turkhunt, 2 trophyh, 3 wschamp]
+
+		DrvAnalogInput[0] = (INT8)x0 + 36 + gun_offs[is_samshoot][0];
+		DrvAnalogInput[1] = (INT8)y0 + 22 + gun_offs[is_samshoot][1];
+		DrvAnalogInput[2] = (INT8)x1 + 36 + gun_offs[is_samshoot][0];
+		DrvAnalogInput[3] = (INT8)y1 + 22 + gun_offs[is_samshoot][1];
 	}
 
-	INT32 nCyclesDone = 0;
+	INT32 nInterleave = 256;
+	INT32 nCyclesTotal = (M68K_CYCS / 60) / nInterleave;
+	INT32 nCyclesDone = nExtraCycles;
 	INT32 nCyclesNext = 0;
 	INT32 nCyclesExec = 0;
 
 	SekNewFrame();
 
 	SekOpen(0);
-
-	for(INT32 i=0; i<SETA2_INTER_LEAVE; i++) {
-		nCyclesNext += M68K_CYCS_PER_INTER;
+	DrvDrawBegin();
+	for (INT32 i = 0; i < nInterleave; i++) {
+		nCyclesNext += nCyclesTotal;
 		nCyclesExec = SekRun( nCyclesNext - nCyclesDone );
 		nCyclesDone += nCyclesExec;
 
-		for (INT32 j=0;j<3;j++)
-		if (tmp68301_timer[j]) {
-			tmp68301_timer_counter[j] += nCyclesExec;
-			if (tmp68301_timer_counter[j] >= tmp68301_timer[j]) {
-				// timer[j] timeout !
-				tmp68301_timer[j] = 0;
-				tmp68301_timer_counter[j] = 0;
-				tmp68301_timer_callback(j);
+		current_scanline = i; // this should be _before_ the SekRun() above, but the
+		// raster chain won't kick-off.  probably something I overlooked.. -dink
+
+		if (raster_en && i == raster_pos) {
+			if (raster_extra) { // first raster line is "special"
+				INT32 c = SekRun( nCyclesTotal / 2 ); // run 1/2 line
+				nCyclesExec += c;
+				nCyclesDone += c;
+				raster_extra = 0;
 			}
+			tmp68301_update_irq_state(1);
+			DrvDrawScanline(i);
 		}
 
-		if (i == 15) tmp68301_update_irq_state(2);
+		for (INT32 j=0;j<3;j++)
+			if (tmp68301_timer[j]) {
+				tmp68301_timer_counter[j] += nCyclesExec;
+				if (tmp68301_timer_counter[j] >= tmp68301_timer[j]) {
+					// timer[j] timeout !
+					tmp68301_timer[j] = 0;
+					tmp68301_timer_counter[j] = 0;
+					tmp68301_timer_callback(j);
+				}
+			}
+
+		if (i == 241-1) tmp68301_update_irq_state(2);
+
+		if (i == 240-1) {
+			if (pBurnDraw)
+				DrvDrawEnd();
+
+			tmp68301_update_irq_state(0);
+		}
 	}
 
-	tmp68301_update_irq_state(0);
+	nExtraCycles = SekTotalCycles() - (M68K_CYCS / 60);
 
 	SekClose();
 
-	if (pBurnDraw)
-		samshootDraw();
+	if (pBurnDraw) {
+		BurnGunDrawTargets();
+	}
 
 	if (pBurnSoundOut)
 		x1010_sound_update();
@@ -3306,19 +3801,25 @@ static INT32 grdiansScan(INT32 nAction,INT32 *pnMin)
 		
 		x1010_scan(nAction, pnMin);
 
-		BurnGunScan();
-
-		// Scan Input state
-		SCAN_VAR(DrvInput);
+		if (nBurnGunNumPlayers) BurnGunScan();
 
 		// Scan TMP 68301 Chip state
 		SCAN_VAR(tmp68301_timer);
 		SCAN_VAR(tmp68301_timer_counter);
 		SCAN_VAR(tmp68301_irq_vector);
 
+		// Raster stuff (grdians: fire in intro, heli-crash @ shortly after game start)
+		SCAN_VAR(raster_extra);
+		SCAN_VAR(raster_latch);
+		SCAN_VAR(raster_pos);
+		SCAN_VAR(raster_en);
+
+		// Keep track of cycles between frames
+		SCAN_VAR(nExtraCycles);
+
 		if (nAction & ACB_WRITE) {
 
-			// palette changed 
+			// palette changed
 			bRecalcPalette = 1;
 
 			// x1-010 bank changed
@@ -3332,10 +3833,50 @@ static INT32 grdiansScan(INT32 nAction,INT32 *pnMin)
 
 struct BurnDriver BurnDrvGrdians = {
 	"grdians", NULL, NULL, NULL, "1995",
-	"Guardians\0Denjin Makai II\0", "Imperfect graphics @ game start cutscene", "Banpresto", "Newer Seta",
+	"Guardians\0Denjin Makai II\0", NULL, "Banpresto", "Newer Seta",
 	L"Guardians\0\u96FB\u795E\u9B54\u584A \uFF29\uFF29\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_SETA2, GBF_SCRFIGHT, 0,
 	NULL, grdiansRomInfo, grdiansRomName, NULL, NULL, NULL, NULL, grdiansInputInfo, grdiansDIPInfo,
+	grdiansInit, grdiansExit, grdiansFrame, DrvDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	304, 232, 4, 3
+};
+
+struct BurnDriver BurnDrvGrdianssy = {
+	"grdianssy", "grdians", NULL, NULL, "2022-01-26",
+	"Guardians (Shen Yue Edition, Hack)\0Denjin Makai II (Shen Yue Edition, Hack)\0", NULL, "Hack", "Newer Seta",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_SETA2, GBF_SCRFIGHT, 0,
+	NULL, grdianssyRomInfo, grdianssyRomName, NULL, NULL, NULL, NULL, grdiansInputInfo, grdiansDIPInfo,
+	grdiansInit, grdiansExit, grdiansFrame, DrvDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	304, 232, 4, 3
+};
+
+struct BurnDriver BurnDrvGrdianslbs = {
+	"grdianslbs", "grdians", NULL, NULL, "2022-02-08",
+	"Guardians (LBS Edition, Hack)\0Denjin Makai II (LBS Edition, Hack)\0", NULL, "Hack", "Newer Seta",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_SETA2, GBF_SCRFIGHT, 0,
+	NULL, grdianslbsRomInfo, grdianslbsRomName, NULL, NULL, NULL, NULL, grdiansInputInfo, grdiansDIPInfo,
+	grdiansInit, grdiansExit, grdiansFrame, DrvDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	304, 232, 4, 3
+};
+
+struct BurnDriver BurnDrvGrdianslbss = {
+	"grdianslbss", "grdians", NULL, NULL, "2021-04-29",
+	"Guardians (Field Edition, Hack)\0Denjin Makai II (Field Edition, Hack)\0", NULL, "Hack", "Newer Seta",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_SETA2, GBF_SCRFIGHT, 0,
+	NULL, grdianslbssRomInfo, grdianslbssRomName, NULL, NULL, NULL, NULL, grdiansInputInfo, grdiansDIPInfo,
+	grdiansInit, grdiansExit, grdiansFrame, DrvDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	304, 232, 4, 3
+};
+
+struct BurnDriver BurnDrvGrdianske = {
+	"grdianske", "grdians", NULL, NULL, "2022-02-18",
+	"Guardians (Kerron Edition, Hack)\0Denjin Makai II (Kerron Edition, Hack)\0", NULL, "Hack", "Newer Seta",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 2, HARDWARE_SETA2, GBF_SCRFIGHT, 0,
+	NULL, grdianskeRomInfo, grdianskeRomName, NULL, NULL, NULL, NULL, grdiansInputInfo, grdiansDIPInfo,
 	grdiansInit, grdiansExit, grdiansFrame, DrvDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	304, 232, 4, 3
 };
@@ -3416,7 +3957,7 @@ struct BurnDriver BurnDrvDeerhunt = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhuntRomInfo, deerhuntRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3426,7 +3967,7 @@ struct BurnDriver BurnDrvDeerhuna = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhunaRomInfo, deerhunaRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3436,7 +3977,7 @@ struct BurnDriver BurnDrvDeerhunb = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhunbRomInfo, deerhunbRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3446,7 +3987,7 @@ struct BurnDriver BurnDrvDeerhunc = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhuncRomInfo, deerhuncRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3456,7 +3997,7 @@ struct BurnDriver BurnDrvDeerhund = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhundRomInfo, deerhundRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3466,7 +4007,7 @@ struct BurnDriver BurnDrvDeerhune = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhuneRomInfo, deerhuneRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3476,7 +4017,7 @@ struct BurnDriver BurnDrvDeerhunj = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, deerhunjRomInfo, deerhunjRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, DeerhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	deerhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3486,7 +4027,7 @@ struct BurnDriver BurnDrvTurkhunt = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 1, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, turkhuntRomInfo, turkhuntRomName, NULL, NULL, NULL, NULL, DeerhuntInputInfo, TurkhuntDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	turkhuntInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3496,7 +4037,7 @@ struct BurnDriver BurnDrvWschamp = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, wschampRomInfo, wschampRomName, NULL, NULL, NULL, NULL, WschampInputInfo, WschampDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	wschampInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3506,7 +4047,7 @@ struct BurnDriver BurnDrvWschampa = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, wschampaRomInfo, wschampaRomName, NULL, NULL, NULL, NULL, WschampInputInfo, WschampDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	wschampInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3516,7 +4057,7 @@ struct BurnDriver BurnDrvWschampb = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, wschampbRomInfo, wschampbRomName, NULL, NULL, NULL, NULL, WschampInputInfo, WschampDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	wschampInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 
@@ -3526,7 +4067,7 @@ struct BurnDriver BurnDrvTrophyh = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_SETA2, GBF_SHOOT, 0,
 	NULL, trophyhRomInfo, trophyhRomName, NULL, NULL, NULL, NULL, WschampInputInfo, TrophyhDIPInfo,
-	samshootInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
+	trophyhInit, grdiansExit, samshootFrame, samshootDraw, grdiansScan, &bRecalcPalette, 0x8000,
 	320, 240, 4, 3
 };
 

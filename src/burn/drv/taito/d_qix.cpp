@@ -127,10 +127,10 @@ static struct BurnInputInfo SdungeonInputList[] = {
 	{"P1 Left Stick Down",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
 	{"P1 Left Stick Left",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 left"	},
 	{"P1 Left Stick Right",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
-	{"P1 Right Stick Up",	BIT_DIGITAL,	DrvJoy1 + 4,	"p3 up"		},
-	{"P1 Right Stick Down",	BIT_DIGITAL,	DrvJoy1 + 6,	"p3 down"	},
-	{"P1 Right Stick Left",	BIT_DIGITAL,	DrvJoy1 + 7,	"p3 left"	},
-	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy1 + 5,	"p3 right"	},
+	{"P1 Right Stick Up",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 up 2"	},
+	{"P1 Right Stick Down",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 down 2"	},
+	{"P1 Right Stick Left",	BIT_DIGITAL,	DrvJoy1 + 7,	"p1 left 2"	},
+	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy1 + 5,	"p1 right 2"},
 
 	{"P2 Coin",				BIT_DIGITAL,	DrvJoy2 + 5,	"p2 coin"	},
 	{"P2 Left Stick Start",	BIT_DIGITAL,	DrvJoy4 + 1,	"p2 start"	},
@@ -138,10 +138,10 @@ static struct BurnInputInfo SdungeonInputList[] = {
 	{"P2 Left Stick Down",	BIT_DIGITAL,	DrvJoy5 + 2,	"p2 down"	},
 	{"P2 Left Stick Left",	BIT_DIGITAL,	DrvJoy5 + 3,	"p2 left"	},
 	{"P2 Left Stick Right",	BIT_DIGITAL,	DrvJoy5 + 1,	"p2 right"	},
-	{"P2 Right Stick Up",	BIT_DIGITAL,	DrvJoy5 + 4,	"p4 up"		},
-	{"P2 Right Stick Down",	BIT_DIGITAL,	DrvJoy5 + 6,	"p4 down"	},
-	{"P2 Right Stick Left",	BIT_DIGITAL,	DrvJoy5 + 7,	"p4 left"	},
-	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy5 + 5,	"p4 right"	},
+	{"P2 Right Stick Up",	BIT_DIGITAL,	DrvJoy5 + 4,	"p2 up 2"	},
+	{"P2 Right Stick Down",	BIT_DIGITAL,	DrvJoy5 + 6,	"p2 down 2"	},
+	{"P2 Right Stick Left",	BIT_DIGITAL,	DrvJoy5 + 7,	"p2 left 2"	},
+	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy5 + 5,	"p2 right 2"},
 
 	{"P3 Coin",				BIT_DIGITAL,	DrvJoy2 + 6,	"p3 coin"	},
 
@@ -220,10 +220,10 @@ static struct BurnInputInfo ComplexxInputList[] = {
 	{"P1 Left Stick Down",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
 	{"P1 Left Stick Left",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 left"	},
 	{"P1 Left Stick Right",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
-	{"P2 Right Stick Up",	BIT_DIGITAL,	DrvJoy5 + 4,	"p2 up"		},
-	{"P2 Right Stick Down",	BIT_DIGITAL,	DrvJoy5 + 6,	"p2 down"	},
-	{"P2 Right Stick Left",	BIT_DIGITAL,	DrvJoy5 + 7,	"p2 left"	},
-	{"P2 Right Stick Right",BIT_DIGITAL,	DrvJoy5 + 5,	"p2 right"	},
+	{"P1 Right Stick Up",	BIT_DIGITAL,	DrvJoy5 + 4,	"p1 up 2"	},
+	{"P1 Right Stick Down",	BIT_DIGITAL,	DrvJoy5 + 6,	"p1 down 2"	},
+	{"P1 Right Stick Left",	BIT_DIGITAL,	DrvJoy5 + 7,	"p1 left 2"	},
+	{"P1 Right Stick Right",BIT_DIGITAL,	DrvJoy5 + 5,	"p1 right 2"},
 	{"P1 Button 1",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
 	{"P2 Coin",				BIT_DIGITAL,	DrvJoy2 + 5,	"p2 coin"	},
@@ -306,11 +306,7 @@ static UINT8 qix_main_read(UINT16 address)
 	switch (address)
 	{
 		case 0x8c00:
-			M6809Close();
-			M6809Open(1);
-			M6809SetIRQLine(1, CPU_IRQSTATUS_ACK);
-			M6809Close();
-			M6809Open(0);
+			M6809SetIRQLine(1, 1, CPU_IRQSTATUS_ACK);
 			return 0xff;
 
 		case 0x8c01:
@@ -356,11 +352,7 @@ static void qix_main_write(UINT16 address, UINT8 data)
 	switch (address)
 	{
 		case 0x8c00:
-			M6809Close();
-			M6809Open(1);
-			M6809SetIRQLine(1, CPU_IRQSTATUS_ACK);
-			M6809Close();
-			M6809Open(0);
+			M6809SetIRQLine(1, 1, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x8c01:
@@ -399,11 +391,7 @@ static UINT8 qix_video_read(UINT16 address)
 			return 0; // ??
 
 		case 0x8c00:
-			M6809Close();
-			M6809Open(0);
-			M6809SetIRQLine(1, CPU_IRQSTATUS_ACK);
-			M6809Close();
-			M6809Open(1);
+			M6809SetIRQLine(0, 1, CPU_IRQSTATUS_ACK);
 			return 0xff;
 
 		case 0x8c01:
@@ -462,11 +450,7 @@ static void qix_video_write(UINT16 address, UINT8 data)
 	switch (address)
 	{
 		case 0x8c00:
-			M6809Close();
-			M6809Open(0);
-			M6809SetIRQLine(1, CPU_IRQSTATUS_ACK);
-			M6809Close();
-			M6809Open(1);
+			M6809SetIRQLine(0, 1, CPU_IRQSTATUS_ACK);
 		return;
 
 		case 0x8c01:
@@ -876,12 +860,7 @@ static INT32 DrvRomLoad(INT32 *banked_prg)
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	INT32 banked_prog = 0;
 	if (DrvRomLoad(&banked_prog)) return 1;
@@ -986,7 +965,7 @@ static INT32 DrvExit()
 	is_slither = 0;
 	is_zookeep = 0;
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -1097,10 +1076,8 @@ static INT32 DrvFrame()
 		if (is_slither) {
 			BurnTrackballConfig(0, AXIS_NORMAL, AXIS_REVERSED);
 			BurnTrackballConfig(1, AXIS_NORMAL, AXIS_REVERSED);
-			BurnTrackballFrame(0, DrvAnalogPort0, DrvAnalogPort1, 1, 2);
-			BurnTrackballFrame(1, DrvAnalogPort2, DrvAnalogPort3, 1, 2);
-			BurnTrackballUpdateSlither(0);
-			BurnTrackballUpdateSlither(1);
+			BurnTrackballFrame(0, DrvAnalogPort0, DrvAnalogPort1, 0, 2);
+			BurnTrackballFrame(1, DrvAnalogPort2, DrvAnalogPort3, 0, 2);
 		}
 	}
 
@@ -1152,7 +1129,7 @@ static INT32 DrvFrame()
 			partial_update();
 		}
 
-		if (is_slither && (i%(120*8)) == (120*8)-1) {
+		if (is_slither && (i % (88*8)) == 0) { // update 3x / frame
 			BurnTrackballUpdateSlither(0);
 			BurnTrackballUpdateSlither(1);
 		}
@@ -1885,7 +1862,7 @@ static INT32 SlitherInit()
 
 struct BurnDriver BurnDrvSlither = {
 	"slither", NULL, NULL, NULL, "1982",
-	"Slither (set 1)\0", NULL, "Century II", "Miscellaneous",
+	"Slither (set 1)\0", "Press 'P2 Start' to exit settings screen", "Century II", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, slitherRomInfo, slitherRomName, NULL, NULL, NULL, NULL, SlitherInputInfo, NULL,
@@ -1916,7 +1893,7 @@ STD_ROM_FN(slithera)
 
 struct BurnDriver BurnDrvSlithera = {
 	"slithera", "slither", NULL, NULL, "1982",
-	"Slither (set 2)\0", NULL, "Century II", "Miscellaneous",
+	"Slither (set 2)\0", "Press 'P2 Start' to exit settings screen", "Century II", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_MISC, 0,
 	NULL, slitheraRomInfo, slitheraRomName, NULL, NULL, NULL, NULL, SlitherInputInfo, NULL,

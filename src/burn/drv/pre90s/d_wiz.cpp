@@ -1,10 +1,6 @@
 // FB Alpha Wiz driver module
 // Based on MAME driver by Zsolt Vasvari
 
-// Wiz Todo:
-// scion: static in audio is normal (no kidding), use scionc!
-//
-
 #include "tiles_generic.h"
 #include "bitswap.h"
 #include "z80_intf.h"
@@ -41,114 +37,114 @@ static UINT8 *char_bank_select;
 static UINT8 *screen_flip;
 static UINT8 *background_color;
 
+static INT32 lastboom = 0;
+
 static UINT8 DrvInputs[2];
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvDips[2];
 static UINT8 DrvReset;
 
-static UINT8 bHasSamples = 0;
-
 static UINT8 Wizmode = 0;
 static UINT8 Scionmodeoffset = 0;
 
 static struct BurnInputInfo WizInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Wiz)
 
 static struct BurnInputInfo ScionInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Scion)
 
 static struct BurnInputInfo StingerInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Stinger)
 
 static struct BurnInputInfo KungfutInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 3"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 5,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Kungfut)
@@ -454,10 +450,8 @@ static struct BurnDIPInfo WizDIPList[]=
 
 STDDIPINFO(Wiz)
 
-void __fastcall wiz_main_write(UINT16 address, UINT8 data)
+static void __fastcall wiz_main_write(UINT16 address, UINT8 data)
 {
-	static INT32 lastboom = 0;
-
 	switch (address)
 	{
 		case 0xc800:
@@ -533,7 +527,7 @@ void __fastcall wiz_main_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall wiz_main_read(UINT16 address)
+static UINT8 __fastcall wiz_main_read(UINT16 address)
 {
 	switch (address)
 	{
@@ -577,7 +571,7 @@ UINT8 __fastcall wiz_main_read(UINT16 address)
 	return 0;
 }
 
-void __fastcall wiz_sound_write(UINT16 address, UINT8 data)
+static void __fastcall wiz_sound_write(UINT16 address, UINT8 data)
 {
 	address &= 0x7fff;
 
@@ -605,7 +599,7 @@ void __fastcall wiz_sound_write(UINT16 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall wiz_sound_read(UINT16 address)
+static UINT8 __fastcall wiz_sound_read(UINT16 address)
 {
 	address &= 0x7fff;
 
@@ -636,6 +630,8 @@ static INT32 DrvDoReset()
 	AY8910Reset(2);
 
 	BurnSampleReset();
+
+	lastboom = 0;
 
 	return 0;
 }
@@ -830,12 +826,7 @@ static INT32 StingerLoadRoms()
 
 static INT32 DrvInit(int (*RomLoadCallback)())
 {
-	AllMem = NULL;
-	MemIndex();
-	UINT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (RomLoadCallback()) return 1;
@@ -872,10 +863,12 @@ static INT32 DrvInit(int (*RomLoadCallback)())
 	AY8910SetAllRoutes(0, 0.10, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(1, 0.10, BURN_SND_ROUTE_BOTH);
 	AY8910SetAllRoutes(2, 0.10, BURN_SND_ROUTE_BOTH);
+	AY8910SetBuffered(ZetTotalCycles, 3072000);
 
 	BurnSampleInit(1);
 	BurnSampleSetAllRoutesAllSamples(0.05, BURN_SND_ROUTE_BOTH);
-	bHasSamples = BurnSampleGetStatus(0) != -1;
+	BurnSampleGetStatus(0) != -1;
+	BurnSampleSetBuffered(ZetTotalCycles, 3072000);
 
 	GenericTilesInit();
 
@@ -895,11 +888,10 @@ static INT32 DrvExit()
 	AY8910Exit(2);
 	BurnSampleExit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	Wizmode = 0;
 	Scionmodeoffset = 0;
-	bHasSamples = 0;
 
 	return 0;
 }
@@ -908,15 +900,15 @@ static void draw_background(INT16 bank, INT16 palbank, INT16 colortype)
 {
 	for (INT16 offs = 0x3ff; offs >= 0; offs--)
 	{
-		INT16 sx    = (offs & 0x1f);
+		INT16 sx = (offs & 0x1f);
 		UINT8 sy = (((offs / 32)<<3) - DrvSprRAM0[2 * sx + 0]) &0xff;
 		INT16 color;
 
-		if (colortype) 
+		if (colortype)
 		{
 			color = (DrvSprRAM0[2 * sx | 1] & 0x07) | (palbank << 3);
 		}
-		else 
+		else
 		{
 			color = (DrvSprRAM0[2 * sx + 1] & 0x04) | (DrvVidRAM0[offs] & 3) | (palbank << 3);
 		}
@@ -1008,9 +1000,7 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = *background_color;
-	} 
+	BurnTransferClear(*background_color);
 
 	draw_background(2 + ((char_bank_select[0] << 1) | char_bank_select[1]), palbank, 0);
 	draw_foreground(palbank, 0);
@@ -1032,9 +1022,7 @@ static INT32 StingerDraw()
 		DrvRecalc = 0;
 	}
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = *background_color;
-	}
+	BurnTransferClear(*background_color);
 
 	draw_background(2 + char_bank_select[0], palbank, 1);
 	draw_foreground(palbank, 1);
@@ -1056,9 +1044,7 @@ static INT32 KungfutDraw()
 		DrvRecalc = 0;
 	}
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = *background_color;
-	}
+	BurnTransferClear(*background_color);
 
 	draw_background(2 + char_bank_select[0], palbank, 0);
 	draw_foreground(palbank, 0);
@@ -1077,6 +1063,8 @@ static INT32 DrvFrame()
 		DrvDoReset();
 	}
 
+	ZetNewFrame();
+
 	{
 		memset (DrvInputs, 0, 2);
 		for (INT16 i = 0; i < 8; i++) {
@@ -1088,7 +1076,6 @@ static INT32 DrvFrame()
 	INT32 nInterleave = 16;
 	INT32 nCyclesTotal[2] = { 3072000 / 60, 3072000 / 60 };
 	INT32 nCyclesDone[2]  = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
@@ -1101,25 +1088,11 @@ static INT32 DrvFrame()
 		CPU_RUN(1, Zet);
 		if ((i % 4) == 0x03 && interrupt_enable[1]) ZetNmi();
 		ZetClose();
-
-		// BurnSample needs several updates per frame when using BurnSampleGetStatus()
-		// so leave alone for now..
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			AY8910Render(pSoundBuf, nSegmentLength);
-			if (bHasSamples) BurnSampleRender(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			AY8910Render(pSoundBuf, nSegmentLength);
-			if (bHasSamples) BurnSampleRender(pSoundBuf, nSegmentLength);
-		}
+		AY8910Render(pBurnSoundOut, nBurnSoundLen);
+		BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	if (pBurnDraw) {
@@ -1150,6 +1123,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		AY8910Scan(nAction, pnMin);
 		BurnSampleScan(nAction, pnMin);
+
+		SCAN_VAR(lastboom);
 	}
 
 	return 0;
@@ -1436,11 +1411,11 @@ struct BurnDriver BurnDrvStinger = {
 // Stinger (prototype?)
 
 static struct BurnRomInfo stinger2RomDesc[] = {
-	{ "n1.bin",	0x2000, 0xf2d2790c, 1 }, //  0 maincpu
-	{ "n2.bin",	0x2000, 0x8fd2d8d8, 1 }, //  1
-	{ "n3.bin",	0x2000, 0xf1794d36, 1 }, //  2
-	{ "n4.bin",	0x2000, 0x230ba682, 1 }, //  3
-	{ "n5.bin",	0x2000, 0xa03a01da, 1 }, //  4
+	{ "n1.bin",		0x2000, 0xf2d2790c, 1 }, //  0 maincpu
+	{ "n2.bin",		0x2000, 0x8fd2d8d8, 1 }, //  1
+	{ "n3.bin",		0x2000, 0xf1794d36, 1 }, //  2
+	{ "n4.bin",		0x2000, 0x230ba682, 1 }, //  3
+	{ "n5.bin",		0x2000, 0xa03a01da, 1 }, //  4
 
 	{ "6-9f.bin",	0x2000, 0x79757f0c, 2 }, //  5 audiocpu
 
@@ -1448,9 +1423,9 @@ static struct BurnRomInfo stinger2RomDesc[] = {
 	{ "8-11e.bin",	0x2000, 0x43c61b3f, 3 }, //  7
 	{ "9-14e.bin",	0x2000, 0xc9ed8fc7, 3 }, //  8
 
-	{ "10.bin",	0x2000, 0xf6721930, 4 }, //  9 gfx2
-	{ "11.bin",	0x2000, 0xa4404e63, 4 }, // 10
-	{ "12.bin",	0x2000, 0xb60fa88c, 4 }, // 11
+	{ "10.bin",		0x2000, 0xf6721930, 4 }, //  9 gfx2
+	{ "11.bin",		0x2000, 0xa4404e63, 4 }, // 10
+	{ "12.bin",		0x2000, 0xb60fa88c, 4 }, // 11
 
 	{ "stinger.a7",	0x0100, 0x52c06fc2, 5 }, // 12 proms
 	{ "stinger.b7",	0x0100, 0x9985e575, 5 }, // 13
@@ -1466,6 +1441,45 @@ struct BurnDriver BurnDrvStinger2 = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, stinger2RomInfo, stinger2RomName, NULL, NULL, stingerSampleInfo, stingerSampleName, StingerInputInfo, Stinger2DIPInfo,
+	StingerInit, DrvExit, DrvFrame, StingerDraw, DrvScan,
+	&DrvRecalc, 0x100, 224, 256, 3, 4
+};
+
+// Finger (bootleg of Stinger)
+// AFC 02300 Rev.0 + AFC 03300 Rev.0 PCBs. Only the first three main CPU ROMs differ. Basically just a GFX hack of the stinger2 set.
+
+static struct BurnRomInfo fingerRomDesc[] = {
+	{ "1.5j",		0x2000, 0x4949ae39, 1 }, //  0 maincpu
+	{ "2.7j",		0x2000, 0x7288db11, 1 }, //  1
+	{ "3.8j",		0x2000, 0x386c6207, 1 }, //  2
+	{ "4.9j",		0x2000, 0x230ba682, 1 }, //  3
+	{ "5.10j",		0x2000, 0xa03a01da, 1 }, //  4
+
+	{ "6.9f",		0x2000, 0x79757f0c, 2 }, //  5 audiocpu
+
+	{ "7.9e",		0x2000, 0x775489be, 3 }, //  6 gfx1
+	{ "8.11e",		0x2000, 0x43c61b3f, 3 }, //  7
+	{ "9.14e",		0x2000, 0xc9ed8fc7, 3 }, //  8
+
+	// Labels were actually all 1 but overwritten with a marker
+	{ "10.9h",		0x2000, 0xf6721930, 4 }, //  9 gfx2
+	{ "11.11h",		0x2000, 0xa4404e63, 4 }, // 10
+	{ "12.14h",		0x2000, 0xb60fa88c, 4 }, // 11
+
+	{ "6301.a7",	0x0100, 0x52c06fc2, 5 }, // 12 proms
+	{ "6301.b7",	0x0100, 0x9985e575, 5 }, // 13
+	{ "6301.a8",	0x0100, 0x76b57629, 5 }, // 14
+};
+
+STD_ROM_PICK(finger)
+STD_ROM_FN(finger)
+
+struct BurnDriver BurnDrvFinger = {
+	"finger", "stinger", NULL, "stinger", "1983",
+	"Finger (bootleg of Stinger)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, fingerRomInfo, fingerRomName, NULL, NULL, stingerSampleInfo, stingerSampleName, StingerInputInfo, Stinger2DIPInfo,
 	StingerInit, DrvExit, DrvFrame, StingerDraw, DrvScan,
 	&DrvRecalc, 0x100, 224, 256, 3, 4
 };
@@ -1496,17 +1510,61 @@ static struct BurnRomInfo scionRomDesc[] = {
 
 STD_ROM_PICK(scion)
 STD_ROM_FN(scion)
+/*Comparing files sc6 and 6.9F
+0000002E: DD 00
+0000002F: 7E 00
+00000030: 0F 00
+00000031: CB 00
+00000032: AF 00
+00000033: C3 00
+00000034: 2E 00
+00000035: 01 00
+00000122: 00 DD
+00000123: 3E 7E
+00000124: 10 0E
+0000012B: C3 DD
+0000012C: 2E 7E
+0000012D: 00 0F
+00000146: 3E DD
+00000147: 0F 7E
+00000148: 00 4C */
 
 static INT32 ScionInit()
 {
 	Scionmodeoffset = 8*2; // 2 8x8char offset
 
-	return DrvInit(StingerLoadRoms);
+	INT32 rc = DrvInit(StingerLoadRoms);
+
+	if (!rc) {
+		// patch sound cpu prot
+		DrvZ80ROM1[0x2e] = 0x00;
+		DrvZ80ROM1[0x2f] = 0x00;
+		DrvZ80ROM1[0x30] = 0x00;
+		DrvZ80ROM1[0x31] = 0x00;
+		DrvZ80ROM1[0x32] = 0x00;
+		DrvZ80ROM1[0x33] = 0x00;
+		DrvZ80ROM1[0x34] = 0x00;
+		DrvZ80ROM1[0x35] = 0x00;
+
+		DrvZ80ROM1[0x122] = 0xdd;
+		DrvZ80ROM1[0x123] = 0x7e;
+		DrvZ80ROM1[0x124] = 0x0e;
+
+		DrvZ80ROM1[0x12b] = 0xdd;
+		DrvZ80ROM1[0x12c] = 0x7e;
+		DrvZ80ROM1[0x12d] = 0x0f;
+
+		DrvZ80ROM1[0x146] = 0xdd;
+		DrvZ80ROM1[0x147] = 0x7e;
+		DrvZ80ROM1[0x148] = 0x4c;
+	}
+
+	return rc;
 }
 
 struct BurnDriver BurnDrvScion = {
 	"scion", NULL, NULL, "stinger", "1984",
-	"Scion\0", "Music horribly broken, use scionc instead!", "Seibu Denshi", "Miscellaneous",
+	"Scion\0", NULL, "Seibu Denshi", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, scionRomInfo, scionRomName, NULL, NULL, stingerSampleInfo, stingerSampleName, ScionInputInfo, ScionDIPInfo,

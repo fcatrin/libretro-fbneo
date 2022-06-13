@@ -21,8 +21,14 @@ static UINT32 nAudActive = 0;
 	extern struct AudOut AudOutXAudio2;
 #elif defined (BUILD_MACOS)
     extern struct AudOut AudOutMacOS;
-#elif defined (BUILD_SDL)
+#elif defined (BUILD_SDL) 
 	extern struct AudOut AudOutSDL;
+#elif defined (BUILD_SDL2)
+	#if defined (FORCE_PULSE_AUDIO)
+		extern struct AudOut AudOutPulseSimple;
+	#else
+		extern struct AudOut AudOutSDL;
+	#endif
 #elif defined (_XBOX)
 	extern struct AudOut AudOutXAudio2;
 #elif defined (BUILD_QT)
@@ -39,8 +45,14 @@ static struct AudOut *pAudOut[]=
 	&AudOutXAudio2,
 #elif defined (BUILD_MACOS)
     &AudOutMacOS,
-#elif defined (BUILD_SDL)
+#elif defined (BUILD_SDL) 
 	&AudOutSDL,
+#elif defined (BUILD_SDL2)
+	#if defined (FORCE_PULSE_AUDIO)
+		&AudOutPulseSimple,
+	#else
+		&AudOutSDL,
+	#endif
 #elif defined (_XBOX)
 	&AudOutXAudio2,
 #elif defined (BUILD_QT)
@@ -79,7 +91,7 @@ INT32 AudSoundInit()
 	if (nAudSelect >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	nAudActive = nAudSelect;
 
 	if ((nRet = pAudOut[nAudActive]->SoundInit()) == 0) {
@@ -102,12 +114,12 @@ INT32 AudSoundPlay()
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	INT32 nRet = pAudOut[nAudActive]->SoundPlay();
 	if (!nRet) {
 		bAudPlaying = true;
 	}
-	
+
 	return nRet;
 }
 
@@ -116,7 +128,7 @@ INT32 AudSoundStop()
 	if (nAudActive >= AUD_LEN) {
 		return 1;
 	}
-	
+
 	bAudPlaying = false;
 
 	return pAudOut[nAudActive]->SoundStop();
@@ -125,16 +137,16 @@ INT32 AudSoundStop()
 INT32 AudSoundExit()
 {
 	IntInfoFree(&AudInfo);
-	
+
 	if (!bAudOkay || nAudActive >= AUD_LEN) {
 		return 1;
 	}
 	bAudOkay = false;
 
 	INT32 nRet = pAudOut[nAudActive]->SoundExit();
-	
+
 	nAudActive = 0;
-	
+
 	return nRet;
 }
 
@@ -181,7 +193,7 @@ INT32 AudSelect(UINT32 nPlugIn)
 		nAudSelect = nPlugIn;
 		return 0;
 	}
-	
+
 	return 1;
 }
 

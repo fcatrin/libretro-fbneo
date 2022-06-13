@@ -168,7 +168,7 @@ inline static UINT16 ToaScanlineRegister()
 {
 	static INT32 nPreviousScanline;
 	UINT16 nFlags = 0xFE00;
-	INT32 nCurrentScanline = SekCurrentScanline();
+	INT32 nCurrentScanline = (SekCurrentScanline() + 1) % 262;
 
 #if 0
 	// None of the games actually use this
@@ -186,7 +186,7 @@ inline static UINT16 ToaScanlineRegister()
 
 	}
 
-	return nFlags | nCurrentScanline;
+	return nFlags | ((nCurrentScanline > 255) ? 0x1ff : nCurrentScanline);
 }
 
 // toa_extratext.cpp

@@ -239,6 +239,8 @@ static INT32 DrvDoReset()
 	soundlatch = 0;
 	background_image = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -303,12 +305,7 @@ static INT32 DrvGfxDecode()
 
 static INT32 DrvInit(INT32 load_type)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (load_type == 0)
 	{
@@ -421,7 +418,7 @@ static INT32 DrvExit()
 	AY8910Exit(1);
 	AY8910Exit(2);
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -507,19 +504,7 @@ static void draw_sprites()
 		} else {
 			code &= 0x7f; // ??
 
-			if (flipy) {
-				if (flipx) {
-					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM2);
-				}
-			} else {
-				if (flipx) {
-					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 3, 0, 0, DrvGfxROM2);
-				}
-			}
+			Draw16x16MaskTile(pTransDraw, code, sx, sy, flipx, flipy, color, 3, 0, 0, DrvGfxROM2);
 		}
 	}
 }
@@ -661,7 +646,7 @@ struct BurnDriver BurnDrvBombjack = {
 	"bombjack", NULL, NULL, NULL, "1984",
 	"Bomb Jack (set 1)\0", NULL, "Tehkan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjackRomInfo, bombjackRomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
 	BombjackInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	224, 256, 3, 4
@@ -701,7 +686,7 @@ struct BurnDriver BurnDrvBombjack2 = {
 	"bombjack2", "bombjack", NULL, NULL, "1984",
 	"Bomb Jack (set 2)\0", NULL, "Tehkan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjack2RomInfo, bombjack2RomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
 	BombjackInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	224, 256, 3, 4
@@ -739,7 +724,7 @@ struct BurnDriver BurnDrvBombjackt = {
 	"bombjackt", "bombjack", NULL, NULL, "1984",
 	"Bomb Jack (Tecfri, Spain)\0", NULL, "Tehkan (Tecfri licence)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, bombjacktRomInfo, bombjacktRomName, NULL, NULL, NULL, NULL, BombjackInputInfo, BombjackDIPInfo,
 	BombjacktInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x80,
 	224, 256, 3, 4

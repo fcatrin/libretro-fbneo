@@ -1,6 +1,18 @@
 // FB Alpha Beast Busters and Mechanized Attack driver module
 // Based on MAME driver by Bryan McPhail
 
+// Solved both ym2608 + deltaT problems July 31, 2021 -dink
+// Problem:
+// Mechanized Attack, music lost on savestate load
+// I _think_ it's something to do with the ymdeltat part of the ym2608
+// fighting over the fm status register w/the ym2608 itself.  First and
+// second attempt to fix it failed.  Game marked w/state issues.     - dink apr.1.2021
+
+// Note:
+// This problem also affects Hatris in pst90s/d_pipedrm.cpp, but has a different
+// issue: the deltat samples stop playing on state load, yet the music continues
+// to play.
+
 #include "tiles_generic.h"
 #include "m68000_intf.h"
 #include "z80_intf.h"
@@ -34,18 +46,20 @@ static UINT8 *DrvSprBuf;
 static UINT8 *DrvPfScroll0;
 static UINT8 *DrvPfScroll1;
 
+static UINT16 *SpriteBitmap[2];
+
 static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 sound_status;
 static UINT8 soundlatch;
 static UINT8 gun_select;
-static INT32 LethalGun0 = 0;
-static INT32 LethalGun1 = 0;
-static INT32 LethalGun2 = 0;
-static INT32 LethalGun3 = 0;
-static INT32 LethalGun4 = 0;
-static INT32 LethalGun5 = 0;
+static INT16 LethalGun0 = 0;
+static INT16 LethalGun1 = 0;
+static INT16 LethalGun2 = 0;
+static INT16 LethalGun3 = 0;
+static INT16 LethalGun4 = 0;
+static INT16 LethalGun5 = 0;
 
 static INT32 game_select = 0; // bbuster = 0, mechatt = 1
 
@@ -58,77 +72,77 @@ static UINT8 DrvReset;
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo BbustersInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	A("P1 Gun X",    	BIT_ANALOG_REL, &LethalGun0,    "mouse x-axis"	),
 	A("P1 Gun Y",    	BIT_ANALOG_REL, &LethalGun1,    "mouse y-axis"	),
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p2 fire 2"	},
 	A("P2 Gun X",    	BIT_ANALOG_REL, &LethalGun2,    "p2 x-axis"	),
 	A("P2 Gun Y",    	BIT_ANALOG_REL, &LethalGun3,    "p2 y-axis"	),
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p3 start"	},
 	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy2 + 1,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p3 fire 2"	},
 	A("P3 Gun X",    	BIT_ANALOG_REL, &LethalGun4,    "p2 x-axis"	),
 	A("P3 Gun Y",   	 BIT_ANALOG_REL,&LethalGun5,    "p2 y-axis"	),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Bbusters)
 
 static struct BurnInputInfo Bbusters2pInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 fire 2"	},
 	A("P1 Gun X",    	BIT_ANALOG_REL, &LethalGun0,    "mouse x-axis"	),
 	A("P1 Gun Y",    	BIT_ANALOG_REL, &LethalGun1,    "mouse y-axis"	),
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p2 fire 2"	},
 	A("P2 Gun X",    	BIT_ANALOG_REL, &LethalGun2,    "p2 x-axis"	),
 	A("P2 Gun Y",    	BIT_ANALOG_REL, &LethalGun3,    "p2 y-axis"	),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Bbusters2p)
 
 static struct BurnInputInfo MechattInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 start"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 9,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 fire 2"	},
 	A("P1 Gun X",    	BIT_ANALOG_REL, &LethalGun0,    "mouse x-axis"	),
 	A("P1 Gun Y",    	BIT_ANALOG_REL, &LethalGun1,    "mouse y-axis"	),
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 2"	},
 	A("P2 Gun X",    	BIT_ANALOG_REL, &LethalGun2,    "p2 x-axis"	),
 	A("P2 Gun Y",    	BIT_ANALOG_REL, &LethalGun3,    "p2 y-axis"	),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Mechatt)
@@ -136,200 +150,200 @@ STDINPUTINFO(Mechatt)
 
 static struct BurnDIPInfo BbustersDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xf9, NULL				},
-	{0x15, 0xff, 0xff, 0x8f, NULL				},
+	{0x14, 0xff, 0xff, 0xf9, NULL						},
+	{0x15, 0xff, 0xff, 0x8f, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
-	{0x14, 0x01, 0x01, 0x00, "No"				},
-	{0x14, 0x01, 0x01, 0x01, "Yes"				},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
+	{0x14, 0x01, 0x01, 0x00, "No"						},
+	{0x14, 0x01, 0x01, 0x01, "Yes"						},
 
 	{0   , 0xfe, 0   ,    4, "Magazine / Grenade"		},
-	{0x14, 0x01, 0x06, 0x04, "5 / 2"			},
-	{0x14, 0x01, 0x06, 0x06, "7 / 3"			},
-	{0x14, 0x01, 0x06, 0x02, "9 / 4"			},
-	{0x14, 0x01, 0x06, 0x00, "12 / 5"			},
+	{0x14, 0x01, 0x06, 0x04, "5 / 2"					},
+	{0x14, 0x01, 0x06, 0x06, "7 / 3"					},
+	{0x14, 0x01, 0x06, 0x02, "9 / 4"					},
+	{0x14, 0x01, 0x06, 0x00, "12 / 5"					},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"			},
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
 	{0x14, 0x01, 0x18, 0x00, "4 Coins 1 Credits"		},
 	{0x14, 0x01, 0x18, 0x08, "3 Coins 1 Credits"		},
 	{0x14, 0x01, 0x18, 0x10, "2 Coins 1 Credits"		},
 	{0x14, 0x01, 0x18, 0x18, "1 Coin  1 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"			},
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
 	{0x14, 0x01, 0x60, 0x60, "1 Coin  2 Credits"		},
 	{0x14, 0x01, 0x60, 0x40, "1 Coin  3 Credits"		},
 	{0x14, 0x01, 0x60, 0x20, "1 Coin  4 Credits"		},
 	{0x14, 0x01, 0x60, 0x00, "1 Coin  6 Credits"		},
 
-	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
-	{0x14, 0x01, 0x80, 0x80, "Common"			},
-	{0x14, 0x01, 0x80, 0x00, "Individual"			},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"				},
+	{0x14, 0x01, 0x80, 0x80, "Common"					},
+	{0x14, 0x01, 0x80, 0x00, "Individual"				},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{0x15, 0x01, 0x03, 0x02, "Easy"				},
-	{0x15, 0x01, 0x03, 0x03, "Normal"			},
-	{0x15, 0x01, 0x03, 0x01, "Hard"				},
-	{0x15, 0x01, 0x03, 0x00, "Hardest"			},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x15, 0x01, 0x03, 0x02, "Easy"						},
+	{0x15, 0x01, 0x03, 0x03, "Normal"					},
+	{0x15, 0x01, 0x03, 0x01, "Hard"						},
+	{0x15, 0x01, 0x03, 0x00, "Hardest"					},
 
-	{0   , 0xfe, 0   ,    4, "Game Mode"			},
-	{0x15, 0x01, 0x0c, 0x08, "Demo Sounds Off"		},
-	{0x15, 0x01, 0x0c, 0x0c, "Demo Sounds On"		},
+	{0   , 0xfe, 0   ,    4, "Game Mode"				},
+	{0x15, 0x01, 0x0c, 0x08, "Demo Sounds Off"			},
+	{0x15, 0x01, 0x0c, 0x0c, "Demo Sounds On"			},
 	{0x15, 0x01, 0x0c, 0x04, "Infinite Energy (Cheat)"	},
-	{0x15, 0x01, 0x0c, 0x00, "Freeze"			},
+	{0x15, 0x01, 0x0c, 0x00, "Freeze"					},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x15, 0x01, 0x80, 0x80, "Off"				},
-	{0x15, 0x01, 0x80, 0x00, "On"				},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x15, 0x01, 0x80, 0x80, "Off"						},
+	{0x15, 0x01, 0x80, 0x00, "On"						},
 };
 
 STDDIPINFO(Bbusters)
 
 static struct BurnDIPInfo Bbusters2pDIPList[]=
 {
-	{0x0e, 0xff, 0xff, 0xf9, NULL				},
-	{0x0f, 0xff, 0xff, 0x8f, NULL				},
+	{0x0e, 0xff, 0xff, 0xf9, NULL						},
+	{0x0f, 0xff, 0xff, 0x8f, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
-	{0x0e, 0x01, 0x01, 0x00, "No"				},
-	{0x0e, 0x01, 0x01, 0x01, "Yes"				},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
+	{0x0e, 0x01, 0x01, 0x00, "No"						},
+	{0x0e, 0x01, 0x01, 0x01, "Yes"						},
 
 	{0   , 0xfe, 0   ,    4, "Magazine / Grenade"		},
-	{0x0e, 0x01, 0x06, 0x04, "5 / 2"			},
-	{0x0e, 0x01, 0x06, 0x06, "7 / 3"			},
-	{0x0e, 0x01, 0x06, 0x02, "9 / 4"			},
-	{0x0e, 0x01, 0x06, 0x00, "12 / 5"			},
+	{0x0e, 0x01, 0x06, 0x04, "5 / 2"					},
+	{0x0e, 0x01, 0x06, 0x06, "7 / 3"					},
+	{0x0e, 0x01, 0x06, 0x02, "9 / 4"					},
+	{0x0e, 0x01, 0x06, 0x00, "12 / 5"					},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"			},
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
 	{0x0e, 0x01, 0x18, 0x00, "4 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x18, 0x08, "3 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x18, 0x10, "2 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x18, 0x18, "1 Coin  1 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"			},
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
 	{0x0e, 0x01, 0x60, 0x60, "1 Coin  2 Credits"		},
 	{0x0e, 0x01, 0x60, 0x40, "1 Coin  3 Credits"		},
 	{0x0e, 0x01, 0x60, 0x20, "1 Coin  4 Credits"		},
 	{0x0e, 0x01, 0x60, 0x00, "1 Coin  6 Credits"		},
 
-	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
-	{0x0e, 0x01, 0x80, 0x80, "Common"			},
-	{0x0e, 0x01, 0x80, 0x00, "Individual"			},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"				},
+	{0x0e, 0x01, 0x80, 0x80, "Common"					},
+	{0x0e, 0x01, 0x80, 0x00, "Individual"				},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{0x0f, 0x01, 0x03, 0x02, "Easy"				},
-	{0x0f, 0x01, 0x03, 0x03, "Normal"			},
-	{0x0f, 0x01, 0x03, 0x01, "Hard"				},
-	{0x0f, 0x01, 0x03, 0x00, "Hardest"			},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x0f, 0x01, 0x03, 0x02, "Easy"						},
+	{0x0f, 0x01, 0x03, 0x03, "Normal"					},
+	{0x0f, 0x01, 0x03, 0x01, "Hard"						},
+	{0x0f, 0x01, 0x03, 0x00, "Hardest"					},
 
-	{0   , 0xfe, 0   ,    4, "Game Mode"			},
-	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"		},
-	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"		},
+	{0   , 0xfe, 0   ,    4, "Game Mode"				},
+	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"			},
+	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"			},
 	{0x0f, 0x01, 0x0c, 0x04, "Infinite Energy (Cheat)"	},
-	{0x0f, 0x01, 0x0c, 0x00, "Freeze"			},
+	{0x0f, 0x01, 0x0c, 0x00, "Freeze"					},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0f, 0x01, 0x80, 0x80, "Off"				},
-	{0x0f, 0x01, 0x80, 0x00, "On"				},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x0f, 0x01, 0x80, 0x80, "Off"						},
+	{0x0f, 0x01, 0x80, 0x00, "On"						},
 };
 
 STDDIPINFO(Bbusters2p)
 
 static struct BurnDIPInfo MechattDIPList[]=
 {
-	{0x0e, 0xff, 0xff, 0xff, NULL				},
-	{0x0f, 0xff, 0xff, 0xff, NULL				},
+	{0x0e, 0xff, 0xff, 0xff, NULL						},
+	{0x0f, 0xff, 0xff, 0xff, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
-	{0x0e, 0x01, 0x01, 0x01, "Common"			},
-	{0x0e, 0x01, 0x01, 0x00, "Individual"			},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"				},
+	{0x0e, 0x01, 0x01, 0x01, "Common"					},
+	{0x0e, 0x01, 0x01, 0x00, "Individual"				},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
-	{0x0e, 0x01, 0x02, 0x00, "No"				},
-	{0x0e, 0x01, 0x02, 0x02, "Yes"				},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
+	{0x0e, 0x01, 0x02, 0x00, "No"						},
+	{0x0e, 0x01, 0x02, 0x02, "Yes"						},
 
 	{0   , 0xfe, 0   ,    4, "Magazine / Grenade"		},
-	{0x0e, 0x01, 0x0c, 0x08, "5 / 2"			},
-	{0x0e, 0x01, 0x0c, 0x0c, "6 / 3"			},
-	{0x0e, 0x01, 0x0c, 0x04, "7 / 4"			},
-	{0x0e, 0x01, 0x0c, 0x00, "8 / 5"			},
+	{0x0e, 0x01, 0x0c, 0x08, "5 / 2"					},
+	{0x0e, 0x01, 0x0c, 0x0c, "6 / 3"					},
+	{0x0e, 0x01, 0x0c, 0x04, "7 / 4"					},
+	{0x0e, 0x01, 0x0c, 0x00, "8 / 5"					},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"			},
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
 	{0x0e, 0x01, 0x30, 0x00, "4 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x30, 0x10, "3 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x30, 0x20, "2 Coins 1 Credits"		},
 	{0x0e, 0x01, 0x30, 0x30, "1 Coin  1 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"			},
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
 	{0x0e, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x00, "1 Coin  4 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{0x0f, 0x01, 0x03, 0x02, "Easy"				},
-	{0x0f, 0x01, 0x03, 0x03, "Normal"			},
-	{0x0f, 0x01, 0x03, 0x01, "Hard"				},
-	{0x0f, 0x01, 0x03, 0x00, "Hardest"			},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x0f, 0x01, 0x03, 0x02, "Easy"						},
+	{0x0f, 0x01, 0x03, 0x03, "Normal"					},
+	{0x0f, 0x01, 0x03, 0x01, "Hard"						},
+	{0x0f, 0x01, 0x03, 0x00, "Hardest"					},
 
-	{0   , 0xfe, 0   ,    4, "Game Mode"			},
-	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"		},
-	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"		},
+	{0   , 0xfe, 0   ,    4, "Game Mode"				},
+	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"			},
+	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"			},
 	{0x0f, 0x01, 0x0c, 0x04, "Infinite Energy (Cheat)"	},
-	{0x0f, 0x01, 0x0c, 0x00, "Freeze"			},
+	{0x0f, 0x01, 0x0c, 0x00, "Freeze"					},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0f, 0x01, 0x80, 0x80, "Off"				},
-	{0x0f, 0x01, 0x80, 0x00, "On"				},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x0f, 0x01, 0x80, 0x80, "Off"						},
+	{0x0f, 0x01, 0x80, 0x00, "On"						},
 };
 
 STDDIPINFO(Mechatt)
 
 static struct BurnDIPInfo MechattuDIPList[]=
 {
-	{0x0e, 0xff, 0xff, 0xff, NULL				},
-	{0x0f, 0xff, 0xff, 0xff, NULL				},
+	{0x0e, 0xff, 0xff, 0xff, NULL						},
+	{0x0f, 0xff, 0xff, 0xff, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
-	{0x0e, 0x01, 0x01, 0x01, "Common"			},
-	{0x0e, 0x01, 0x01, 0x00, "Individual"			},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"				},
+	{0x0e, 0x01, 0x01, 0x01, "Common"					},
+	{0x0e, 0x01, 0x01, 0x00, "Individual"				},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"		},
-	{0x0e, 0x01, 0x02, 0x00, "No"				},
-	{0x0e, 0x01, 0x02, 0x02, "Yes"				},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
+	{0x0e, 0x01, 0x02, 0x00, "No"						},
+	{0x0e, 0x01, 0x02, 0x02, "Yes"						},
 
 	{0   , 0xfe, 0   ,    4, "Magazine / Grenade"		},
-	{0x0e, 0x01, 0x0c, 0x08, "5 / 2"			},
-	{0x0e, 0x01, 0x0c, 0x0c, "6 / 3"			},
-	{0x0e, 0x01, 0x0c, 0x04, "7 / 4"			},
-	{0x0e, 0x01, 0x0c, 0x00, "8 / 5"			},
+	{0x0e, 0x01, 0x0c, 0x08, "5 / 2"					},
+	{0x0e, 0x01, 0x0c, 0x0c, "6 / 3"					},
+	{0x0e, 0x01, 0x0c, 0x04, "7 / 4"					},
+	{0x0e, 0x01, 0x0c, 0x00, "8 / 5"					},
 
-	{0   , 0xfe, 0   ,    4, "Coin A"			},
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
 	{0x0e, 0x01, 0x30, 0x00, "Free_Play"				},
-	{0x0e, 0x01, 0x30, 0x10, "1 Coin/2 Credits first, then 1 Coin/1 Credit"		},
-	{0x0e, 0x01, 0x30, 0x20, "2 Coins/1 Credit first, then 1 Coin/1 Credit"		},
+	{0x0e, 0x01, 0x30, 0x10, "1 Coin/2 Credits first, then 1 Coin/1 Credit"	},
+	{0x0e, 0x01, 0x30, 0x20, "2 Coins/1 Credit first, then 1 Coin/1 Credit"	},
 	{0x0e, 0x01, 0x30, 0x30, "1 Coin  1 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Coin B"			},
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
 	{0x0e, 0x01, 0xc0, 0xc0, "1 Coin  1 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x80, "1 Coin  2 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
 	{0x0e, 0x01, 0xc0, 0x00, "1 Coin  4 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{0x0f, 0x01, 0x03, 0x02, "Easy"				},
-	{0x0f, 0x01, 0x03, 0x03, "Normal"			},
-	{0x0f, 0x01, 0x03, 0x01, "Hard"				},
-	{0x0f, 0x01, 0x03, 0x00, "Hardest"			},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x0f, 0x01, 0x03, 0x02, "Easy"						},
+	{0x0f, 0x01, 0x03, 0x03, "Normal"					},
+	{0x0f, 0x01, 0x03, 0x01, "Hard"						},
+	{0x0f, 0x01, 0x03, 0x00, "Hardest"					},
 
-	{0   , 0xfe, 0   ,    4, "Game Mode"			},
-	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"		},
-	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"		},
+	{0   , 0xfe, 0   ,    4, "Game Mode"				},
+	{0x0f, 0x01, 0x0c, 0x08, "Demo Sounds Off"			},
+	{0x0f, 0x01, 0x0c, 0x0c, "Demo Sounds On"			},
 	{0x0f, 0x01, 0x0c, 0x04, "Infinite Energy (Cheat)"	},
-	{0x0f, 0x01, 0x0c, 0x00, "Freeze"			},
+	{0x0f, 0x01, 0x0c, 0x00, "Freeze"					},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{0x0f, 0x01, 0x80, 0x80, "Off"				},
-	{0x0f, 0x01, 0x80, 0x00, "On"				},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x0f, 0x01, 0x80, 0x80, "Off"						},
+	{0x0f, 0x01, 0x80, 0x00, "On"						},
 };
 
 STDDIPINFO(Mechattu)
@@ -374,6 +388,14 @@ static UINT16 mechatt_gun_r(UINT16 offset)
 	return x | (y << 8);
 }
 
+static void sound_sync()
+{
+	INT32 cyc = ((SekTotalCycles() * 4) / 12) - ZetTotalCycles();
+	if (cyc > 0) {
+		BurnTimerUpdate(ZetTotalCycles() + cyc);
+	}
+}
+
 static UINT16 __fastcall bbusters_main_read_word(UINT32 address)
 {
 	if ((address & 0xffff00) == 0x0f8000) {
@@ -398,6 +420,7 @@ static UINT16 __fastcall bbusters_main_read_word(UINT32 address)
 			return DrvDips[1];
 
 		case 0x0e0018:
+			sound_sync();
 			return sound_status;
 
 		case 0x0e8000:
@@ -430,12 +453,12 @@ static void __fastcall bbusters_main_write_word(UINT32 address, UINT16 data)
 	{
 		case 0x0b8000:
 		case 0x0b8002:
-			*((UINT16*)(DrvPfScroll0 + (address & 2))) = data;
+			*((UINT16*)(DrvPfScroll0 + (address & 2))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x0b8008:
 		case 0x0b800a:
-			*((UINT16*)(DrvPfScroll1 + (address & 2))) = data;
+			*((UINT16*)(DrvPfScroll1 + (address & 2))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x0e8000: {
@@ -449,6 +472,7 @@ static void __fastcall bbusters_main_write_word(UINT32 address, UINT16 data)
 		return;
 
 		case 0x0f0018: {
+			sound_sync();
 			soundlatch = data;
 			ZetNmi();
 		}
@@ -456,9 +480,9 @@ static void __fastcall bbusters_main_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-static void __fastcall bbusters_main_write_byte(UINT32 /*address*/, UINT8 /*data*/)
+static void __fastcall bbusters_main_write_byte(UINT32 address, UINT8 data)
 {
-	//bprintf (0, _T("MWB: %5.5x, %2.2x\n"), address, data);
+	bprintf (0, _T("MWB: %5.5x, %2.2x\n"), address, data);
 }
 
 static UINT16 __fastcall mechatt_main_read_word(UINT32 address)
@@ -478,6 +502,7 @@ static UINT16 __fastcall mechatt_main_read_word(UINT32 address)
 			return mechatt_gun_r(address - 0xe0004);
 
 		case 0x0e8000:
+			sound_sync();
 			return sound_status;
 	}
 
@@ -499,12 +524,12 @@ static void __fastcall mechatt_main_write_word(UINT32 address, UINT16 data)
 	{
 		case 0x0b8000:
 		case 0x0b8002:
-			*((UINT16*)(DrvPfScroll0 + (address & 2))) = data;
+			*((UINT16*)(DrvPfScroll0 + (address & 2))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x0c8000:
 		case 0x0c8002:
-			*((UINT16*)(DrvPfScroll1 + (address & 2))) = data;
+			*((UINT16*)(DrvPfScroll1 + (address & 2))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 
 		case 0x0e4002:
@@ -512,6 +537,7 @@ static void __fastcall mechatt_main_write_word(UINT32 address, UINT16 data)
 		return;
 
 		case 0x0e8000: {
+			sound_sync();
 			soundlatch = data;
 			ZetNmi();
 		}
@@ -571,9 +597,9 @@ static UINT8 __fastcall bbusters_sound_read_port(UINT16 port)
 		case 0x02:
 		case 0x03:
 		if (game_select) {
-			return BurnYM2608Read(port & 2);
+			return BurnYM2608Read(port & 3);
 		} else {
-			return BurnYM2610Read(port & 2);
+			return BurnYM2610Read(port & 3);
 		}
 	}
 
@@ -582,20 +608,7 @@ static UINT8 __fastcall bbusters_sound_read_port(UINT16 port)
 
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
 {
-	// Sometimes loading a savestate needs to kick off an irq, but since this
-	// happens outside of DrvScan(), we have to handle opening of the cpu here.
-	INT32 fromFMPostLoad = (ZetGetActive() == -1);
-
-	if (fromFMPostLoad) {
-		bprintf(0, _T("FM-PostLoad kicking irq!!! %X\n"), nStatus);
-		ZetOpen(0);
-	}
-
-	ZetSetIRQLine(0, (nStatus) ?  CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-
-	if (fromFMPostLoad)
-		ZetClose();
-
+	ZetSetIRQLine(0, 0, (nStatus) ?  CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvDoReset()
@@ -658,10 +671,13 @@ static INT32 MemIndex()
 	DrvSprRAM		= Next; Next += 0x010000;
 	DrvSprBuf		= Next; Next += 0x002000;
 
-	DrvPfScroll0		= Next; Next += 0x000004;
-	DrvPfScroll1		= Next; Next += 0x000004;
+	DrvPfScroll0	= Next; Next += 0x000004;
+	DrvPfScroll1	= Next; Next += 0x000004;
 
 	RamEnd			= Next;
+
+	SpriteBitmap[0] = (UINT16*)Next; Next += 256 * 256 * sizeof(UINT16);
+	SpriteBitmap[1] = (UINT16*)Next; Next += 256 * 256 * sizeof(UINT16);
 
 	MemEnd			= Next;
 
@@ -715,12 +731,7 @@ static INT32 DrvInit()
 
 	BurnSetRefreshRate(56.00);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x000001,  0, 2)) return 1;
@@ -755,8 +766,8 @@ static INT32 DrvInit()
 
 		if (BurnLoadRom(DrvSndROM1 + 0x000000, 21, 1)) return 1;
 
-		if (BurnLoadRom(DrvEeprom  + 0x000000, 22, 1)) return 1;
-
+		//if (BurnLoadRom(DrvEeprom  + 0x000000, 22, 1)) return 1; // don't use mame's default eeprom file -dink aug.02.2020
+		memset(DrvEeprom, 0xff, 0x100);
 		DrvGfxDecode();
 	}
 
@@ -805,12 +816,7 @@ static INT32 MechattInit()
 {
 	game_select = 1;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x000001,  0, 2)) return 1;
@@ -888,12 +894,7 @@ static INT32 MechattjInit()
 {
 	game_select = 1;
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x000001,  0, 2)) return 1;
@@ -998,7 +999,7 @@ static INT32 DrvExit()
 	}
 	BurnGunExit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	game_select = 0;
 
@@ -1011,9 +1012,9 @@ static void DrvPaletteUpdate()
 
 	for (INT32 offs = 0; offs < BurnDrvGetPaletteEntries(); offs++)
 	{
-		INT32 r = ram[offs] >> 12;
-		INT32 g = (ram[offs] >> 8) & 0xf;
-		INT32 b = (ram[offs] >> 4) & 0xf;
+		INT32 r = BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 12;
+		INT32 g = (BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 8) & 0xf;
+		INT32 b = (BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 4) & 0xf;
 
 		DrvPalette[offs] = BurnHighCol(r*16+r, g*16+g, b*16+b, 0);
 	}
@@ -1028,7 +1029,7 @@ static void draw_text_layer()
 		INT32 sx = (offs & 0x1f) * 8;
 		INT32 sy = (offs / 0x20) * 8;
 
-		Render8x8Tile_Mask_Clip(pTransDraw, ram[offs] & 0xfff, sx, sy - 16, ram[offs] >> 12, 4, 0xf, 0, DrvGfxROM0);
+		Render8x8Tile_Mask_Clip(pTransDraw, BURN_ENDIAN_SWAP_INT16(ram[offs]) & 0xfff, sx, sy - 16, BURN_ENDIAN_SWAP_INT16(ram[offs]) >> 12, 4, 0xf, 0, DrvGfxROM0);
 	}
 }
 
@@ -1039,8 +1040,8 @@ static void draw_layer(UINT8 *rambase, UINT8 *gfx, INT32 color_offset, INT32 tra
 
 	INT32 width = (wide) ? 256 : 128;
 
-	INT32 scrollx = scr[0] & ((width * 16)-1);
-	INT32 scrolly = (scr[1] + 16) & 0x1ff;
+	INT32 scrollx = BURN_ENDIAN_SWAP_INT16(scr[0]) & ((width * 16)-1);
+	INT32 scrolly = (BURN_ENDIAN_SWAP_INT16(scr[1]) + 16) & 0x1ff;
 
 	for (INT32 offs = 0; offs < width * 32; offs++)
 	{
@@ -1054,9 +1055,9 @@ static void draw_layer(UINT8 *rambase, UINT8 *gfx, INT32 color_offset, INT32 tra
 		if (sx >= nScreenWidth || sy >= nScreenHeight) continue;
 
 		if (transp) {
-			Render16x16Tile_Mask_Clip(pTransDraw, ram[offs] & 0xfff, sx, sy, ram[offs]>>12, 4, 0xf, color_offset, gfx);
+			Render16x16Tile_Mask_Clip(pTransDraw, BURN_ENDIAN_SWAP_INT16(ram[offs]) & 0xfff, sx, sy, BURN_ENDIAN_SWAP_INT16(ram[offs])>>12, 4, 0xf, color_offset, gfx);
 		} else {
-			Render16x16Tile_Clip(pTransDraw, ram[offs] & 0xfff, sx, sy, ram[offs]>>12, 4, color_offset, gfx);
+			Render16x16Tile_Clip(pTransDraw, BURN_ENDIAN_SWAP_INT16(ram[offs]) & 0xfff, sx, sy, BURN_ENDIAN_SWAP_INT16(ram[offs])>>12, 4, color_offset, gfx);
 		}
 	}
 }
@@ -1104,7 +1105,7 @@ inline const UINT8 *get_source_ptr(UINT8 *gfx, UINT32 sprite, INT32 dx, INT32 dy
 	return gfx + (((sprite + code) & 0x3fff) * 0x100) + ((dy & 0xf) * 0x10);
 }
 
-static void draw_block(const UINT8 *scale_table_ptr,INT32 scale_line_count,INT32 x,INT32 y,INT32 size,INT32 flipx,INT32 flipy,UINT32 sprite,INT32 color,INT32 bank,INT32 block)
+static void draw_block(INT32 chip, const UINT8 *scale_table_ptr,INT32 scale_line_count,INT32 x,INT32 y,INT32 size,INT32 flipx,INT32 flipy,UINT32 sprite,INT32 color,INT32 bank,INT32 block)
 {
 	UINT8 *gfx = (bank == 2) ? DrvGfxROM2 : DrvGfxROM1;
 	INT32 pen_base = ((bank == 2) ? 0x200 : 0x100) + ((color & 0xf) << 4);
@@ -1116,7 +1117,7 @@ static void draw_block(const UINT8 *scale_table_ptr,INT32 scale_line_count,INT32
 
 	while (scale_line_count) {
 		if (dy>=16 && dy<240) {
-			UINT16 *destline = pTransDraw + (dy - 16) * nScreenWidth;
+			UINT16 *destline = SpriteBitmap[chip] + (dy - 16) * nScreenWidth;
 			UINT8 srcline=*scale_table_ptr;
 			const UINT8 *srcptr=NULL;
 
@@ -1149,7 +1150,7 @@ static void draw_block(const UINT8 *scale_table_ptr,INT32 scale_line_count,INT32
 	}
 }
 
-static void draw_sprites(UINT8 *source8, INT32 bank, INT32 pass)
+static void draw_sprites(INT32 chip, UINT8 *source8, INT32 bank)
 {
 	UINT16 *source = (UINT16*)source8;
 	const UINT8 *scale_table=DrvZoomTab;
@@ -1157,61 +1158,84 @@ static void draw_sprites(UINT8 *source8, INT32 bank, INT32 pass)
 	for (INT32 offs = 0; offs < 0x800; offs += 4) {
 		INT32 scale;
 
-		INT32 sprite=source[offs+1];
-		INT32 colour=source[offs+0];
+		INT32 sprite=BURN_ENDIAN_SWAP_INT16(source[offs+1]);
+		INT32 colour=BURN_ENDIAN_SWAP_INT16(source[offs+0]);
 
 		if ((colour==0xf7 || colour==0xffff || colour == 0x43f9) && (sprite==0x3fff || sprite==0xffff || sprite==0x0001))
 			continue; // sprite 1, color 0x43f9 is the dead sprite in the top-right of the screen in Mechanized Attack's High Score table.
 
-		INT16 y=source[offs+3];
-		INT32 x=source[offs+2];
+		INT16 y=BURN_ENDIAN_SWAP_INT16(source[offs+3]);
+		INT32 x=BURN_ENDIAN_SWAP_INT16(source[offs+2]);
 
 		if (x&0x200) x=-(0x100-(x&0xff));
 
 		if (y > 320 || y < -256) y &= 0x1ff; // fix for bbusters ending & "Zing!" attract-mode fullscreen zombie & Helicopter on the 3rd rotation of the attractmode sequence
 
 		colour>>=12;
-		INT32 block=(source[offs+0]>>8)&0x3;
-		INT32 fy=source[offs+0]&0x400;
-		INT32 fx=source[offs+0]&0x800;
+		INT32 block=(BURN_ENDIAN_SWAP_INT16(source[offs+0])>>8)&0x3;
+		INT32 fy=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0x400;
+		INT32 fx=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0x800;
 		sprite&=0x3fff;
 
-		// Palettes 0xc-0xf confirmed to be behind tilemap on Beast Busters
-		if (pass == 1 && (colour & 0xc) != 0xc)
-			continue;
-		if (pass == 0 && (colour & 0xc) == 0xc)
-			continue;
-
-		switch ((source[offs+0]>>8)&0x3)
+		switch ((BURN_ENDIAN_SWAP_INT16(source[offs+0])>>8)&0x3)
 		{
 			case 0: {
-				scale=source[offs+0]&0x7;
+				scale=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0x7;
 				const UINT8 *scale_table_ptr = scale_table+0x387f+(0x80*scale);
 				INT32 scale_line_count = 0x10-scale;
-				draw_block(scale_table_ptr,scale_line_count,x,y,16,fx,fy,sprite,colour,bank,block);
+				draw_block(chip, scale_table_ptr,scale_line_count,x,y,16,fx,fy,sprite,colour,bank,block);
 			}
 			break;
 			case 1: { // 2 x 2
-				scale=source[offs+0]&0xf;
+				scale=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0xf;
 				const UINT8 *scale_table_ptr = scale_table+0x707f+(0x80*scale);
 				INT32 scale_line_count = 0x20-scale;
-				draw_block(scale_table_ptr,scale_line_count,x,y,32,fx,fy,sprite,colour,bank,block);
+				draw_block(chip, scale_table_ptr,scale_line_count,x,y,32,fx,fy,sprite,colour,bank,block);
 			}
 			break;
 			case 2: { // 64 by 64 block (2 x 2) x 2
-				scale=source[offs+0]&0x1f;
+				scale=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0x1f;
 				const UINT8 *scale_table_ptr = scale_table+0xa07f+(0x80*scale);
 				INT32 scale_line_count = 0x40-scale;
-				draw_block(scale_table_ptr,scale_line_count,x,y,64,fx,fy,sprite,colour,bank,block);
+				draw_block(chip, scale_table_ptr,scale_line_count,x,y,64,fx,fy,sprite,colour,bank,block);
 			}
 			break;
 			case 3: { // 2 x 2 x 2 x 2
-				scale=source[offs+0]&0x3f;
+				scale=BURN_ENDIAN_SWAP_INT16(source[offs+0])&0x3f;
 				const UINT8 *scale_table_ptr = scale_table+0xc07f+(0x80*scale);
 				INT32 scale_line_count = 0x80-scale;
-				draw_block(scale_table_ptr,scale_line_count,x,y,128,fx,fy,sprite,colour,bank,block);
+				draw_block(chip, scale_table_ptr,scale_line_count,x,y,128,fx,fy,sprite,colour,bank,block);
 			}
 			break;
+		}
+	}
+}
+
+static void mix_sprites(INT32 chip, INT32 pass)
+{
+	for (INT32 y = 0; y < nScreenHeight; y++) {
+		UINT16 *src = SpriteBitmap[chip] + y * nScreenWidth;
+		UINT16 *dest = pTransDraw + y * nScreenWidth;
+
+		for (INT32 x = 0; x < nScreenWidth; x++) {
+			if (src[x] != 0xffff) {
+				switch (pass) {
+					case 0: {
+						if ((src[x] & 0xc0) != 0xc0)
+							dest[x] = src[x];
+						break;
+					}
+					case 1: {
+						if ((src[x] & 0xc0) == 0xc0)
+							dest[x] = src[x];
+						break;
+					}
+					case -1: {
+						dest[x] = src[x];
+						break;
+					}
+				}
+			}
 		}
 	}
 }
@@ -1225,18 +1249,22 @@ static INT32 BbustersDraw()
 
 	BurnTransferClear();
 
+	// sprites -> sprite bitmaps
+	memset(SpriteBitmap[0], 0xff, 256 * 256 * sizeof(UINT16));
+	memset(SpriteBitmap[1], 0xff, 256 * 256 * sizeof(UINT16));
+	draw_sprites(1, DrvSprBuf + 0x1000, 2);
+	draw_sprites(0, DrvSprBuf + 0x0000, 1);
+
 	if (nBurnLayer & 1) draw_layer(DrvPfRAM1, DrvGfxROM4, 0x500, 0, DrvPfScroll1, 0);
-	if (nSpriteEnable & 1) draw_sprites(DrvSprBuf + 0x1000, 2, 1);
+	if (nSpriteEnable & 1) mix_sprites(1, 1);
 	if (nBurnLayer & 2) draw_layer(DrvPfRAM0, DrvGfxROM3, 0x300, 1, DrvPfScroll0, 0);
-	if (nSpriteEnable & 2) draw_sprites(DrvSprBuf + 0x1000, 2, 0);
-	if (nSpriteEnable & 4) draw_sprites(DrvSprBuf + 0x0000, 1, -1);
+	if (nSpriteEnable & 2) mix_sprites(1, 0);
+	if (nSpriteEnable & 4) mix_sprites(0, -1);
 	if (nBurnLayer & 4) draw_text_layer();
 
 	BurnTransferCopy(DrvPalette);
 
-	for (INT32 i = 0; i < nBurnGunNumPlayers; i++) {
-		BurnGunDrawTarget(i, BurnGunX[i] >> 8, BurnGunY[i] >> 8);
-	}
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -1250,16 +1278,19 @@ static INT32 MechattDraw()
 
 	BurnTransferClear();
 
+	// sprites -> sprite bitmaps
+	memset(SpriteBitmap[0], 0xff, 256 * 256 * sizeof(UINT16));
+	draw_sprites(0, DrvSprBuf + 0x0000, 1);
+
 	if (nBurnLayer & 1) draw_layer(DrvPfRAM1, DrvGfxROM4, 0x300, 0, DrvPfScroll1, 1);
+	if (nSpriteEnable & 1) mix_sprites(0, 1);
 	if (nBurnLayer & 2) draw_layer(DrvPfRAM0, DrvGfxROM3, 0x200, 1, DrvPfScroll0, 1);
-	if (nSpriteEnable & 2) draw_sprites(DrvSprBuf + 0x0000, 1, -1);
+	if (nSpriteEnable & 2) mix_sprites(0, 0);
 	if (nBurnLayer & 4) draw_text_layer();
 
 	BurnTransferCopy(DrvPalette);
 
-	for (INT32 i = 0; i < nBurnGunNumPlayers; i++) {
-		BurnGunDrawTarget(i, BurnGunX[i] >> 8, BurnGunY[i] >> 8);
-	}
+	BurnGunDrawTargets();
 
 	return 0;
 }
@@ -1282,25 +1313,25 @@ static INT32 DrvFrame()
 			DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
 		}
 
-		BurnGunMakeInputs(0, (INT16)LethalGun0, (INT16)LethalGun1);
-		BurnGunMakeInputs(1, (INT16)LethalGun2, (INT16)LethalGun3);
-		BurnGunMakeInputs(2, (INT16)LethalGun4, (INT16)LethalGun5);
+		BurnGunMakeInputs(0, LethalGun0, LethalGun1);
+		BurnGunMakeInputs(1, LethalGun2, LethalGun3);
+		BurnGunMakeInputs(2, LethalGun4, LethalGun5);
 
 	}
 
 	INT32 nInterleave = 30;
 	INT32 nCyclesTotal[2] = { 12000000 / 56, 4000000 / 56 };
+	INT32 nCyclesDone[2] = { 0, 0 };
 
 	SekOpen(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		SekRun(nCyclesTotal[0] / nInterleave);
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN(0, Sek);
+		CPU_RUN_TIMER(1);
 	}
-	SekSetIRQLine((game_select) ? 4 : 6, CPU_IRQSTATUS_AUTO);
 
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	SekSetIRQLine((game_select) ? 4 : 6, CPU_IRQSTATUS_AUTO);
 
 	if (pBurnSoundOut) {
 		if (game_select) {
@@ -1308,6 +1339,7 @@ static INT32 DrvFrame()
 		} else {
 			BurnYM2610Update(pBurnSoundOut, nBurnSoundLen);
 		}
+		BurnSoundDCFilter(); // dc offset in mechatt
 	}
 
 	ZetClose();
@@ -1326,38 +1358,41 @@ static INT32 DrvFrame()
 static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
-	
-	if (pnMin != NULL) {
-		*pnMin = 0x029719;
+
+	if (pnMin) {
+		*pnMin = 0x029702;
 	}
 
-	if (nAction & ACB_MEMORY_RAM) {
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
+
 		ba.Data	  = AllRam;
-		ba.nLen	  = RamEnd-AllRam;
+		ba.nLen	  = RamEnd - AllRam;
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
-	}
-	
-	if (nAction & ACB_DRIVER_DATA) {
 
 		SekScan(nAction);
 		ZetScan(nAction);
-		BurnGunScan();
 
-		ZetOpen(0);
 		if (game_select) {
 			BurnYM2608Scan(nAction, pnMin);
 		} else {
 			BurnYM2610Scan(nAction, pnMin);
 		}
-		ZetClose();
+
+		BurnGunScan();
 
 		SCAN_VAR(sound_status);
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(gun_select);
+	}
 
-		DrvRecalc = 1;
+	if (nAction & ACB_NVRAM && game_select == 0) { // bbusters only!
+		ba.Data		= DrvEeprom;
+		ba.nLen		= 0x00100;
+		ba.nAddress	= 0;
+		ba.szName	= "NV RAM";
+		BurnAcb(&ba);
 	}
 
 	return 0;

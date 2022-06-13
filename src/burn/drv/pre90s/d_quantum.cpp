@@ -24,7 +24,7 @@ static UINT8 DrvRecalc;
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
-static UINT8 DrvDips[2];
+static UINT8 DrvDips[3];
 static UINT16 DrvInputs[2];
 static UINT8 DrvReset;
 
@@ -51,6 +51,7 @@ static struct BurnInputInfo QuantumInputList[] = {
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 #undef A
 
@@ -88,6 +89,10 @@ static struct BurnDIPInfo QuantumDIPList[]=
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
 	{DO+1, 0x01, 0x80, 0x80, "Off"					},
 	{DO+1, 0x01, 0x80, 0x00, "On"					},
+
+	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
+	{DO+2, 0x01, 0x01, 0x00, "No"					},
+	{DO+2, 0x01, 0x01, 0x01, "Yes"					},
 };
 #undef DO
 
@@ -276,6 +281,28 @@ static INT32 dip1_read(INT32 offset)
 	return (0 << (7 - (offset))) & 0x80;
 }
 
+static INT32 res_check()
+{
+	if (DrvDips[2] & 1) {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 1080) {
+			vector_rescale((1080*480/640), 1080);
+			return 1;
+		}
+	} else {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 640) {
+			vector_rescale(480, 640);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static INT32 DrvDoReset(INT32 clear_mem)
 {
 	if (clear_mem) {
@@ -290,6 +317,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	avgdvg_reset();
 
 	avgOK = 0;
+
+	res_check();
 
 	return 0;
 }
@@ -319,12 +348,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	memset (DrvNVRAM, 0xff, 0x200);
 
@@ -391,7 +415,7 @@ static INT32 DrvExit()
 
 	BurnTrackballExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -428,6 +452,8 @@ static INT32 DrvDraw()
 	}
 
 	if ((~DrvDips[1] & 0x80) && avgOK) avgdvg_go(); // service mode doesn't run avgdvg_go(), so we do it manually.
+
+	if (res_check()) return 0; // resolution was changed
 
 	draw_vector(DrvPalette);
 
@@ -504,37 +530,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		*pnMin = 0x029722;
 	}
 
-	if (nAction & ACB_MEMORY_ROM) {
-		ba.Data		= Drv68KROM;
-		ba.nLen		= 0x14000;
-		ba.nAddress	= 0;
-		ba.szName	= "68K ROM";
-		BurnAcb(&ba);
-	}
-
-	if (nAction & ACB_MEMORY_RAM) {
-		memset(&ba, 0, sizeof(ba));
-		ba.Data	  = DrvColRAM;
-		ba.nLen	  = 0x0020;
-		ba.szName = "Color Ram";
-		ba.nAddress	= 0x950000;
-		BurnAcb(&ba);
-		
-		memset(&ba, 0, sizeof(ba));
-		ba.Data	  = DrvVectorRAM;
-		ba.nLen	  = 0x2000;
-		ba.szName = "Vector Ram";
-		ba.nAddress	= 0x800000;
-		BurnAcb(&ba);
-		
-		memset(&ba, 0, sizeof(ba));
-		ba.Data	  = Drv68KRAM;
-		ba.nLen	  = 0x4000;
-		ba.szName = "68K Ram";
-		ba.nAddress	= 0x018000;
-		BurnAcb(&ba);
-	}
-
 	if (nAction & ACB_NVRAM) {
 		memset(&ba, 0, sizeof(ba));
 		ba.Data	  = DrvNVRAM;
@@ -545,6 +540,12 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	}
 
 	if (nAction & ACB_VOLATILE) {
+		memset(&ba, 0, sizeof(ba));
+		ba.Data	  = AllRam;
+		ba.nLen	  = RamEnd - AllRam;
+		ba.szName = "All Ram";
+		BurnAcb(&ba);
+
 		SekScan(nAction);
 
 		avgdvg_scan(nAction, pnMin);
@@ -555,12 +556,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(avgOK);
 
 		pokey_scan(nAction, pnMin);
-	}
-
-	if (nAction & ACB_WRITE) {
-		if (avgOK) {
-			avgdvg_go();
-		}
 	}
 
 	return 0;
@@ -593,10 +588,10 @@ struct BurnDriver BurnDrvQuantum = {
 	"quantum", NULL, NULL, NULL, "1982",
 	"Quantum (rev 2)\0", NULL, "General Computer Corporation (Atari license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_VECTOR, 0,
 	NULL, quantumRomInfo, quantumRomName, NULL, NULL, NULL, NULL, QuantumInputInfo, QuantumDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
-	600, 900, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -626,10 +621,10 @@ struct BurnDriver BurnDrvQuantum1 = {
 	"quantum1", "quantum", NULL, NULL, "1982",
 	"Quantum (rev 1)\0", NULL, "General Computer Corporation (Atari license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_VECTOR, 0,
 	NULL, quantum1RomInfo, quantum1RomName, NULL, NULL, NULL, NULL, QuantumInputInfo, QuantumDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
-	600, 900, 3, 4
+	480, 640, 3, 4
 };
 
 
@@ -659,8 +654,8 @@ struct BurnDriver BurnDrvQuantump = {
 	"quantump", "quantum", NULL, NULL, "1982",
 	"Quantum (prototype)\0", NULL, "General Computer Corporation (Atari license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_ACTION | GBF_VECTOR, 0,
 	NULL, quantumpRomInfo, quantumpRomName, NULL, NULL, NULL, NULL, QuantumInputInfo, QuantumDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
-	600, 900, 3, 4
+	480, 640, 3, 4
 };

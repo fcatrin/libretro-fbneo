@@ -11,7 +11,7 @@
 
 #define EMU_M68K								// Use Musashi 68000 emulator
 
-#define SEK_MAX	(4)								// Maximum number of CPUs supported
+#define SEK_MAX	(5)								// Maximum number of CPUs supported
 
 #if defined EMU_M68K
  #include "m68k/m68k.h"
@@ -134,12 +134,17 @@ void SekSetCyclesScanline(INT32 nCycles);
 void SekClose();
 void SekOpen(const INT32 i);
 INT32 SekGetActive();
-INT32 SekShouldInterrupt();
+INT32 SekShouldInterrupt(); // megadrive
 void SekBurnUntilInt();
 
-#define SEK_IRQSTATUS_NONE (0x0000)
-#define SEK_IRQSTATUS_AUTO (0x2000)
-#define SEK_IRQSTATUS_ACK  (0x1000)
+void SekCPUPush(INT32 nCPU);
+void SekCPUPop();
+INT32 SekCPUGetStackNum();
+
+#define SEK_IRQSTATUS_NONE  (0x0000)
+#define SEK_IRQSTATUS_VAUTO (0x4000)
+#define SEK_IRQSTATUS_AUTO  (0x2000)
+#define SEK_IRQSTATUS_ACK   (0x1000)
 
 void SekSetIRQLine(const INT32 line, INT32 status);
 void SekSetIRQLine(INT32 nCPU, const INT32 line, INT32 status);
@@ -162,6 +167,8 @@ void SekSetHALT(INT32 nStatus);
 void SekSetHALT(INT32 nCPU, INT32 nStatus);
 INT32 SekGetHALT();
 INT32 SekGetHALT(INT32 nCPU);
+
+INT32 SekIdle(INT32 nCPU, INT32 nCycles);
 
 inline static INT32 SekIdle(INT32 nCycles)
 {
@@ -223,6 +230,8 @@ inline static INT32 SekCurrentScanline()
 	return SekTotalCycles() / nSekCyclesScanline;
 }
 
+// Mask off address bits (usually top, default is 0xffffff)
+void SekSetAddressMask(UINT32 nAddressMask);
 
 // Map areas of memory
 INT32 SekMapMemory(UINT8* pMemory, UINT32 nStart, UINT32 nEnd, INT32 nType);

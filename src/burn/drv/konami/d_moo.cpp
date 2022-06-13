@@ -54,6 +54,7 @@ static INT32 sound_nmi_enable = 0;
 static INT32 irq5_timer = 0;
 static UINT16 control_data = 0;
 static INT32 fogcnt = 0;
+static INT32 alpha = 0;
 static UINT8 z80_bank;
 
 static UINT16 zmask; // 0xffff moomesa, 0x00ff bucky
@@ -212,7 +213,7 @@ static void moo_objdma()
 
 	do
 	{
-		if ((*src & 0x8000) && (*src & zmask))
+		if ((BURN_ENDIAN_SWAP_INT16(*src) & 0x8000) && (BURN_ENDIAN_SWAP_INT16(*src) & zmask))
 		{
 			memcpy(dst, src, 0x10);
 			dst += 8;
@@ -848,6 +849,8 @@ static INT32 DrvDoReset()
 
 	fogcnt = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -896,12 +899,7 @@ static INT32 MooInit()
 {
 	GenericTilesInit();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (moomesabl)
 	{ // bootleg
@@ -1021,7 +1019,8 @@ static INT32 MooInit()
 
 	EEPROMInit(&moo_eeprom_interface);
 
-	BurnYM2151Init(4000000);
+	BurnYM2151InitBuffered(4000000, 1, NULL, 0);
+	BurnTimerAttachZet(8000000);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.50, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.50, BURN_SND_ROUTE_RIGHT);
 
@@ -1043,12 +1042,7 @@ static INT32 BuckyInit()
 {
 	GenericTilesInit();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x000001,  0, 2)) return 1;
@@ -1114,7 +1108,8 @@ static INT32 BuckyInit()
 
 	EEPROMInit(&moo_eeprom_interface);
 
-	BurnYM2151Init(4000000);
+	BurnYM2151InitBuffered(4000000, 1, NULL, 0);
+	BurnTimerAttachZet(8000000);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.50, BURN_SND_ROUTE_LEFT);
 	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.50, BURN_SND_ROUTE_RIGHT);
 
@@ -1145,7 +1140,7 @@ static INT32 DrvExit()
 		MSM6295Exit(0);
 	}
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	moomesabl = 0;
 
@@ -1158,9 +1153,9 @@ static void DrvPaletteRecalc()
 
 	for (INT32 i = 0; i < 0x2000/2; i+=2)
 	{
-		INT32 r = pal[i+0] & 0xff;
-		INT32 g = pal[i+1] >> 8;
-		INT32 b = pal[i+1] & 0xff;
+		INT32 r = BURN_ENDIAN_SWAP_INT16(pal[i+0]) & 0xff;
+		INT32 g = BURN_ENDIAN_SWAP_INT16(pal[i+1]) >> 8;
+		INT32 b = BURN_ENDIAN_SWAP_INT16(pal[i+1]) & 0xff;
 
 		DrvPalette[i/2] = (r << 16) + (g << 8) + b;
 	}
@@ -1174,7 +1169,7 @@ static INT32 DrvDraw()
 
 	static const INT32 K053251_CI[4] = { 1, 2, 3, 4 };
 	INT32 layers[3];
-	INT32 plane, alpha = 0;
+	INT32 plane;
 	INT32 enable_alpha = 0;
 
 	sprite_colorbase = K053251GetPaletteIndex(0);
@@ -1199,7 +1194,7 @@ static INT32 DrvDraw()
 
 	if (nBurnLayer & (1<<layers[1])) K056832Draw(layers[1], 0, 2);
 
-	alpha = (zmask == 0xffff) ? K054338_alpha_level_moo(1) : K054338_set_alpha_level(1);
+	// alpha is set in DrvFrame before DrvDraw, moomesa needs edge detection (frameskipping/ffwd can mess this up)
 	enable_alpha = K054338_read_register(K338_REG_CONTROL) & K338_CTL_MIXPRI;
 
 	if (zmask == 0xffff) { // moo mesa
@@ -1245,6 +1240,16 @@ static INT32 DrvFrame()
 			DrvInputs[3] ^= (DrvJoy4[i] & 1) << i;
 		}
 
+		// Clear Opposites
+		if ((DrvInputs[2] & 0x000c) == 0) DrvInputs[2] |= 0x000c;
+		if ((DrvInputs[2] & 0x0003) == 0) DrvInputs[2] |= 0x0003;
+		if ((DrvInputs[2] & 0x0c00) == 0) DrvInputs[2] |= 0x0c00;
+		if ((DrvInputs[2] & 0x0300) == 0) DrvInputs[2] |= 0x0300;
+		if ((DrvInputs[3] & 0x000c) == 0) DrvInputs[3] |= 0x000c;
+		if ((DrvInputs[3] & 0x0003) == 0) DrvInputs[3] |= 0x0003;
+		if ((DrvInputs[3] & 0x0c00) == 0) DrvInputs[3] |= 0x0c00;
+		if ((DrvInputs[3] & 0x0300) == 0) DrvInputs[3] |= 0x0300;
+
 		DrvInputs[1] = (DrvDips[0] & 0xf0) | ((DrvJoy5[3]) ? 0x00 : 0x08);
 	}
 
@@ -1252,7 +1257,6 @@ static INT32 DrvFrame()
 	ZetNewFrame();
 
 	INT32 nInterleave = 120;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 8000000 / 60 };
 	if (moomesabl) nCyclesTotal[0] = 16100000 / 60;  // weird
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -1261,11 +1265,7 @@ static INT32 DrvFrame()
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nNext, nCyclesSegment;
-
-		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[0];
-		nCyclesDone[0] += SekRun(nCyclesSegment);
+		CPU_RUN(0, Sek);
 
 		if (i == (nInterleave - 1)) {
 			if (moomesabl) {
@@ -1294,25 +1294,13 @@ static INT32 DrvFrame()
 		}
 
 		if (!moomesabl) {
-			nCyclesSegment = (SekTotalCycles() / 2) - ZetTotalCycles();
-			if (nCyclesSegment > 0) nCyclesDone[1] += ZetRun(nCyclesSegment); // sync sound cpu to main cpu
-
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
+			CPU_RUN_TIMER(1);
 		}
 	}
 
 	if (pBurnSoundOut) {
 		if (!moomesabl) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			if (nSegmentLength) {
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-			}
+			BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 			K054539Update(0, pBurnSoundOut, nBurnSoundLen);
 		} else {
 			MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
@@ -1322,6 +1310,9 @@ static INT32 DrvFrame()
 	ZetClose();
 	SekClose();
 
+	// K054338_alpha_level_moo() needs to do an edge detection. frameskipping/ffwd can mess this up.
+	alpha = (zmask == 0xffff) ? K054338_alpha_level_moo(1) : K054338_set_alpha_level(1);
+
 	if (pBurnDraw) {
 		DrvDraw();
 	}
@@ -1329,7 +1320,7 @@ static INT32 DrvFrame()
 	return 0;
 }
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -1364,6 +1355,7 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 		SCAN_VAR(control_data);
 		SCAN_VAR(fogcnt);
+		SCAN_VAR(alpha);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -1409,7 +1401,7 @@ struct BurnDriver BurnDrvMoomesa = {
 	"moomesa", NULL, NULL, NULL, "1992",
 	"Wild West C.O.W.-Boys of Moo Mesa (ver EAB)\0", NULL, "Konami", "GX151",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, moomesaRomInfo, moomesaRomName, NULL, NULL, NULL, NULL, MooInputInfo, MooDIPInfo,
 	MooInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -1446,7 +1438,7 @@ struct BurnDriver BurnDrvMoomesauac = {
 	"moomesauac", "moomesa", NULL, NULL, "1992",
 	"Wild West C.O.W.-Boys of Moo Mesa (ver UAC)\0", NULL, "Konami", "GX151",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, moomesauacRomInfo, moomesauacRomName, NULL, NULL, NULL, NULL, MooInputInfo, MooDIPInfo,
 	MooInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -1483,7 +1475,7 @@ struct BurnDriver BurnDrvMoomesauab = {
 	"moomesauab", "moomesa", NULL, NULL, "1992",
 	"Wild West C.O.W.-Boys of Moo Mesa (ver UAB)\0", NULL, "Konami", "GX151",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, moomesauabRomInfo, moomesauabRomName, NULL, NULL, NULL, NULL, MooInputInfo, MooDIPInfo,
 	MooInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -1520,7 +1512,7 @@ struct BurnDriver BurnDrvMoomesaaab = {
 	"moomesaaab", "moomesa", NULL, NULL, "1992",
 	"Wild West C.O.W.-Boys of Moo Mesa (ver AAB)\0", NULL, "Konami", "GX151",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, moomesaaabRomInfo, moomesaaabRomName, NULL, NULL, NULL, NULL, MooInputInfo, MooDIPInfo,
 	MooInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -1565,7 +1557,7 @@ struct BurnDriverD BurnDrvMoomesabl = {
 	"moomesabl", "moomesa", NULL, NULL, "1992",
 	"Wild West C.O.W.-Boys of Moo Mesa (bootleg)\0", NULL, "bootleg", "GX151",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_BOOTLEG, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_NOT_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, moomesablRomInfo, moomesablRomName, NULL, NULL, NULL, NULL, MooInputInfo, MooDIPInfo,
 	moomesablInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 224, 4, 3
@@ -1603,7 +1595,7 @@ struct BurnDriver BurnDrvBucky = {
 	"bucky", NULL, NULL, NULL, "1992",
 	"Bucky O'Hare (ver EAB)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyRomInfo, buckyRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3
@@ -1641,7 +1633,7 @@ struct BurnDriver BurnDrvBuckyea = {
 	"buckyea", "bucky", NULL, NULL, "1992",
 	"Bucky O'Hare (ver EA)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyeaRomInfo, buckyeaRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3
@@ -1679,7 +1671,7 @@ struct BurnDriver BurnDrvBuckyjaa = {
 	"buckyjaa", "bucky", NULL, NULL, "1992",
 	"Bucky O'Hare (ver JAA)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyjaaRomInfo, buckyjaaRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3
@@ -1718,7 +1710,7 @@ struct BurnDriver BurnDrvBuckyaa = {
 	"buckyaa", "bucky", NULL, NULL, "1992",
 	"Bucky O'Hare (ver AA)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyaaRomInfo, buckyaaRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3
@@ -1756,7 +1748,7 @@ struct BurnDriver BurnDrvBuckyuab = {
 	"buckyuab", "bucky", NULL, NULL, "1992",
 	"Bucky O'Hare (ver UAB)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyuabRomInfo, buckyuabRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3
@@ -1794,7 +1786,7 @@ struct BurnDriver BurnDrvBuckyaab = {
 	"buckyaab", "bucky", NULL, NULL, "1992",
 	"Bucky O'Hare (ver AAB)\0", NULL, "Konami", "GX173",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_KONAMI, GBF_RUNGUN, 0,
 	NULL, buckyaabRomInfo, buckyaabRomName, NULL, NULL, NULL, NULL, BuckyInputInfo, BuckyDIPInfo,
 	BuckyInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	384, 224, 4, 3

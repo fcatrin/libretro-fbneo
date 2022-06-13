@@ -1,6 +1,5 @@
 // burn_sound.h - General sound support functions
 // based on code by Daniel Moreno (ComaC) < comac2k@teleline.es >
-
 #if defined BUILD_X86_ASM
 extern "C" {
 	int __cdecl ChannelMix_QS_A(int* Dest, int nLen,
@@ -31,12 +30,20 @@ void BurnSoundCopyClamp_Add_C(INT32* Src, INT16* Dest, INT32 Len);
 void BurnSoundCopyClamp_Mono_C(INT32* Src, INT16* Dest, INT32 Len);
 void BurnSoundCopyClamp_Mono_Add_C(INT32* Src, INT16* Dest, INT32 Len);
 
-extern INT32 cmc_4p_Precalc();
+void BurnSoundInit(); // init cubic filter table, etc
+
+inline INT32 BURN_SND_CLIP(INT32 sam)
+{
+	if (sam > 0x7fff) return 0x7fff;
+	else if (sam < -0x8000) return -0x8000;
+	else return sam;
+}
 
 void BurnSoundDCFilter();
 void BurnSoundDCFilterReset(); // called in burn.cpp: BurnDrvInit()
 
 void BurnSoundClear();
+void BurnSoundTweakVolume(INT16 *sndout, INT32 len, double volume);
 
 #ifdef __ELF__
  #define Precalc _Precalc

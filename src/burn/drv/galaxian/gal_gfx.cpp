@@ -8,6 +8,8 @@ GalExtendTileInfo GalExtendTileInfoFunction;
 GalExtendSpriteInfo GalExtendSpriteInfoFunction;
 GalRenderFrame GalRenderFrameFunction;
 
+INT32 GalScreenUnflipper = 0;
+
 UINT8 GalFlipScreenX;
 UINT8 GalFlipScreenY;
 UINT8 *GalGfxBank;
@@ -40,74 +42,74 @@ INT32 SpriteXOffsets[16]    = { 0, 1, 2, 3, 4, 5, 6, 7, 64, 65, 66, 67, 68, 69, 
 INT32 SpriteYOffsets[16]    = { 0, 8, 16, 24, 32, 40, 48, 56, 128, 136, 144, 152, 160, 168, 176, 184 };
 
 // Tile extend helpers
-void UpperExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void UpperExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code += 0x100;
 }
 
-void PiscesExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void PiscesExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= GalGfxBank[0] << 8;
 }
 
-void Batman2ExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void Batman2ExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	if (*Code & 0x80) *Code |= GalGfxBank[0] << 8;
 }
 
-void GmgalaxExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void GmgalaxExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= GalGfxBank[0] << 9;
 }
 
-void MooncrstExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void MooncrstExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	if (GalGfxBank[2] && (*Code & 0xc0) == 0x80) *Code = (*Code & 0x3f) | (GalGfxBank[0] << 6) | (GalGfxBank[1] << 7) | 0x0100;
 }
 
-void MoonqsrExtendTileInfo(UINT16 *Code, INT32*, INT32 Attr, INT32)
+void MoonqsrExtendTileInfo(UINT16 *Code, INT32*, INT32 Attr, INT32, INT32)
 {
 	*Code |= (Attr & 0x20) << 3;
 }
 
-void SkybaseExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void SkybaseExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= GalGfxBank[2] << 8;
 }
 
-void JumpbugExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void JumpbugExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	if ((*Code & 0xc0) == 0x80 && (GalGfxBank[2] & 0x01)) *Code += 128 + ((GalGfxBank[0] & 0x01) << 6) + ((GalGfxBank[1] & 0x01) << 7) + ((~GalGfxBank[4] & 0x01) << 8);
 }
 
-void FroggerExtendTileInfo(UINT16*, INT32 *Colour, INT32, INT32)
+void FroggerExtendTileInfo(UINT16*, INT32 *Colour, INT32, INT32, INT32)
 {
 	*Colour = ((*Colour >> 1) & 0x03) | ((*Colour << 2) & 0x04);
 }
 
-void MshuttleExtendTileInfo(UINT16 *Code, INT32*, INT32 Attr, INT32)
+void MshuttleExtendTileInfo(UINT16 *Code, INT32*, INT32 Attr, INT32, INT32)
 {
 	*Code |= (Attr & 0x30) << 4;
 }
 
-void Fourin1ExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void Fourin1ExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= Fourin1Bank << 8;
 }
 
-void MarinerExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x)
+void MarinerExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x, INT32)
 {
 	UINT8 *Prom = GalProm + 0x120;
 	
 	*Code |= (Prom[x] & 0x01) << 8;
 }
 
-void MimonkeyExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void MimonkeyExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= (GalGfxBank[0] << 8) | (GalGfxBank[1] << 9);
 }
 
-void DambustrExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x)
+void DambustrExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x, INT32)
 {
 	if (GalGfxBank[0] == 0) {
 		*Code |= 0x300;
@@ -120,25 +122,66 @@ void DambustrExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x)
 	}
 }
 
-void Ad2083ExtendTileInfo(UINT16 *Code, INT32 *Colour, INT32 Attr, INT32)
+void Ad2083ExtendTileInfo(UINT16 *Code, INT32 *Colour, INT32 Attr, INT32, INT32)
 {
 	INT32 Bank = Attr & 0x30;
 	*Code |= (Bank << 4);
 	*Colour |= ((Attr & 0x40) >> 3);
 }
 
-void RacknrolExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x)
+void RacknrolExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32 x, INT32)
 {
 	UINT8 Bank = GalGfxBank[x] & 7;	
 	*Code |= Bank << 8;
 }
 
-void BagmanmcExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32)
+void HaremExtendTileInfo(UINT16 *Code, INT32 *color, INT32, INT32 x, INT32)
+{
+	UINT8 Bank = (GalGfxBank[1] >> (x / 4)) & 1;
+	*Code |= Bank * 0x200;
+	*color |= GAL_TMAP_OPAQUE; // all Opaque
+}
+
+void NamenayoExtendTileInfo(UINT16 *code, INT32 *color, INT32 attr, INT32 x, INT32 y)
+{
+	if (~attr & 1) { // pf/hud
+		INT32 e_at = namenayo_extattr[y & 0x1f];
+		*code += (e_at & 0x38) << 5;
+		*color = (e_at & 0x07);
+		if (x < (0x1f - 8)) *color |= GAL_TMAP_OPAQUE; // pf: opaque, hud: transparent
+	} else {
+		// map
+		*code += ((attr & 0xfe) == 0x20) ? 0x400 : 0;
+	}
+}
+
+void BagmanmcExtendTileInfo(UINT16 *Code, INT32*, INT32, INT32, INT32)
 {
 	*Code |= GalGfxBank[0] << 9;
 }
 
 // Sprite extend helpers
+void NamenayoExtendSpriteInfo(const UINT8 *base, INT32*, INT32*, UINT8*, UINT8*, UINT16 *code, UINT8 *color)
+{
+	*code += (base[2] & 0x08) << 3;
+	*color += 0x08;
+}
+
+void PacmanblExtendSpriteInfo(const UINT8*, INT32 *sx, INT32*, UINT8*, UINT8*, UINT16 *Code, UINT8*)
+{
+	// Sprites on the topmost row of the maze are ok, everywhere else need
+	// their x-offset attenuated to keep sprites off of the maze walls. -dink dec.2020
+	if (*sx >= 18 && *sx <= 24) {
+		*sx += 1;
+	}
+	if (*sx >= 25 && *sx <= 29) {
+		*sx += 2;
+	}
+	if (*sx >= 30) {
+		*sx += 3;
+	}
+}
+
 void UpperExtendSpriteInfo(const UINT8*, INT32*, INT32*, UINT8*, UINT8*, UINT16 *Code, UINT8*)
 {
 	*Code += 0x40;
@@ -171,7 +214,12 @@ void SkybaseExtendSpriteInfo(const UINT8*, INT32*, INT32*, UINT8*, UINT8*, UINT1
 
 void RockclimExtendSpriteInfo(const UINT8*, INT32*, INT32*, UINT8*, UINT8*, UINT16 *Code, UINT8*)
 {
-	if (GalGfxBank[2]) *Code |= 0x40;
+	if ((*Code & 0x30) == 0x20) {
+		if (GalGfxBank[2] & 1) {
+			INT32 bank = (((GalGfxBank[0] & 1) << 5) | ((GalGfxBank[1] & 1) << 4));
+			*Code = (0x40 + bank) | (*Code & 0x0f);
+		}
+	}
 }
 
 void JumpbugExtendSpriteInfo(const UINT8*, INT32*, INT32*, UINT8*, UINT8*, UINT16 *Code, UINT8*)
@@ -574,11 +622,10 @@ void RockclimDrawBackground()
 			
 			y -= 16;
 
-			if (x > 8 && x < (nScreenWidth - 8) && y > 8 && y < (nScreenHeight - 8)) {
-				Render8x8Tile(pTransDraw, Code, x, y, Colour, 4, 32, RockclimTiles);
-			} else {
-				Render8x8Tile_Clip(pTransDraw, Code, x, y, Colour, 4, 32, RockclimTiles);
-			}
+			if (GalFlipScreenX) x = nScreenWidth - 8 - x;
+			if (GalFlipScreenY) y = nScreenHeight - 8 - y;
+
+			Draw8x8Tile(pTransDraw, Code, x, y, GalFlipScreenX, GalFlipScreenY, Colour, 4, 32, RockclimTiles);
 
 			TileIndex++;
 		}
@@ -804,7 +851,7 @@ void DambustrDrawBackground()
 // Char Layer rendering
 static void GalRenderBgLayer(UINT8 *pVideoRam)
 {
-	INT32 mx, my, Attr, Colour, x, y, TileIndex = 0, RamPos;
+	INT32 mx, my, Attr, Colour, x, y, TileIndex = 0, RamPos, DrawOpaque;
 	UINT16 Code;
 	
 	for (my = 0; my < 32; my++) {
@@ -814,8 +861,11 @@ static void GalRenderBgLayer(UINT8 *pVideoRam)
 			Attr = GalSpriteRam[(RamPos * 2) + 1];
 			Colour = Attr  & ((GalColourDepth == 3) ? 0x03 : 0x07);
 			
-			if (GalExtendTileInfoFunction) GalExtendTileInfoFunction(&Code, &Colour, Attr, RamPos);
-			
+			if (GalExtendTileInfoFunction) GalExtendTileInfoFunction(&Code, &Colour, Attr, RamPos, TileIndex >> 5);
+
+			DrawOpaque = Colour & GAL_TMAP_OPAQUE; // extended tile info can tag Opaque this way
+			Colour &= ~GAL_TMAP_OPAQUE;
+
 			if (SfxTilemap) {
 				x = 8 * my;
 				y = 8 * mx;
@@ -832,7 +882,7 @@ static void GalRenderBgLayer(UINT8 *pVideoRam)
 			INT32 px, py;
 		
 			UINT32 nPalette = Colour << GalColourDepth;
-		
+
 			for (py = 0; py < 8; py++) {
 				for (px = 0; px < 8; px++) {
 					UINT8 c = GalChars[(Code * 64) + (py * 8) + px];
@@ -840,7 +890,7 @@ static void GalRenderBgLayer(UINT8 *pVideoRam)
 					if (GalFlipScreenY) c = GalChars[(Code * 64) + ((7 - py) * 8) + px];
 					if (GalFlipScreenX && GalFlipScreenY) c = GalChars[(Code * 64) + ((7 - py) * 8) + (7 - px)];
 				
-					if (c) {
+					if (c || DrawOpaque) { // Harem, Namenayo has no transparency on this layer
 						INT32 xPos = x + px;
 						INT32 yPos = y + py;
 					
@@ -891,7 +941,7 @@ static void GalRenderSprites(const UINT8 *SpriteBase)
 	INT32 ClipOfs = GalFlipScreenX ? 16 : 0;
 	INT32 xMin = GalSpriteClipStart - ClipOfs;
 	INT32 xMax = GalSpriteClipEnd - ClipOfs + 1;
-	
+
 	for (SprNum = 7; SprNum >= 0; SprNum--) {
 		const UINT8 *Base = &SpriteBase[SprNum * 4];
 		UINT8 Base0 = FroggerAdjust ? ((Base[0] >> 4) | (Base[0] << 4)) : Base[0];
@@ -903,7 +953,7 @@ static void GalRenderSprites(const UINT8 *SpriteBase)
 		INT32 sx = Base[3];
 
 		if (GalExtendSpriteInfoFunction) GalExtendSpriteInfoFunction(Base, &sx, &sy, &xFlip, &yFlip, &Code, &Colour);
-		
+
 		if (GalFlipScreenX) {
 			sx = 242 - sx;
 			xFlip = !xFlip;
@@ -922,36 +972,8 @@ static void GalRenderSprites(const UINT8 *SpriteBase)
 			sx = 242 - 1 - sx;
 			xFlip = !xFlip;
 		}
-		
-		if (sx > 16 && sx < (nScreenWidth - 16) && sy > 16 && sy < (nScreenHeight - 16)) {
-			if (xFlip) {
-				if (yFlip) {
-					Render16x16Tile_Mask_FlipXY(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				} else {
-					Render16x16Tile_Mask_FlipX(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				}
-			} else {
-				if (yFlip) {
-					Render16x16Tile_Mask_FlipY(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				} else {
-					Render16x16Tile_Mask(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				}
-			}
-		} else {
-			if (xFlip) {
-				if (yFlip) {
-					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				} else {
-					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				}
-			} else {
-				if (yFlip) {
-					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				} else {
-					Render16x16Tile_Mask_Clip(pTransDraw, Code, sx, sy, Colour, GalColourDepth, 0, 0, GalSprites);
-				}
-			}
-		}
+
+		Draw16x16MaskTile(pTransDraw, Code, sx, sy, xFlip, yFlip, Colour, GalColourDepth, 0, 0, GalSprites);
 	}
 }
 
@@ -1083,6 +1105,14 @@ static void GalDrawBullets(const UINT8 *Base)
 	}
 }
 
+// Add before BurnTransferCopy(); for the game you want to fix below & GalScreenUnflipper = 1 in game's init.
+static void Coctail_Unflippy()
+{
+	if (GalScreenUnflipper) {
+		BurnTransferFlip(GalFlipScreenX, GalFlipScreenY);
+	}
+}
+
 // Render a frame
 INT32 GalDraw()
 {
@@ -1091,10 +1121,17 @@ INT32 GalDraw()
 	} else {
 		BurnTransferClear();
 		GalCalcPaletteFunction();
-		if (GalRenderBackgroundFunction) GalRenderBackgroundFunction();
-		GalRenderBgLayer(GalVideoRam);
-		GalRenderSprites(&GalSpriteRam[0x40]);
-		if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0x60]);
+
+		if (nBurnLayer & 1 && GalRenderBackgroundFunction)
+			GalRenderBackgroundFunction();
+		if (nBurnLayer & 2)
+			GalRenderBgLayer(GalVideoRam);
+		if (nSpriteEnable & 1)
+			GalRenderSprites(&GalSpriteRam[0x40]);
+		if (nSpriteEnable & 2 && GalDrawBulletsFunction)
+			GalDrawBullets(&GalSpriteRam[0x60]);
+
+		Coctail_Unflippy();
 		BurnTransferCopy(GalPalette);
 	}
 
@@ -1110,6 +1147,7 @@ void ZigZagRenderFrame()
 	GalRenderSprites(&GalSpriteRam[0x40]);
 	GalRenderSprites(&GalSpriteRam[0x40 + 0x20]);
 	//if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0x60]);
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }
 
@@ -1124,6 +1162,7 @@ void DkongjrmRenderFrame()
 	GalRenderSprites(&GalSpriteRam[0xc0]);
 	GalRenderSprites(&GalSpriteRam[0xe0]);
 	if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0x60]);
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }
 
@@ -1146,6 +1185,7 @@ void DambustrRenderFrame()
 		}
 		GalRenderBgLayer(GalVideoRam2);
 	}	
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }
 
@@ -1157,6 +1197,7 @@ void FantastcRenderFrame()
 	GalRenderBgLayer(GalVideoRam);
 	GalRenderSprites(&GalSpriteRam[0x40]);
 	if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0xc0]);
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }
 
@@ -1171,6 +1212,7 @@ void TimefgtrRenderFrame()
 	GalRenderSprites(&GalSpriteRam[0x240]);
 	GalRenderSprites(&GalSpriteRam[0x340]);
 	if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0xc0]);
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }
 
@@ -1182,5 +1224,6 @@ void ScramblerRenderFrame()
 	GalRenderBgLayer(GalVideoRam);
 	GalRenderSprites(&GalSpriteRam[0xc0]);
 	if (GalDrawBulletsFunction) GalDrawBullets(&GalSpriteRam[0xe0]);
+	Coctail_Unflippy();
 	BurnTransferCopy(GalPalette);
 }

@@ -28,7 +28,7 @@ static TCHAR* szClass = _T("FinalBurn Neo");					// Window class name
 HWND hScrnWnd = NULL;									// Handle to the screen window
 HWND hRebar = NULL;										// Handle to the Rebar control containing the menu
 
-static bool bMaximised;
+static bool bMaximized;
 static int nPrevWidth, nPrevHeight;
 
 static int bBackFromHibernation = 0;
@@ -216,7 +216,6 @@ static int WINAPI gameCallback(char* game, int player, int numplayers)
 	}
 
 	if (!bFound) {
-//		kailleraEndGame();
 		Kaillera_End_Game();
 		return 1;
 	}
@@ -227,9 +226,12 @@ static int WINAPI gameCallback(char* game, int player, int numplayers)
 	bCheatsAllowed = false;								// Disable cheats during netplay
 	AudSoundStop();										// Stop while we load roms
 	DrvInit(nBurnDrvActive, false);						// Init the game driver
-	ScrnInit();
+
+	// w/Kaillera: DrvInit() can't post it's restart message because we're not in the message loop yet.
+	// so we must MediaExit() / MediaInit() here.  -dink
+	MediaExit();
+	MediaInit();
 	AudSoundPlay();										// Restart sound
-	VidInit();
 	SetFocus(hScrnWnd);
 
 //	dprintf(_T(" ** OSD startnet text sent.\n"));
@@ -246,7 +248,6 @@ static int WINAPI gameCallback(char* game, int player, int numplayers)
 	DrvExit();
 	if (kNetGame) {
 		kNetGame = 0;
-//		kailleraEndGame();
 		Kaillera_End_Game();
 	}
 	DeActivateChat();
@@ -299,10 +300,8 @@ static void DoNetGame()
 	ki.moreInfosCallback = NULL;
 
 	Kaillera_Set_Infos(&ki);
-	//kailleraSetInfos(&ki);
 
 	Kaillera_Select_Server_Dialog(NULL);
-	//kailleraSelectServerDialog(NULL);
 
 	if (gameList) {
 		free(gameList);
@@ -331,6 +330,10 @@ int CreateDatfileWindows(int bType)
 	if (bType == DAT_GAMEGEAR_ONLY) _sntprintf(szConsoleString, 64, _T(", Game Gear only"));
 	if (bType == DAT_MSX_ONLY) _sntprintf(szConsoleString, 64, _T(", MSX 1 Games only"));
 	if (bType == DAT_SPECTRUM_ONLY) _sntprintf(szConsoleString, 64, _T(", ZX Spectrum Games only"));
+	if (bType == DAT_NES_ONLY) _sntprintf(szConsoleString, 64, _T(", NES Games only"));
+	if (bType == DAT_FDS_ONLY) _sntprintf(szConsoleString, 64, _T(", FDS Games only"));
+	if (bType == DAT_NGP_ONLY) _sntprintf(szConsoleString, 64, _T(", NeoGeo Pocket Games only"));
+	if (bType == DAT_CHANNELF_ONLY) _sntprintf(szConsoleString, 64, _T(", Fairchild Channel F Games only"));
 
 	TCHAR szProgramString[25];
 	_sntprintf(szProgramString, 25, _T("ClrMame Pro XML"));
@@ -382,18 +385,26 @@ int CreateAllDatfilesWindows()
 
 	pItemIDList = SHBrowseForFolder(&bInfo);
 
-	if (pItemIDList) {
-		if (SHGetPathFromIDList(pItemIDList, buffer)) {
-			int strLen = _tcslen(buffer);
-			if (strLen) {
-				if (buffer[strLen - 1] != _T('\\')) {
-					buffer[strLen]		= _T('\\');
-					buffer[strLen + 1]	= _T('\0');
-				}
-			}
-		}
-		pMalloc->Free(pItemIDList);
+	if (!pItemIDList) {	// User clicked 'Cancel'
+		pMalloc->Release();
+		return nRet;
 	}
+
+	if (!SHGetPathFromIDList(pItemIDList, buffer)) {	// Browse dialog returned non-filesystem path
+		pMalloc->Free(pItemIDList);
+		pMalloc->Release();
+		return nRet;
+	}
+
+	int strLen = _tcslen(buffer);
+	if (strLen) {
+		if (buffer[strLen - 1] != _T('\\')) {
+			buffer[strLen]		= _T('\\');
+			buffer[strLen + 1]	= _T('\0');
+		}
+	}
+
+	pMalloc->Free(pItemIDList);
 	pMalloc->Release();
 
 	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(""));
@@ -428,6 +439,18 @@ int CreateAllDatfilesWindows()
 
 	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", ZX Spectrum Games only"));
 	create_datfile(szFilename, DAT_SPECTRUM_ONLY);
+
+	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", NES Games only"));
+	create_datfile(szFilename, DAT_NES_ONLY);
+
+	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", FDS Games only"));
+	create_datfile(szFilename, DAT_FDS_ONLY);
+
+	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", Neo Geo Pocket Games only"));
+	create_datfile(szFilename, DAT_NGP_ONLY);
+
+	_sntprintf(szFilename, MAX_PATH, _T("%s") _T(APP_TITLE) _T(" v%.20s (%s%s).dat"), buffer, szAppBurnVer, szProgramString, _T(", Fairchild Channel F Games only"));
+	create_datfile(szFilename, DAT_CHANNELF_ONLY);
 
 	return nRet;
 }
@@ -859,7 +882,7 @@ int BurnerLoadDriver(TCHAR *szDriverName)
 		nBurnDrvActive = j;
 		if (!_tcscmp(szDriverName, BurnDrvGetText(DRV_NAME)) && (!(BurnDrvGetFlags() & BDF_BOARDROM))) {
 			nBurnDrvActive = nOldDrvSelect;
-			nDialogSelect = j;
+			nDialogSelect = nOldDlgSelected = j;
 			SplashDestroy(1);
 			StopReplay();
 
@@ -897,7 +920,7 @@ int StartFromReset(TCHAR *szDriverName)
 	bLoading = 1;
 
 	nBurnDrvActive = nOldDrvSelect;
-	nDialogSelect = nOldDrvSelect;
+	nDialogSelect = nOldDlgSelected = nOldDrvSelect;
 	SplashDestroy(1);
 	StopReplay();
 
@@ -925,6 +948,27 @@ void scrnSSUndo() // called from the menu (shift+F8) and CheckSystemMacros() in 
 			VidSNewShortMsg(szStringFailed);
 		}
 		PausedRedraw();
+	}
+}
+
+void ScrnInitLua() {
+	if (UseDialogs()) {
+		if (!LuaConsoleHWnd) {
+			InputSetCooperativeLevel(false, bAlwaysProcessKeyboardInput);
+			LuaConsoleHWnd = CreateDialog(hAppInst, MAKEINTRESOURCE(IDD_LUA), NULL, (DLGPROC)DlgLuaScriptDialog);
+		}
+		else
+		{
+			SetForegroundWindow(LuaConsoleHWnd);
+		}
+	}
+}
+
+void ScrnExitLua() {
+	if (LuaConsoleHWnd) {
+		PostMessage(LuaConsoleHWnd, WM_CLOSE, 0, 0);
+
+		LuaConsoleHWnd = NULL;
 	}
 }
 
@@ -1100,6 +1144,15 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			SetPauseMode(1);
 			break;
 
+		case ID_LUA_OPEN:
+			ScrnInitLua();
+			MenuEnableItems();
+			break;
+		case ID_LUA_CLOSE_ALL:
+			ScrnExitLua();
+			MenuEnableItems();
+			break;
+
 #ifdef INCLUDE_AVI_RECORDING
 			case MENU_AVISTART:
 			if (AviStart()) {
@@ -1128,7 +1181,6 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 				DrvExit();
   				if (kNetGame) {
 					kNetGame = 0;
-//					kailleraEndGame();
 					Kaillera_End_Game();
 					DeActivateChat();
 					PostQuitMessage(0);
@@ -1138,7 +1190,7 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 				ScrnSize();
 				ScrnTitle();
 				MenuEnableItems();
-				nDialogSelect = -1;
+				//nDialogSelect = -1;
 				nBurnDrvActive = ~0U;
 
 				POST_INITIALISE_MESSAGE;
@@ -1152,7 +1204,6 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 #endif
 			if (kNetGame) {
 				kNetGame = 0;
-//				kailleraEndGame();
 				Kaillera_End_Game();
 				DeActivateChat();
 			}
@@ -1867,6 +1918,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			POST_INITIALISE_MESSAGE;
 			break;
 
+		case MENU_RUNAHEAD:
+			bRunAhead = !bRunAhead;
+			break;
+
 		case MENU_AUD_PLUGIN_1:
 			AudSelect(0);
 			POST_INITIALISE_MESSAGE;
@@ -1880,18 +1935,6 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_DSOUND_NOSOUND:
 			if (!bDrvOkay) {
 				nAudSampleRate[0] = 0;
-				POST_INITIALISE_MESSAGE;
-			}
-			break;
-		case MENU_DSOUND_11025:
-			if (!bDrvOkay) {
-				nAudSampleRate[0] = 11025;
-				POST_INITIALISE_MESSAGE;
-			}
-			break;
-		case MENU_DSOUND_22050:
-			if (!bDrvOkay) {
-				nAudSampleRate[0] = 22050;
 				POST_INITIALISE_MESSAGE;
 			}
 			break;
@@ -1911,18 +1954,6 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 		case MENU_XAUDIO_NOSOUND:
 			if (!bDrvOkay) {
 				nAudSampleRate[1] = 0;
-				POST_INITIALISE_MESSAGE;
-			}
-			break;
-		case MENU_XAUDIO_11025:
-			if (!bDrvOkay) {
-				nAudSampleRate[1] = 11025;
-				POST_INITIALISE_MESSAGE;
-			}
-			break;
-		case MENU_XAUDIO_22050:
-			if (!bDrvOkay) {
-				nAudSampleRate[1] = 22050;
 				POST_INITIALISE_MESSAGE;
 			}
 			break;
@@ -2034,6 +2065,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			bAutoLoadGameList = !bAutoLoadGameList;
 			break;
 
+		case MENU_AUTOSCANGAMELIST:
+			bSkipStartupCheck = !bSkipStartupCheck;
+			break;
+
 		case MENU_SAVEHISCORES:
 			EnableHiscores = !EnableHiscores;
 			break;
@@ -2044,6 +2079,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 
 		case MENU_GEARSHIFT:
 			BurnShiftEnabled = !BurnShiftEnabled;
+			break;
+
+		case MENU_LIGHTGUNRETICLES:
+			bBurnGunDrawReticles = !bBurnGunDrawReticles;
 			break;
 
 #ifdef INCLUDE_AVI_RECORDING
@@ -2199,34 +2238,49 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			break;
 		}
 
-		case MENU_INPUT_AUTOFIRE_RATE_1: nAutoFireRate = 22; break;
+		case MENU_AUDIO_VOLUME_0:
+		case MENU_AUDIO_VOLUME_10:
+		case MENU_AUDIO_VOLUME_20:
+		case MENU_AUDIO_VOLUME_30:
+		case MENU_AUDIO_VOLUME_40:
+		case MENU_AUDIO_VOLUME_50:
+		case MENU_AUDIO_VOLUME_60:
+		case MENU_AUDIO_VOLUME_70:
+		case MENU_AUDIO_VOLUME_80:
+		case MENU_AUDIO_VOLUME_90:
+		case MENU_AUDIO_VOLUME_100:
+			nAudVolume = (id - MENU_AUDIO_VOLUME_0) * 1000;
+			AudSoundSetVolume();
+			break;
+
+		case MENU_INPUT_AUTOFIRE_RATE_1: nAutoFireRate = 24; break;
 		case MENU_INPUT_AUTOFIRE_RATE_2: nAutoFireRate = 12; break;
 		case MENU_INPUT_AUTOFIRE_RATE_3: nAutoFireRate =  8; break;
-		case MENU_INPUT_AUTOFIRE_RATE_4: nAutoFireRate =  4; break;
+		case MENU_INPUT_AUTOFIRE_RATE_4: nAutoFireRate =  6; break;
+		case MENU_INPUT_AUTOFIRE_RATE_5: nAutoFireRate =  4; break;
+		case MENU_INPUT_AUTOFIRE_RATE_6: nAutoFireRate =  2; break;
 
-		case MENU_PRIORITY_REALTIME:
-			nAppThreadPriority = THREAD_PRIORITY_TIME_CRITICAL;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+		case MENU_PRIORITY_REALTIME: // bad idea, this will freeze the entire system.
 			break;
 		case MENU_PRIORITY_HIGH:
-			nAppThreadPriority = THREAD_PRIORITY_HIGHEST;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+			nAppProcessPriority = HIGH_PRIORITY_CLASS;
+			SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 			break;
 		case MENU_PRIORITY_ABOVE_NORMAL:
-			nAppThreadPriority = THREAD_PRIORITY_ABOVE_NORMAL;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+			nAppProcessPriority = ABOVE_NORMAL_PRIORITY_CLASS;
+			SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 			break;
 		case MENU_PRIORITY_NORMAL:
-			nAppThreadPriority = THREAD_PRIORITY_NORMAL;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+			nAppProcessPriority = NORMAL_PRIORITY_CLASS;
+			SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 			break;
 		case MENU_PRIORITY_BELOW_NORMAL:
-			nAppThreadPriority = THREAD_PRIORITY_BELOW_NORMAL;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+			nAppProcessPriority = BELOW_NORMAL_PRIORITY_CLASS;
+			SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 			break;
 		case MENU_PRIORITY_LOW:
-			nAppThreadPriority = THREAD_PRIORITY_LOWEST;
-			SetThreadPriority(GetCurrentThread(), nAppThreadPriority);
+			nAppProcessPriority = IDLE_PRIORITY_CLASS;
+			SetPriorityClass(GetCurrentProcess(), nAppProcessPriority);
 			break;
 
 		case MENU_CLRMAME_PRO_XML:
@@ -2295,6 +2349,30 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			}
 			break;
 
+		case MENU_CLRMAME_PRO_XML_NES_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_NES_ONLY);
+			}
+			break;
+
+		case MENU_CLRMAME_PRO_XML_FDS_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_FDS_ONLY);
+			}
+			break;
+
+		case MENU_CLRMAME_PRO_XML_NGP_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_NGP_ONLY);
+			}
+			break;
+
+		case MENU_CLRMAME_PRO_XML_CHANNELF_ONLY:
+			if (UseDialogs()) {
+				CreateDatfileWindows(DAT_CHANNELF_ONLY);
+			}
+			break;
+
 		case MENU_CLRMAME_PRO_ALL_DATS:
 			if (UseDialogs()) {
 				CreateAllDatfilesWindows();
@@ -2351,18 +2429,18 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 			break;
 
 		case MENU_CHEATSEARCH_START: {
-			CheatSearchStart();
+			if (CheatSearchStart() == 0) {
+				TCHAR szText[100];
+				_stprintf(szText, FBALoadStringEx(hAppInst, IDS_CHEAT_SEARCH_NEW, true));
+				VidSAddChatMsg(NULL, 0xFFFFFF, szText, 0xFFBFBF);
 
-			TCHAR szText[100];
-			_stprintf(szText, FBALoadStringEx(hAppInst, IDS_CHEAT_SEARCH_NEW, true));
-			VidSAddChatMsg(NULL, 0xFFFFFF, szText, 0xFFBFBF);
-
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_NOCHANGE, MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_CHANGE, MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_DECREASE, MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_INCREASE, MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_DUMPFILE, MF_ENABLED | MF_BYCOMMAND);
-			EnableMenuItem(hMenu, MENU_CHEATSEARCH_EXIT, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_NOCHANGE, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_CHANGE, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_DECREASE, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_INCREASE, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_DUMPFILE, MF_ENABLED | MF_BYCOMMAND);
+				EnableMenuItem(hMenu, MENU_CHEATSEARCH_EXIT, MF_ENABLED | MF_BYCOMMAND);
+			}
 			break;
 		}
 
@@ -2495,10 +2573,10 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 
 		case MENU_CONTENTS: {
 			if (!nVidFullscreen) {
-				FILE* fp = _tfopen(_T("fba.chm"), _T("r"));
+				FILE* fp = _tfopen(_T("fbneo.chm"), _T("r"));
 				if (fp) {
 					fclose(fp);
-					ShellExecute(NULL, _T("open"), _T("fba.chm"), NULL, NULL, SW_SHOWNORMAL);
+					ShellExecute(NULL, _T("open"), _T("fbneo.chm"), NULL, NULL, SW_SHOWNORMAL);
 				}
 			}
 			break;
@@ -2600,9 +2678,9 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 					POST_INITIALISE_MESSAGE;
 					break;
 				case MENU_RGBEFFECTS:
-					nVidBlitterOpt[nVidSelect] &= ~0x00100000;
+					//nVidBlitterOpt[nVidSelect] &= ~0x00100000;
 					nVidBlitterOpt[nVidSelect] |= 0x00010000;
-					bVidScanlines = 0;
+					//bVidScanlines = 0;
 					ScrnSize();
 					VidInit();
 					if (bVidScanlines) {
@@ -2614,7 +2692,7 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 					}
 					break;
 				case MENU_3DPROJECTION:
-					nVidBlitterOpt[nVidSelect] &= ~0x00010000;
+					//nVidBlitterOpt[nVidSelect] &= ~0x00010000;
 					nVidBlitterOpt[nVidSelect] |= 0x00100000;
 					POST_INITIALISE_MESSAGE;
 					break;
@@ -2723,6 +2801,7 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 						}
 						if (nVidBlitterOpt[nVidSelect] & 0x00010000) {
 							nVidBlitterOpt[nVidSelect] &= ~0x00010000;
+
 							ScrnSize();
 							VidInit();
 							VidRedraw();
@@ -3040,6 +3119,17 @@ static void OnCommand(HWND /*hDlg*/, int id, HWND /*hwndCtl*/, UINT codeNotify)
 					POST_INITIALISE_MESSAGE;
 					break;
 
+				case MENU_DX9_ALT_HARD_FX_NONE:
+				case MENU_DX9_ALT_HARD_FX_CRT_APERTURE:
+				case MENU_DX9_ALT_HARD_FX_CRT_CALIGARI:
+				case MENU_DX9_ALT_HARD_FX_CRT_CGWG_FAST:
+				case MENU_DX9_ALT_HARD_FX_CRT_EASY_MODE:
+				case MENU_DX9_ALT_HARD_FX_CRT_STANDARD:
+				case MENU_DX9_ALT_HARD_FX_CRT_BICUBIC:
+				case MENU_DX9_ALT_HARD_FX_CRT_CGA:
+					nVidDX9HardFX = id - MENU_DX9_ALT_HARD_FX_NONE;
+					break;
+
 				case MENU_DX9_ALT_FORCE_16BIT:
 					bVidForce16bitDx9Alt = !bVidForce16bitDx9Alt;
 					POST_INITIALISE_MESSAGE;
@@ -3095,7 +3185,7 @@ static int OnSysCommand(HWND, UINT sysCommand, int, int)
 static void OnSize(HWND, UINT state, int cx, int cy)
 {
 	if (state == SIZE_MINIMIZED) {
-		bMaximised = false;
+		bMaximized = false;
 	} else {
 		bool bSizeChanged = false;
 
@@ -3106,16 +3196,16 @@ static void OnSize(HWND, UINT state, int cx, int cy)
 		}
 
 		if (state == SIZE_MAXIMIZED) {
-			if (!bMaximised) {
+			if (!bMaximized) {
 				bSizeChanged = true;
 			}
-			bMaximised = true;
+			bMaximized = true;
 		}
 		if (state == SIZE_RESTORED) {
-			if (bMaximised) {
+			if (bMaximized) {
 				bSizeChanged = true;
 			}
-			bMaximised = false;
+			bMaximized = false;
 		}
 
 		if (bSizeChanged) {
@@ -3331,6 +3421,7 @@ int ScrnSize()
 	}
 
 	if ((bVidCorrectAspect || bVidFullStretch) && !(nVidSelect == 2 && (nVidBlitterOpt[2] & 0x0100) == 0)) {
+
 		int ww = w;
 		int hh = h;
 
@@ -3339,15 +3430,15 @@ int ScrnSize()
 				if (ww > nBmapWidth * nMaxSize) {
 					ww = nBmapWidth * nMaxSize;
 				}
-				if (hh > ww * nVidScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nVidScrnAspectY * nGameAspectX)) {
-					hh = ww * nVidScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nVidScrnAspectY * nGameAspectX);
+				if (hh > (INT64)ww * nVidScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nVidScrnAspectY * nGameAspectX)) {
+					hh = (INT64)ww * nVidScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nVidScrnAspectY * nGameAspectX);
 				}
 			} else {
 				if (hh > nBmapHeight * nMaxSize) {
 					hh = nBmapHeight * nMaxSize;
 				}
-				if (ww > hh * nVidScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nVidScrnAspectX * nGameAspectY)) {
-					ww = hh * nVidScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nVidScrnAspectX * nGameAspectY);
+				if (ww > (INT64)hh * nVidScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nVidScrnAspectX * nGameAspectY)) {
+					ww = (INT64)hh * nVidScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nVidScrnAspectX * nGameAspectY);
 				}
 			}
 		} while ((ww > w || hh > h) && nMaxSize-- > 1);
@@ -3388,7 +3479,13 @@ int ScrnSize()
 
 	MenuUpdate();
 
-	bMaximised = false;
+	if (bMaximized) {
+		// At this point: game window is maximized
+		// different game is selected
+		// usually the game window would be re-created using the "Window Size" selection
+		// -but- since the game window was maximized, it should stay that way.
+		PostMessage(hScrnWnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+	}
 
 	MoveWindow(hScrnWnd, x, y, w, h, true);
 
@@ -3440,6 +3537,7 @@ int ScrnInit()
 	RECT rect;
 	int nWindowStyles, nWindowExStyles;
 
+	ScrnExitLua();
 	ScrnExit();
 
 	if (ScrnRegister() != 0) {

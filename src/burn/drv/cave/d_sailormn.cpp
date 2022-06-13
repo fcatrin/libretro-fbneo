@@ -36,6 +36,7 @@ static INT8 nSoundIRQ;
 static INT8 nUnknownIRQ;
 
 static INT32 nCaveCyclesDone[2];
+static INT32 nCyclesExtra[2];
 
 static INT32 agalletamode = 0;
 static INT32 nWhichGame;	// 0 - sailormn/sailormno
@@ -493,6 +494,10 @@ static INT32 DrvDoReset()
 	MSM6295Reset();
 	BurnYM2151Reset();
 
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -525,11 +530,6 @@ static INT32 DrvDraw()
 	return 0;
 }
 
-inline static INT32 CheckSleep(INT32)
-{
-	return 0;
-}
-
 static INT32 DrvFrame()
 {
 	INT32 nCyclesVBlank;
@@ -556,16 +556,13 @@ static INT32 DrvFrame()
 	SekNewFrame();
 
 	nCyclesTotal[0] = (INT32)((INT64)16000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
-	nCaveCyclesDone[0] = 0;
+	nCaveCyclesDone[0] = nCyclesExtra[0];
 #if 0
 	nCyclesTotal[1] = (INT32)((INT64)8000000 * nBurnCPUSpeedAdjust / (0x0100 * CAVE_REFRESHRATE));
 #else
 	nCyclesTotal[1] = (INT32)(8000000 / CAVE_REFRESHRATE);
 #endif
-	nCaveCyclesDone[1] -= nCyclesTotal[1];
-	if (nCaveCyclesDone[1] < 0) {
-		nCaveCyclesDone[1] = 0;
-	}
+	nCaveCyclesDone[1] = nCyclesExtra[1];
 
 	nCyclesVBlank = nCyclesTotal[0] - (INT32)((nCyclesTotal[0] * CAVE_VBLANK_LINES) / 271.5);
 	nVBlank = 0;
@@ -603,11 +600,7 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCaveCyclesDone[nCurrentCPU];
-		if (nVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCaveCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCaveCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+        nCaveCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
 		// Run Z80
 		nCurrentCPU = 1;
@@ -635,6 +628,8 @@ static INT32 DrvFrame()
 		}
 	}
 
+    nCyclesExtra[0] = nCaveCyclesDone[0] - nCyclesTotal[0];
+	nCyclesExtra[1] = nCaveCyclesDone[1] - nCyclesTotal[1];
 	SekClose();
 
 	{
@@ -843,11 +838,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(nVideoIRQ);
 		SCAN_VAR(nSoundIRQ);
 		SCAN_VAR(nUnknownIRQ);
-		SCAN_VAR(nVBlank);
+		SCAN_VAR(nCyclesExtra);
+
+		SCAN_VAR(agalletamode);
 
 		CaveScanGraphics();
-
-		SCAN_VAR(DrvInput);
 
 		if (nAction & ACB_WRITE) {
 			INT32 nBank = nCurrentBank;
@@ -855,8 +850,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 			ZetOpen(0);
 			drvZ80Bankswitch(nBank);
 			ZetClose();
-
-		  CaveRecalcPalette = 1;
 		}
 	}
 
@@ -944,15 +937,15 @@ static INT32 gameInit()
 
 	BurnYM2151Init(32000000 / 8);
 	BurnYM2151SetIrqHandler(&drvYM2151IRQHandler);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.30, BURN_SND_ROUTE_LEFT);
-	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.30, BURN_SND_ROUTE_RIGHT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_1, 0.20, BURN_SND_ROUTE_LEFT);
+	BurnYM2151SetRoute(BURN_SND_YM2151_YM2151_ROUTE_2, 0.20, BURN_SND_ROUTE_RIGHT);
 
 	MSM6295Init(0, 16000, 1);
 	MSM6295Init(1, 16000, 1);
 	MSM6295SetBank(0, MSM6295ROM + 0x000000, 0, 0x3ffff);
 	MSM6295SetBank(1, MSM6295ROM + 0x200000, 0, 0x3ffff);
-	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
-	MSM6295SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(0, 0.65, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(1, 0.65, BURN_SND_ROUTE_BOTH);
 	
 	EEPROMInit(&eeprom_interface_93C46);
 	if (!EEPROMAvailable()) EEPROMFill(DefEEPROM,0, 0x80);
@@ -1562,6 +1555,41 @@ static struct BurnRomInfo sailormnohRomDesc[] = {
 STD_ROM_PICK(sailormnoh)
 STD_ROM_FN(sailormnoh)
 
+// Pretty Soldier Sailor Moon (Enhanced Edition v5 Final, Hack)
+// Hacked by Yun Yan
+// 2019-12-29
+
+static struct BurnRomInfo sailormnjeeRomDesc[] = {
+	{ "sailormnjee.u45",	0x080000, 0xe77a6fbe, BRF_ESS | BRF_PRG },	//  0 CPU #0 code
+	{ "bpsm.u46",			0x200000, 0x32084e80, BRF_ESS | BRF_PRG },	//  1
+
+	{ "bpsm945a.u9",		0x080000, 0x438de548, BRF_ESS | BRF_PRG },	//  2 Z80 code
+
+	{ "bpsm.u76",			0x200000, 0xa243a5ba, BRF_GRA },			//  3 Sprite data
+	{ "bpsm.u77",			0x200000, 0x5179a4ac, BRF_GRA },			//  4
+
+	{ "bpsm.u53",			0x200000, 0xb9b15f83, BRF_GRA },			//  5 Layer 0 Tile data
+	{ "bpsm.u54",			0x200000, 0x8f00679d, BRF_GRA },			//  6 Layer 1 Tile data
+
+	{ "bpsm.u57",			0x200000, 0x86be7b63, BRF_GRA },			//  7 Layer 2 Tile data
+	{ "bpsm.u58",			0x200000, 0xe0bba83b, BRF_GRA },			//  8
+	{ "bpsm.u62",			0x200000, 0xa1e3bfac, BRF_GRA },			//  9
+	{ "bpsm.u61",			0x200000, 0x6a014b52, BRF_GRA },			// 10
+	{ "bpsm.u60",			0x200000, 0x992468c0, BRF_GRA },			// 11
+
+	{ "bpsm.u65",			0x200000, 0xf60fb7b5, BRF_GRA },			// 12
+	{ "bpsm.u64",			0x200000, 0x6559d31c, BRF_GRA },			// 13
+	{ "bpsm.u63",			0x200000, 0xd57a56b4, BRF_GRA },			// 14
+
+	{ "bpsm.u48",			0x200000, 0x498e4ed1, BRF_SND },			// 15 MSM6295 #0 ADPCM data
+	{ "bpsm.u47",			0x080000, 0x0f2901b9, BRF_SND },			// 16 MSM6295 #1 ADPCM data
+	
+	{ "sailormn_japan.nv",	0x0080, 0xea03c30a, BRF_ESS | BRF_PRG },
+};
+
+STD_ROM_PICK(sailormnjee)
+STD_ROM_FN(sailormnjee)
+
 static struct BurnRomInfo agalletRomDesc[] = {
 	// these roms were dumped from a board set to Taiwanese region.
 	{ "bp962a.u45",   0x080000, 0x24815046, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
@@ -1832,7 +1860,7 @@ struct BurnDriver BurnDrvSailorMoon = {
 	"sailormn", NULL, NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, Europe)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, Europe)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnRomInfo, sailormnRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1842,7 +1870,7 @@ struct BurnDriver BurnDrvSailorMoonu = {
 	"sailormnu", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, USA)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, USA)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnuRomInfo, sailormnuRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1852,7 +1880,7 @@ struct BurnDriver BurnDrvSailorMoonj = {
 	"sailormnj", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, Japan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnjRomInfo, sailormnjRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1862,7 +1890,7 @@ struct BurnDriver BurnDrvSailorMoonk = {
 	"sailormnk", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, Korea)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, Korea)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnkRomInfo, sailormnkRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1872,7 +1900,7 @@ struct BurnDriver BurnDrvSailorMoont = {
 	"sailormnt", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, Taiwan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, Taiwan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormntRomInfo, sailormntRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1882,7 +1910,7 @@ struct BurnDriver BurnDrvSailorMoonh = {
 	"sailormnh", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22B, Hong Kong)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22B, Hong Kong)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnhRomInfo, sailormnhRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1892,7 +1920,7 @@ struct BurnDriver BurnDrvSailorMoonN = {
 	"sailormnn", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, Europe)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, Europe)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnnRomInfo, sailormnnRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1902,7 +1930,7 @@ struct BurnDriver BurnDrvSailorMoonNu = {
 	"sailormnnu", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, USA)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, USA)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnnuRomInfo, sailormnnuRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1912,7 +1940,7 @@ struct BurnDriver BurnDrvSailorMoonNj = {
 	"sailormnnj", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, Japan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnnjRomInfo, sailormnnjRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1922,7 +1950,7 @@ struct BurnDriver BurnDrvSailorMoonNk = {
 	"sailormnnk", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, Korea)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, Korea)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnnkRomInfo, sailormnnkRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1932,7 +1960,7 @@ struct BurnDriver BurnDrvSailorMoonNt = {
 	"sailormnnt", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, Taiwan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, Taiwan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnntRomInfo, sailormnntRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1942,7 +1970,7 @@ struct BurnDriver BurnDrvSailorMoonNh = {
 	"sailormnnh", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/22, Hong Kong)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/22, Hong Kong)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnnhRomInfo, sailormnnhRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1952,7 +1980,7 @@ struct BurnDriver BurnDrvSailorMoonO = {
 	"sailormno", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, Europe)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, Europe)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnoRomInfo, sailormnoRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1962,7 +1990,7 @@ struct BurnDriver BurnDrvSailorMoonOu = {
 	"sailormnou", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, USA)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, USA)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnouRomInfo, sailormnouRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1972,7 +2000,7 @@ struct BurnDriver BurnDrvSailorMoonOj = {
 	"sailormnoj", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, Japan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnojRomInfo, sailormnojRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1982,7 +2010,7 @@ struct BurnDriver BurnDrvSailorMoonOk = {
 	"sailormnok", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, Korea)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, Korea)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnokRomInfo, sailormnokRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -1992,7 +2020,7 @@ struct BurnDriver BurnDrvSailorMoonOt = {
 	"sailormnot", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, Taiwan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, Taiwan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnotRomInfo, sailormnotRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
@@ -2002,8 +2030,18 @@ struct BurnDriver BurnDrvSailorMoonOh = {
 	"sailormnoh", "sailormn", NULL,  NULL,"1995",
 	"Pretty Soldier Sailor Moon (ver. 95/03/21, Hong Kong)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Pretty Soldier Sailor Moon\0\u7F8E\u5C11\u5973\u6226\u58EB \u30BB\u30FC\u30E9\u30FC\u30E0\u30FC\u30F3 (ver. 95/03/21, Hong Kong)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
 	NULL, sailormnohRomInfo, sailormnohRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
+	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
+};
+
+struct BurnDriver BurnDrvSailorMoonjee = {
+	"sailormnjee", "sailormn", NULL, NULL, "2019-12-29",
+	"Pretty Soldier Sailor Moon (Enhanced Edition v5 Final, Hack)\0", "Hack only enable in Extra Hard", "Hack", "Cave",
+	L"Pretty Soldier Sailor Moon (Enhanced Edition v5 Final, Hack)\0\u7f8e\u5c11\u5973\u6226\u58eb \u30bb\u30fc\u30e9\u30fc\u30e0\u30fc\u30f3 (\u62e1\u5f35\u7248 v5, \u30cf\u30c3\u30af)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_SCRFIGHT, 0,
+	NULL, sailormnjeeRomInfo, sailormnjeeRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	sailormnInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
 };
@@ -2012,7 +2050,7 @@ struct BurnDriver BurnDrvAirGallet = {
 	"agallet", NULL, NULL,  NULL,"1996",
 	"Air Gallet (Europe)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (Europe)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletRomInfo, agalletRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2022,7 +2060,7 @@ struct BurnDriver BurnDrvAirGalleta = {
 	"agalleta", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (older, Europe)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, Europe)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletaRomInfo, agalletaRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2032,7 +2070,7 @@ struct BurnDriver BurnDrvAirGalletu = {
 	"agalletu", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (USA)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (USA)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletuRomInfo, agalletuRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2042,7 +2080,7 @@ struct BurnDriver BurnDrvAirGalletau = {
 	"agalletau", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (older, USA)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, USA)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletauRomInfo, agalletauRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2052,7 +2090,7 @@ struct BurnDriver BurnDrvAirGalletj = {
 	"agalletj", "agallet", NULL,  NULL,"1996",
 	"Akuu Gallet (Japan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Akuu Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletjRomInfo, agalletjRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2062,7 +2100,7 @@ struct BurnDriver BurnDrvAirGalletaj = {
 	"agalletaj", "agallet", NULL,  NULL,"1996",
 	"Akuu Gallet (older, Japan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Akuu Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, Japan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletajRomInfo, agalletajRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2072,7 +2110,7 @@ struct BurnDriver BurnDrvAirGalletk = {
 	"agalletk", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (Korea)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (Korea)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletkRomInfo, agalletkRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2082,7 +2120,7 @@ struct BurnDriver BurnDrvAirGalletak = {
 	"agalletak", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (older, Korea)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, Korea)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletakRomInfo, agalletakRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2092,7 +2130,7 @@ struct BurnDriver BurnDrvAirGallett = {
 	"agallett", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (Taiwan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (Taiwan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agallettRomInfo, agallettRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2102,7 +2140,7 @@ struct BurnDriver BurnDrvAirGalletat = {
 	"agalletat", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (older, Taiwan)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, Taiwan)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletatRomInfo, agalletatRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2112,7 +2150,7 @@ struct BurnDriver BurnDrvAirGalleth = {
 	"agalleth", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (Hong Kong)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (Hong Kong)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agallethRomInfo, agallethRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4
@@ -2122,7 +2160,7 @@ struct BurnDriver BurnDrvAirGalletah = {
 	"agalletah", "agallet", NULL,  NULL,"1996",
 	"Air Gallet (older, Hong Kong)\0", NULL, "BanPresto / Gazelle", "Cave",
 	L"Air Gallet\0\u30A2\u30EF\u30A6\u30AE\u30E3\u30EC\u30C3\u30C8 (older, Hong Kong)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_Z80, GBF_VERSHOOT, 0,
 	NULL, agalletahRomInfo, agalletahRomName, NULL, NULL, NULL, NULL, sailormnInputInfo, NULL,
 	agalletaInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 240, 320, 3, 4

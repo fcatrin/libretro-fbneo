@@ -615,8 +615,8 @@ reverse:
 			while (samples--)
 			{
 				/* fetch two samples */
-				INT32 val1 = base[accum >> 11];
-				INT32 val2 = base[((accum + (1 << 11)) & voice->accum_mask) >> 11];
+				INT32 val1 = BURN_ENDIAN_SWAP_INT16(base[accum >> 11]);
+				INT32 val2 = BURN_ENDIAN_SWAP_INT16(base[((accum + (1 << 11)) & voice->accum_mask) >> 11]);
 
 				/* decompress u-law */
 				val1 = chip->ulaw_lookup[val1 >> (16 - ULAW_MAXBITS)];
@@ -638,8 +638,8 @@ reverse:
 				}
 
 				/* apply volumes and add */
-				*lbuffer++ += (val1 * lvol) >> 11;
-				*rbuffer++ += (val1 * rvol) >> 11;
+				*lbuffer++ += (val1 * lvol) >> 12;
+				*rbuffer++ += (val1 * rvol) >> 12;
 
 				/* check for loop end */
 				check_for_end_forward(voice, accum);
@@ -653,8 +653,8 @@ reverse:
 			while (samples--)
 			{
 				/* fetch two samples */
-				INT32 val1 = base[accum >> 11];
-				INT32 val2 = base[((accum + (1 << 11)) & voice->accum_mask) >> 11];
+				INT32 val1 = BURN_ENDIAN_SWAP_INT16(base[accum >> 11]);
+				INT32 val2 = BURN_ENDIAN_SWAP_INT16(base[((accum + (1 << 11)) & voice->accum_mask) >> 11]);
 
 				/* decompress u-law */
 				val1 = chip->ulaw_lookup[val1 >> (16 - ULAW_MAXBITS)];
@@ -676,8 +676,8 @@ reverse:
 				}
 
 				/* apply volumes and add */
-				*lbuffer++ += (val1 * lvol) >> 11;
-				*rbuffer++ += (val1 * rvol) >> 11;
+				*lbuffer++ += (val1 * lvol) >> 12;
+				*rbuffer++ += (val1 * rvol) >> 12;
 
 				/* check for loop end */
 				check_for_end_reverse(voice, accum);
@@ -730,8 +730,8 @@ reverse:
 			while (samples--)
 			{
 				/* fetch two samples */
-				INT32 val1 = (INT16)base[accum >> 11];
-				INT32 val2 = (INT16)base[((accum + (1 << 11)) & voice->accum_mask) >> 11];
+				INT32 val1 = (INT16)BURN_ENDIAN_SWAP_INT16(base[accum >> 11]);
+				INT32 val2 = (INT16)BURN_ENDIAN_SWAP_INT16(base[((accum + (1 << 11)) & voice->accum_mask) >> 11]);
 				
 				/* interpolate */
 				val1 = interpolate(val1, val2, accum);
@@ -750,8 +750,8 @@ reverse:
 				}
 
 				/* apply volumes and add */
-				*lbuffer++ += (val1 * lvol) >> 11;
-				*rbuffer++ += (val1 * rvol) >> 11;
+				*lbuffer++ += (val1 * lvol) >> 12;
+				*rbuffer++ += (val1 * rvol) >> 12;
 
 				/* check for loop end */
 				check_for_end_forward(voice, accum);
@@ -765,8 +765,8 @@ reverse:
 			while (samples--)
 			{
 				/* fetch two samples */
-				INT32 val1 = (INT16)base[accum >> 11];
-				INT32 val2 = (INT16)base[((accum + (1 << 11)) & voice->accum_mask) >> 11];
+				INT32 val1 = (INT16)BURN_ENDIAN_SWAP_INT16(base[accum >> 11]);
+				INT32 val2 = (INT16)BURN_ENDIAN_SWAP_INT16(base[((accum + (1 << 11)) & voice->accum_mask) >> 11]);
 				
 				/* interpolate */
 				val1 = interpolate(val1, val2, accum);
@@ -785,8 +785,8 @@ reverse:
 				}
 
 				/* apply volumes and add */
-				*lbuffer++ += (val1 * lvol) >> 11;
-				*rbuffer++ += (val1 * rvol) >> 11;
+				*lbuffer++ += (val1 * lvol) >> 12;
+				*rbuffer++ += (val1 * rvol) >> 12;
 
 				/* check for loop end */
 				check_for_end_reverse(voice, accum);
@@ -904,18 +904,18 @@ void ES5506Update(INT16 *outputs, INT32 samples_len)
 		INT32 nRightSample[4] = {0, 0, 0, 0};
 		INT32 nTotalLeftSample, nTotalRightSample;
 
-		nLeftSample[0] += (INT32)(pBufL[(nFractionalPosition >> 16) - 3]);
-		nLeftSample[1] += (INT32)(pBufL[(nFractionalPosition >> 16) - 2]);
-		nLeftSample[2] += (INT32)(pBufL[(nFractionalPosition >> 16) - 1]);
-		nLeftSample[3] += (INT32)(pBufL[(nFractionalPosition >> 16) - 0]);
+		nLeftSample[0] += BURN_SND_CLIP((INT32)(pBufL[(nFractionalPosition >> 16) - 3]) >> 4);
+		nLeftSample[1] += BURN_SND_CLIP((INT32)(pBufL[(nFractionalPosition >> 16) - 2]) >> 4);
+		nLeftSample[2] += BURN_SND_CLIP((INT32)(pBufL[(nFractionalPosition >> 16) - 1]) >> 4);
+		nLeftSample[3] += BURN_SND_CLIP((INT32)(pBufL[(nFractionalPosition >> 16) - 0]) >> 4);
 
-		nRightSample[0] += (INT32)(pBufR[(nFractionalPosition >> 16) - 3]);
-		nRightSample[1] += (INT32)(pBufR[(nFractionalPosition >> 16) - 2]);
-		nRightSample[2] += (INT32)(pBufR[(nFractionalPosition >> 16) - 1]);
-		nRightSample[3] += (INT32)(pBufR[(nFractionalPosition >> 16) - 0]);
+		nRightSample[0] += BURN_SND_CLIP((INT32)(pBufR[(nFractionalPosition >> 16) - 3]) >> 4);
+		nRightSample[1] += BURN_SND_CLIP((INT32)(pBufR[(nFractionalPosition >> 16) - 2]) >> 4);
+		nRightSample[2] += BURN_SND_CLIP((INT32)(pBufR[(nFractionalPosition >> 16) - 1]) >> 4);
+		nRightSample[3] += BURN_SND_CLIP((INT32)(pBufR[(nFractionalPosition >> 16) - 0]) >> 4);
 
-		nTotalLeftSample  = INTERPOLATE4PS_16BIT((nFractionalPosition >> 4) & 0x0fff, nLeftSample[0] >> 4, nLeftSample[1] >> 4, nLeftSample[2] >> 4, nLeftSample[3] >> 4);
-		nTotalRightSample = INTERPOLATE4PS_16BIT((nFractionalPosition >> 4) & 0x0fff, nRightSample[0] >> 4, nRightSample[1] >> 4, nRightSample[2] >> 4, nRightSample[3] >> 4);
+		nTotalLeftSample  = INTERPOLATE4PS_16BIT((nFractionalPosition >> 4) & 0x0fff, nLeftSample[0], nLeftSample[1], nLeftSample[2], nLeftSample[3]);
+		nTotalRightSample = INTERPOLATE4PS_16BIT((nFractionalPosition >> 4) & 0x0fff, nRightSample[0], nRightSample[1], nRightSample[2], nRightSample[3]);
 
 		outputs[i + 0] = BURN_SND_CLIP(nTotalLeftSample * chip->volume[0]);
 		outputs[i + 1] = BURN_SND_CLIP(nTotalRightSample * chip->volume[1]);
@@ -1034,10 +1034,12 @@ void ES5506Scan(INT32 nAction, INT32* pnMin)
 	}
 
 	if (nAction & ACB_WRITE) {
-		nFractionalPosition = 0;
-		nPosition = 0;
+		if (~nAction & ACB_RUNAHEAD) {
+			nFractionalPosition = 0;
+			nPosition = 0;
+			memset(chip->scratch, 0, 2 * MAX_SAMPLE_CHUNK * sizeof(INT32));
+		}
 		nSampleSize = (UINT32)chip->sample_rate * (1 << 16) / nBurnSoundRate;
-		memset(chip->scratch, 0, 2 * MAX_SAMPLE_CHUNK * sizeof(INT32));
 	}
 }
 
@@ -2110,7 +2112,7 @@ ES5506_INLINE UINT16 es5505_reg_read_high(es5506_voice *voice, UINT32 offset)
 			/* this register on a stopped voice, and return the raw sample data at the */
 			/* accumulator */
 			if ((voice->control & CONTROL_STOPMASK) && chip->region_base[voice->control >> 14]) {
-				voice->o1n1 = chip->region_base[voice->control >> 14][voice->exbank + (voice->accum >> 11)];
+				voice->o1n1 = BURN_ENDIAN_SWAP_INT16(chip->region_base[voice->control >> 14][voice->exbank + (voice->accum >> 11)]);
 //				logerror("%02x %08x ==> %08x\n",voice->o1n1,voice->control >> 14,voice->exbank + (voice->accum >> 11));
 			}
 				result = voice->o1n1;

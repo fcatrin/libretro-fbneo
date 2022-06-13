@@ -1,6 +1,10 @@
 // FB Alpha Namco System 1 driver module
 // Based on MAME driver by Ernesto Corvi
 
+// Note:
+// Dip values are bitswapped compared to latest mame
+
+
 #include "tiles_generic.h"
 #include "m6809_intf.h"
 #include "m6800_intf.h"
@@ -502,11 +506,15 @@ STDDIPINFO(Faceoff)
 
 static struct BurnDIPInfo BerabohmDIPList[]=
 {
-	{0x1a, 0xff, 0xff, 0xa1, NULL			},
+	{0x1a, 0xff, 0xff, 0xb1, NULL			},
 
 	{0   , 0xfe, 0   ,    2, "Freeze"		},
 	{0x1a, 0x01, 0x01, 0x01, "Off"			},
 	{0x1a, 0x01, 0x01, 0x00, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
+	{0x1a, 0x01, 0x10, 0x00, "Off"			},
+	{0x1a, 0x01, 0x10, 0x10, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Invulnerability"	},
 	{0x1a, 0x01, 0x20, 0x20, "Off"			},
@@ -2738,8 +2746,8 @@ static struct BurnRomInfo galaga88RomDesc[] = {
 	{ "g81_p0.bin",		0x10000, 0x0f0778ca, 2 | BRF_PRG | BRF_ESS }, //  2 Main and Sub m6809 Code
 	{ "g81_p1.bin",		0x10000, 0xe68cb351, 2 | BRF_PRG | BRF_ESS }, //  3
 	{ "g81_p5.bin",		0x10000, 0x4fbd3f6c, 2 | BRF_PRG | BRF_ESS }, //  4
-	{ "g8x_p6.bin",		0x10000, 0x403d01c1, 2 | BRF_PRG | BRF_ESS }, //  5
-	{ "g8x_p7.bin",		0x10000, 0xdf75b7fc, 2 | BRF_PRG | BRF_ESS }, //  6
+	{ "g82_p6.bin",		0x10000, 0x403d01c1, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "g82_p7.bin",		0x10000, 0xdf75b7fc, 2 | BRF_PRG | BRF_ESS }, //  6
 
 	{ "cus64-64a1.mcu",	0x01000, 0xffb5c0bd, 3 | BRF_PRG | BRF_ESS }, //  7 Internal MCU Code
 
@@ -2887,7 +2895,7 @@ struct BurnDriver BurnDrvGalaga88a = {
 };
 
 
-// World Stadium (Japan)
+// Pro Yakyuu World Stadium (Japan)
 
 static struct BurnRomInfo wsRomDesc[] = {
 	{ "ws1_snd0.bin",	0x10000, 0x45a87810, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -2930,7 +2938,7 @@ static INT32 WsInit()
 
 struct BurnDriver BurnDrvWs = {
 	"ws", NULL, NULL, NULL, "1988",
-	"World Stadium (Japan)\0", NULL, "Namco", "System 1",
+	"Pro Yakyuu World Stadium (Japan)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, wsRomInfo, wsRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
@@ -2939,7 +2947,7 @@ struct BurnDriver BurnDrvWs = {
 };
 
 
-// Beraboh Man (Japan, Rev C)
+// Chou Zetsurinjin Berabowman (Japan, Rev C)
 
 static struct BurnRomInfo berabohmRomDesc[] = {
 	{ "bm1_s0.bin",		0x10000, 0xd5d53cb1, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -2987,7 +2995,7 @@ static INT32 BerabohmInit()
 
 struct BurnDriver BurnDrvBerabohm = {
 	"berabohm", NULL, NULL, NULL, "1988",
-	"Beraboh Man (Japan, Rev C)\0", NULL, "Namco", "System 1",
+	"Chou Zetsurinjin Berabowman (Japan, Rev C)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, berabohmRomInfo, berabohmRomName, NULL, NULL, NULL, NULL, BerabohmInputInfo, BerabohmDIPInfo,
@@ -2996,7 +3004,7 @@ struct BurnDriver BurnDrvBerabohm = {
 };
 
 
-// Beraboh Man (Japan, Rev B)
+// Chou Zetsurinjin Berabowman (Japan, Rev B)
 
 static struct BurnRomInfo berabohmbRomDesc[] = {
 	{ "bm1_s0.bin",		0x10000, 0xd5d53cb1, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -3037,7 +3045,7 @@ STD_ROM_FN(berabohmb)
 
 struct BurnDriver BurnDrvBerabohmb = {
 	"berabohmb", "berabohm", NULL, NULL, "1988",
-	"Beraboh Man (Japan, Rev B)\0", NULL, "Namco", "System 1",
+	"Chou Zetsurinjin Berabowman (Japan, Rev B)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
 	NULL, berabohmbRomInfo, berabohmbRomName, NULL, NULL, NULL, NULL, BerabohmInputInfo, BerabohmDIPInfo,
@@ -3205,7 +3213,7 @@ struct BurnDriver BurnDrvBakutotu = {
 };
 
 
-// World Court (Japan)
+// Pro Tennis World Court (Japan)
 
 static struct BurnRomInfo wldcourtRomDesc[] = {
 	{ "wc1_snd0.bin",	0x10000, 0x17a6505d, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -3243,7 +3251,7 @@ static INT32 WldcourtInit()
 
 struct BurnDriver BurnDrvWldcourt = {
 	"wldcourt", NULL, NULL, NULL, "1988",
-	"World Court (Japan)\0", NULL, "Namco", "System 1",
+	"Pro Tennis World Court (Japan)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, wldcourtRomInfo, wldcourtRomName, NULL, NULL, NULL, NULL, DrvInputInfo, WldcourtDIPInfo,
@@ -3621,7 +3629,7 @@ struct BurnDriver BurnDrvBlastoff = {
 };
 
 
-// World Stadium '89 (Japan)
+// Pro Yakyuu World Stadium '89 (Japan)
 
 static struct BurnRomInfo ws89RomDesc[] = {
 	{ "w91_snd0.bin",	0x10000, 0x52b84d5a, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -3664,7 +3672,7 @@ static INT32 Ws89Init()
 
 struct BurnDriver BurnDrvWs89 = {
 	"ws89", "ws", NULL, NULL, "1989",
-	"World Stadium '89 (Japan)\0", NULL, "Namco", "System 1",
+	"Pro Yakyuu World Stadium '89 (Japan)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SPORTSMISC, 0,
 	NULL, ws89RomInfo, ws89RomName, NULL, NULL, NULL, NULL, DrvInputInfo, Ws89DIPInfo,
@@ -3722,7 +3730,7 @@ struct BurnDriver BurnDrvDangseed = {
 };
 
 
-// World Stadium '90 (Japan)
+// Pro Yakyuu World Stadium '90 (Japan)
 
 static struct BurnRomInfo ws90RomDesc[] = {
 	{ "w91_snd0.bin",	0x10000, 0x52b84d5a, 1 | BRF_PRG | BRF_ESS }, //  0 Sound m6809 Code
@@ -3765,7 +3773,7 @@ static INT32 Ws90Init()
 
 struct BurnDriver BurnDrvWs90 = {
 	"ws90", "ws", NULL, NULL, "1990",
-	"World Stadium '90 (Japan)\0", NULL, "Namco", "System 1",
+	"Pro Yakyuu World Stadium '90 (Japan)\0", NULL, "Namco", "System 1",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
 	NULL, ws90RomInfo, ws90RomName, NULL, NULL, NULL, NULL, DrvInputInfo, Ws90DIPInfo,
@@ -3995,7 +4003,7 @@ static struct BurnRomInfo tankfrceRomDesc[] = {
 
 	{ "tf1_prg0.bin",	0x20000, 0x2ae4b9eb, 2 | BRF_PRG | BRF_ESS }, //  1 Main and Sub m6809 Code
 	{ "tf1_prg1.bin",	0x20000, 0x4a8bb251, 2 | BRF_PRG | BRF_ESS }, //  2
-	{ "tf1prg7.bin",	0x20000, 0x2ec28a87, 2 | BRF_PRG | BRF_ESS }, //  3
+	{ "tf6_prg7.bin",	0x20000, 0x2ec28a87, 2 | BRF_PRG | BRF_ESS }, //  3
 
 	{ "cus64-64a1.mcu",	0x01000, 0xffb5c0bd, 3 | BRF_PRG | BRF_ESS }, //  4 Internal MCU Code
 

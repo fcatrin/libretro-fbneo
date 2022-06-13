@@ -52,7 +52,7 @@ static UINT32 adpcm_pos;
 static INT32 adpcm_data;
 
 static INT32 nGfxRomLen = 0;
-static INT32 nmi_enable = 0;
+static INT32 nmi_enable = 0; // has nmi (not dynamic)
 static INT32 has_ym2610 = 0;
 static INT32 has_adpcm = 0;
 static INT32 has_track = 0;
@@ -79,295 +79,295 @@ static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo FhawkInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy3 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy3 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Fhawk)
 
 static struct BurnInputInfo ChampwrInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy3 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy3 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy3 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy3 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy3 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 7,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 6,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 7,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 6,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Champwr)
 
 static struct BurnInputInfo EvilstonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy3 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy3 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy3 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 1,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 1,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Evilston)
 
 static struct BurnInputInfo PlottingInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Plotting)
 
 static struct BurnInputInfo PuzznicInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Puzznic)
 
 static struct BurnInputInfo PalamedInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Palamed)
 
 static struct BurnInputInfo CachatInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 start"}	,
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Cachat)
 
 static struct BurnInputInfo CubybopInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Cubybop)
 
 static struct BurnInputInfo TubeitInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Tubeit)
 
 static struct BurnInputInfo PlgirlsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy1 + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Plgirls)
 
 #define A(a, b, c, d) { a, b, (UINT8*)(c), d }
 static struct BurnInputInfo HorshoesInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 fire 2"	},
 
 	A("P1 Trackball X", BIT_ANALOG_REL, &DrvAnalogPort0,"p1 x-axis"),
 	A("P1 Trackball Y", BIT_ANALOG_REL, &DrvAnalogPort1,"p1 y-axis"),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
-	{"Tilt",		BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 0,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Horshoes)
@@ -873,7 +873,7 @@ static struct BurnDIPInfo RaimaisDIPList[]=
 	{0x14, 0x01, 0x03, 0x00, "Hardest"		},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x08, "80k and 160k"		},
+	{0x14, 0x01, 0x0c, 0x08, "Every 80k"		},
 	{0x14, 0x01, 0x0c, 0x0c, "80k only"		},
 	{0x14, 0x01, 0x0c, 0x04, "160k only"		},
 	{0x14, 0x01, 0x0c, 0x00, "None"			},
@@ -1406,7 +1406,7 @@ static struct BurnDIPInfo HorshoesDIPList[]=
 STDDIPINFO(Horshoes)
 
 // decode a single byte written to the graphics ram
-static inline void graphics_deocde_one(INT32 offset, UINT8 data)
+static inline void graphics_decode_one(INT32 offset, UINT8 data)
 {
 	offset &= 0x7fff;
 	INT32 k = (offset & 1) * 2;
@@ -1442,7 +1442,7 @@ static void chargfx_write(INT32 offset, UINT16 address, UINT8 data)
 
 	if (data != prev) {
 		DrvGfxRAM[address + ram_bank] = data;
-		graphics_deocde_one(address + ram_bank, data);
+		graphics_decode_one(address + ram_bank, data);
 	}
 }
 
@@ -1585,7 +1585,7 @@ static UINT8 __fastcall fhawk_main_read(UINT16 address)
 
 		case 0xfe04:
 			return current_control;
-	
+
 		case 0xff00:
 		case 0xff01:
 		case 0xff02:
@@ -2328,6 +2328,8 @@ static INT32 DrvDoReset()
 	adpcm_pos = 0;
 	adpcm_data = -1;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -2345,7 +2347,7 @@ static INT32 MemIndex()
 	DrvGfxROM1	= Next; Next += nGfxRomLen * 2;
 	DrvGfxROM2	= Next; Next += 0x010000;
 
-	DrvSampleROM	= Next; Next += 0x080000;
+	DrvSampleROM = Next; Next += 0x080000;
 
 	DrvPalette	= (UINT32*)Next; Next += 0x00100 * sizeof(UINT32);
 
@@ -2356,7 +2358,7 @@ static INT32 MemIndex()
 	DrvZ80RAM0	= Next; Next += 0x002000;
 	DrvZ80RAM1	= Next; Next += 0x002000;
 	DrvZ80RAM2	= Next; Next += 0x002000;
-	DrvShareRAM1	= Next; Next += 0x002000;
+	DrvShareRAM1= Next; Next += 0x002000;
 
 	DrvPalRAM	= Next; Next += 0x001000;
 	DrvSprRAM	= Next; Next += 0x001000;
@@ -2367,7 +2369,7 @@ static INT32 MemIndex()
 	DrvBgRAM	= Next; Next += 0x0020000;
 
 	char_banks	= Next; Next += 0x000004;
-	irq_adr_table	= Next; Next += 0x000003;
+	irq_adr_table = Next; Next += 0x000003;
 	cur_rombank	= Next; Next += 0x000003;
 	cur_rambank	= Next; Next += 0x000004;
 
@@ -2430,12 +2432,7 @@ static INT32 FhawkInit()
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -2509,12 +2506,7 @@ static INT32 ChampwrInit()
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -2592,12 +2584,7 @@ static INT32 EvilstonInit()
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -2661,12 +2648,7 @@ static INT32 RaimaisInit()
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -2736,12 +2718,7 @@ static INT32 KurikintCommonInit(INT32 loadtype)
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (loadtype == 0) // Kurikint
 	{
@@ -2828,12 +2805,7 @@ static INT32 commonSingleZ80(INT32 (*pRomLoadCallback)(), void (*write)(UINT16,U
 {
 	DrvGetGfxRomLen();
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (pRomLoadCallback) {
 		if (pRomLoadCallback()) return 1;
@@ -3238,25 +3210,23 @@ static INT32 Z80x3Frame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Zet);
 		scanline_update(i);
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(1, Zet);
 		if (i == 240) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(2);
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[2] / nInterleave));
+		CPU_RUN_TIMER(2);
 		if (has_adpcm)
 			MSM5205UpdateScanline(i);
 		ZetClose();
 	}
-	
-	ZetOpen(2);
 
-	BurnTimerEndFrame(nCyclesTotal[2]);
+	ZetOpen(2);
 
 	if (pBurnSoundOut) {
 		if (has_ym2610) {
@@ -3295,20 +3265,16 @@ static INT32 Z80x2Frame()
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[3] =  { 6665280 / 60, 0, 4000000 / 60 };
 	INT32 nCyclesDone[3] = { 0, 0, 0 };
-	INT32 nNext = 0;
-	INT32 nCyclesSegment = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nNext = (i + 1) * nCyclesTotal[0] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[0];
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
+		CPU_RUN(0, Zet);
 		scanline_update(i-15);
 		ZetClose();
 
 		ZetOpen(2);
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[2] / nInterleave));
+		CPU_RUN_TIMER(2);
 		if (i == (nInterleave - 4) && nmi_enable) ZetNmi(); // 60hz
 		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
@@ -3316,10 +3282,9 @@ static INT32 Z80x2Frame()
 	
 	ZetOpen(2);
 
-	BurnTimerEndFrame(nCyclesTotal[2]);
-
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 	}
 
 	ZetClose();
@@ -3359,14 +3324,12 @@ static INT32 Z80x1Frame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		BurnTimerUpdate(i * (nCyclesTotal[0] / nInterleave));
+		CPU_RUN_TIMER(0);
 		scanline_update(i*4);
 		ZetClose();
 	}
 	
 	ZetOpen(0);
-
-	BurnTimerEndFrame(nCyclesTotal[0]);
 
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
@@ -3393,13 +3356,14 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 
 	if (nAction & ACB_VOLATILE)
 	{
+		memset(&ba, 0, sizeof(ba));
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
 		ba.szName = "All RAM";
 		BurnAcb(&ba);
 
 		ZetScan(nAction);
-		ZetOpen(2);
+
 		if (has_ym2610) {
 			BurnYM2610Scan(nAction, pnMin);
 		} else {
@@ -3408,17 +3372,22 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		if (has_adpcm) {
 			MSM5205Scan(nAction, pnMin);
 		}
-		ZetClose();
 		TaitoICScan(nAction);
 
-		SCAN_VAR(flipscreen);
+		SCAN_VAR(horshoes_bank);
 		SCAN_VAR(irq_enable);
-		SCAN_VAR(current_control);
 		SCAN_VAR(last_irq_level);
-		SCAN_VAR(adpcm_pos);
+		SCAN_VAR(current_control);
+		SCAN_VAR(flipscreen);
 		SCAN_VAR(mux_control);
 		SCAN_VAR(mcu_position);
-		SCAN_VAR(horshoes_bank);
+		SCAN_VAR(adpcm_pos);
+		SCAN_VAR(adpcm_data);
+
+		SCAN_VAR(track_x);
+		SCAN_VAR(track_y);
+		SCAN_VAR(track_x_last);
+		SCAN_VAR(track_y_last);
 	}
 
 	if (nAction & ACB_WRITE)
@@ -3478,7 +3447,7 @@ struct BurnDriver BurnDrvRaimais = {
 	"raimais", NULL, NULL, NULL, "1988",
 	"Raimais (World)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
 	NULL, raimaisRomInfo, raimaisRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, RaimaisDIPInfo,
 	RaimaisInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3508,7 +3477,7 @@ struct BurnDriver BurnDrvRaimaisj = {
 	"raimaisj", "raimais", NULL, NULL, "1988",
 	"Raimais (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
 	NULL, raimaisjRomInfo, raimaisjRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, RaimaisjDIPInfo,
 	RaimaisInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3538,7 +3507,7 @@ struct BurnDriver BurnDrvRaimaisjo = {
 	"raimaisjo", "raimais", NULL, NULL, "1988",
 	"Raimais (Japan, first revision)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
 	NULL, raimaisjoRomInfo, raimaisjoRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, RaimaisjDIPInfo,
 	RaimaisInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3566,7 +3535,7 @@ struct BurnDriver BurnDrvFhawk = {
 	"fhawk", NULL, NULL, NULL, "1988",
 	"Fighting Hawk (World)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, fhawkRomInfo, fhawkRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, FhawkDIPInfo,
 	FhawkInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
@@ -3594,7 +3563,7 @@ struct BurnDriver BurnDrvFhawkj = {
 	"fhawkj", "fhawk", NULL, NULL, "1988",
 	"Fighting Hawk (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, fhawkjRomInfo, fhawkjRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, FhawkjDIPInfo,
 	FhawkInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
@@ -3625,7 +3594,7 @@ struct BurnDriver BurnDrvChampwr = {
 	"champwr", NULL, NULL, NULL, "1989",
 	"Champion Wrestler (World)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, champwrRomInfo, champwrRomName, NULL, NULL, NULL, NULL, ChampwrInputInfo, ChampwrDIPInfo,
 	ChampwrInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3656,7 +3625,7 @@ struct BurnDriver BurnDrvChampwru = {
 	"champwru", "champwr", NULL, NULL, "1989",
 	"Champion Wrestler (US)\0", NULL, "Taito America Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, champwruRomInfo, champwruRomName, NULL, NULL, NULL, NULL, ChampwrInputInfo, ChampwruDIPInfo,
 	ChampwrInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3687,7 +3656,7 @@ struct BurnDriver BurnDrvChampwrj = {
 	"champwrj", "champwr", NULL, NULL, "1989",
 	"Champion Wrestler (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VSFIGHT, 0,
 	NULL, champwrjRomInfo, champwrjRomName, NULL, NULL, NULL, NULL, ChampwrInputInfo, ChampwrjDIPInfo,
 	ChampwrInit, DrvExit, Z80x3Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3704,6 +3673,9 @@ static struct BurnRomInfo kurikintRomDesc[] = {
 
 	{ "b42-01.ic1",		0x80000, 0x7d1a1fec, 4 | BRF_GRA },           //  3 graphics data
 	{ "b42-02.ic5",		0x80000, 0x1a52e65c, 4 | BRF_GRA },           //  4
+	
+	{ "gal16v8-b42-03.ic4.bin",	 0x00117, 0xf7150d37, 0 | BRF_OPT },  //  5 plds
+	{ "gal16v8-b42-04.ic21.bin", 0x00117, 0xb57b806c, 0 | BRF_OPT },  //  6
 };
 
 STD_ROM_PICK(kurikint)
@@ -3713,7 +3685,7 @@ struct BurnDriver BurnDrvKurikint = {
 	"kurikint", NULL, NULL, NULL, "1988",
 	"Kuri Kinton (World)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, kurikintRomInfo, kurikintRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, KurikintDIPInfo,
 	KurikintInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3730,6 +3702,9 @@ static struct BurnRomInfo kurikintwRomDesc[] = {
 
 	{ "b42-01.ic1",		0x80000, 0x7d1a1fec, 4 | BRF_GRA },           //  3 graphics data
 	{ "b42-02.ic5",		0x80000, 0x1a52e65c, 4 | BRF_GRA },           //  4
+	
+	{ "gal16v8-b42-03.ic4.bin",	 0x00117, 0xf7150d37, 0 | BRF_OPT },  //  5 plds
+	{ "gal16v8-b42-04.ic21.bin", 0x00117, 0xb57b806c, 0 | BRF_OPT },  //  6
 };
 
 STD_ROM_PICK(kurikintw)
@@ -3739,7 +3714,7 @@ struct BurnDriver BurnDrvKurikintw = {
 	"kurikintw", "kurikint", NULL, NULL, "1988",
 	"Kuri Kinton (US, World Games license)\0", NULL, "Taito Corporation (World Games, Inc. license)", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, kurikintwRomInfo, kurikintwRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, KurikintjDIPInfo,
 	KurikintInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3756,6 +3731,9 @@ static struct BurnRomInfo kurikintuRomDesc[] = {
 
 	{ "b42-01.ic1",		0x80000, 0x7d1a1fec, 4 | BRF_GRA },           //  3 graphics data
 	{ "b42-02.ic5",		0x80000, 0x1a52e65c, 4 | BRF_GRA },           //  4
+	
+	{ "gal16v8-b42-03.ic4.bin",	 0x00117, 0xf7150d37, 0 | BRF_OPT },  //  5 plds
+	{ "gal16v8-b42-04.ic21.bin", 0x00117, 0xb57b806c, 0 | BRF_OPT },  //  6
 };
 
 STD_ROM_PICK(kurikintu)
@@ -3765,7 +3743,7 @@ struct BurnDriver BurnDrvKurikintu = {
 	"kurikintu", "kurikint", NULL, NULL, "1988",
 	"Kuri Kinton (US)\0", NULL, "Taito America Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, kurikintuRomInfo, kurikintuRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, KurikintjDIPInfo,
 	KurikintInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3782,6 +3760,9 @@ static struct BurnRomInfo kurikintjRomDesc[] = {
 
 	{ "b42-01.ic1",		0x80000, 0x7d1a1fec, 4 | BRF_GRA },           //  3 graphics data
 	{ "b42-02.ic5",		0x80000, 0x1a52e65c, 4 | BRF_GRA },           //  4
+	
+	{ "gal16v8-b42-03.ic4.bin",	 0x00117, 0xf7150d37, 0 | BRF_OPT },  //  5 plds
+	{ "gal16v8-b42-04.ic21.bin", 0x00117, 0xb57b806c, 0 | BRF_OPT },  //  6
 };
 
 STD_ROM_PICK(kurikintj)
@@ -3791,7 +3772,7 @@ struct BurnDriver BurnDrvKurikintj = {
 	"kurikintj", "kurikint", NULL, NULL, "1988",
 	"Kuri Kinton (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, kurikintjRomInfo, kurikintjRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, KurikintjDIPInfo,
 	KurikintInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3823,7 +3804,7 @@ struct BurnDriver BurnDrvKurikinta = {
 	"kurikinta", "kurikint", NULL, NULL, "1988",
 	"Kuri Kinton (World, prototype?)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SCRFIGHT, 0,
 	NULL, kurikintaRomInfo, kurikintaRomName, NULL, NULL, NULL, NULL, FhawkInputInfo, KurikintaDIPInfo,
 	KurikintaInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3848,7 +3829,7 @@ struct BurnDriver BurnDrvPlotting = {
 	"plotting", NULL, NULL, NULL, "1989",
 	"Plotting (World set 1)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, plottingRomInfo, plottingRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
 	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3873,7 +3854,7 @@ struct BurnDriver BurnDrvPlottinga = {
 	"plottinga", "plotting", NULL, NULL, "1989",
 	"Plotting (World set 2, protected)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, plottingaRomInfo, plottingaRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
 	PlottingaInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3898,7 +3879,7 @@ struct BurnDriver BurnDrvPlottingb = {
 	"plottingb", "plotting", NULL, NULL, "1989",
 	"Plotting (World set 3, earliest version)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, plottingbRomInfo, plottingbRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
 	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3923,7 +3904,7 @@ struct BurnDriver BurnDrvPlottingu = {
 	"plottingu", "plotting", NULL, NULL, "1989",
 	"Plotting (US)\0", NULL, "Taito America Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, plottinguRomInfo, plottinguRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottinguDIPInfo,
 	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3948,7 +3929,7 @@ struct BurnDriver BurnDrvFlipull = {
 	"flipull", "plotting", NULL, NULL, "1989",
 	"Flipull (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, flipullRomInfo, flipullRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
 	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -3975,7 +3956,7 @@ struct BurnDriver BurnDrvPuzznic = {
 	"puzznic", NULL, NULL, NULL, "1989",
 	"Puzznic (World)\0", NULL, "Taito Corporation Japan", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzznicRomInfo, puzznicRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4002,7 +3983,7 @@ struct BurnDriver BurnDrvPuzznicu = {
 	"puzznicu", "puzznic", NULL, NULL, "1989",
 	"Puzznic (US)\0", NULL, "Taito America Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzznicuRomInfo, puzznicuRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4029,7 +4010,7 @@ struct BurnDriver BurnDrvPuzznicj = {
 	"puzznicj", "puzznic", NULL, NULL, "1989",
 	"Puzznic (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzznicjRomInfo, puzznicjRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4052,7 +4033,7 @@ struct BurnDriver BurnDrvPuzznici = {
 	"puzznici", "puzznic", NULL, NULL, "1989",
 	"Puzznic (Italian bootleg)\0", NULL, "bootleg", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzzniciRomInfo, puzzniciRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4075,7 +4056,7 @@ struct BurnDriver BurnDrvPuzznicb = {
 	"puzznicb", "puzznic", NULL, NULL, "1989",
 	"Puzznic (bootleg, set 1)\0", NULL, "bootleg", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzznicbRomInfo, puzznicbRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4098,7 +4079,7 @@ struct BurnDriver BurnDrvPuzznicba = {
 	"puzznicba", "puzznic", NULL, NULL, "1989",
 	"Puzznic (bootleg, set 2)\0", NULL, "bootleg", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, puzznicbaRomInfo, puzznicbaRomName, NULL, NULL, NULL, NULL, PuzznicInputInfo, PuzznicDIPInfo,
 	PuzznicInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4122,7 +4103,7 @@ struct BurnDriver BurnDrvPalamed = {
 	"palamed", NULL, NULL, NULL, "1990",
 	"Palamedes (US)\0", NULL, "Hot-B Co., Ltd.", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, palamedRomInfo, palamedRomName, NULL, NULL, NULL, NULL, PalamedInputInfo, PalamedDIPInfo,
 	PalamedInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4145,7 +4126,7 @@ struct BurnDriver BurnDrvPalamedj = {
 	"palamedj", "palamed", NULL, NULL, "1990",
 	"Palamedes (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, palamedjRomInfo, palamedjRomName, NULL, NULL, NULL, NULL, PalamedInputInfo, PalamedDIPInfo,
 	PalamedInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4172,7 +4153,7 @@ struct BurnDriver BurnDrvCachat = {
 	"cachat", NULL, NULL, NULL, "1993",
 	"Cachat (Japan)\0", NULL, "Taito Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, cachatRomInfo, cachatRomName, NULL, NULL, NULL, NULL, CachatInputInfo, CachatDIPInfo,
 	CachatInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4197,7 +4178,7 @@ struct BurnDriver BurnDrvCubybop = {
 	"cubybop", NULL, NULL, NULL, "199?",
 	"Cuby Bop (location test)\0", NULL, "Hot-B Co., Ltd.", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, cubybopRomInfo, cubybopRomName, NULL, NULL, NULL, NULL, CubybopInputInfo, CubybopDIPInfo,
 	CubybopInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4222,7 +4203,7 @@ struct BurnDriver BurnDrvTubeit = {
 	"tubeit", "cachat", NULL, NULL, "1993",
 	"Tube-It\0", NULL, "bootleg", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, tubeitRomInfo, tubeitRomName, NULL, NULL, NULL, NULL, TubeitInputInfo, TubeitDIPInfo,
 	PalamedInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	320, 224, 4, 3
@@ -4293,7 +4274,7 @@ struct BurnDriver BurnDrvPlgirls2 = {
 	"plgirls2", NULL, NULL, NULL, "1993",
 	"Play Girls 2\0", NULL, "Hot-B Co., Ltd.", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, plgirls2RomInfo, plgirls2RomName, NULL, NULL, NULL, NULL, PlgirlsInputInfo, Plgirls2DIPInfo,
 	PalamedInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
@@ -4318,7 +4299,7 @@ struct BurnDriver BurnDrvPlgirls2b = {
 	"plgirls2b", "plgirls2", NULL, NULL, "1993",
 	"Play Girls 2 (bootleg)\0", NULL, "bootleg", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, plgirls2bRomInfo, plgirls2bRomName, NULL, NULL, NULL, NULL, PlgirlsInputInfo, Plgirls2DIPInfo,
 	Plgirls2bInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
@@ -4345,7 +4326,7 @@ struct BurnDriver BurnDrvHorshoes = {
 	"horshoes", NULL, NULL, NULL, "1990",
 	"American Horseshoes (US)\0", NULL, "Taito America Corporation", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, horshoesRomInfo, horshoesRomName, NULL, NULL, NULL, NULL, HorshoesInputInfo, HorshoesDIPInfo,
 	HorshoesInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
@@ -4371,8 +4352,84 @@ struct BurnDriver BurnDrvEvilston = {
 	"evilston", NULL, NULL, NULL, "1990",
 	"Evil Stone\0", NULL, "Spacy Industrial, Ltd.", "Taito L System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, evilstonRomInfo, evilstonRomName, NULL, NULL, NULL, NULL, EvilstonInputInfo, EvilstonDIPInfo,
 	EvilstonInit, DrvExit, Z80x2Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 320, 3, 4
+};
+
+
+// Sokoban LE
+
+static struct BurnRomInfo sokobanRomDesc[] = {
+	{ "sokoban.ic10",		0x10000, 0x5959ddb4, 1 | BRF_PRG | BRF_ESS }, //  0 main z80 code
+
+	{ "sokoban.ic9",		0x10000, 0x859e1ff4, 4 | BRF_GRA },           //  1 graphics data
+	{ "sokoban.ic8",		0x10000, 0x439a6670, 4 | BRF_GRA },           //  2
+
+	{ "gal16v8-b86-04.bin",	0x00117, 0xbf8c0ea0, 0 | BRF_OPT },           //  3 plds
+};
+
+STD_ROM_PICK(sokoban)
+STD_ROM_FN(sokoban)
+
+struct BurnDriver BurnDrvSokoban = {
+	"sokoban", NULL, NULL, NULL, "2015",
+	"Sokoban LE\0", NULL, "cmonkey", "Taito L System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HOMEBREW, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, sokobanRomInfo, sokobanRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
+	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	320, 224, 4, 3
+};
+
+
+// Speccies 2
+
+static struct BurnRomInfo specciesRomDesc[] = {
+	{ "speccies.ic10",		0x055e9, 0x29e126ac, 1 | BRF_PRG | BRF_ESS }, //  0 main z80 code
+
+	{ "speccies.ic9",		0x10000, 0x11ed1528, 4 | BRF_GRA },           //  1 graphics data
+	{ "speccies.ic8",		0x10000, 0xfcfeb89f, 4 | BRF_GRA },           //  2
+
+	{ "mc68705p3.ic4",		0x00800, 0x085f68b4, 0 | BRF_OPT },           //  3 mcu ?
+	{ "gal16v8-b86-04.bin",	0x00117, 0xbf8c0ea0, 0 | BRF_OPT },           //  4 plds
+};
+
+STD_ROM_PICK(speccies)
+STD_ROM_FN(speccies)
+
+struct BurnDriver BurnDrvSpeccies = {
+	"speccies", NULL, NULL, NULL, "2015",
+	"Speccies 2\0", NULL, "Sokurah", "Taito L System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HOMEBREW, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, specciesRomInfo, specciesRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
+	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	320, 224, 4, 3
+};
+
+
+// SQIJ!
+
+static struct BurnRomInfo sqijRomDesc[] = {
+	{ "sqij.ic10",			0x0f000, 0x214ba802, 1 | BRF_PRG | BRF_ESS }, //  0 main z80 code
+
+	{ "sqij.ic9",			0x10000, 0xc4de729b, 4 | BRF_GRA },           //  1 graphics data
+	{ "sqij.ic8",			0x10000, 0x978df42d, 4 | BRF_GRA },           //  2
+
+	{ "gal16v8-b86-04.bin",	0x00117, 0xbf8c0ea0, 0 | BRF_OPT },           //  3 plds
+};
+
+STD_ROM_PICK(sqij)
+STD_ROM_FN(sqij)
+
+struct BurnDriver BurnDrvSquij = {
+	"sqij", NULL, NULL, NULL, "2018",
+	"SQIJ!\0", NULL, "Sokurah", "Taito L System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HOMEBREW, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	NULL, sqijRomInfo, sqijRomName, NULL, NULL, NULL, NULL, PlottingInputInfo, PlottingDIPInfo,
+	PlottingInit, DrvExit, Z80x1Frame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	320, 224, 4, 3
 };

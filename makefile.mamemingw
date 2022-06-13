@@ -51,7 +51,7 @@ ifndef BUILD_X86_ASM
 	COMPILENAME := $(COMPILENAME)x
 endif
 ifdef BUILD_X64_EXE
-	NAME = fba64
+	NAME = fbneo64
 	COMPILENAME = 6
 endif
 ifdef	DEBUG
@@ -95,11 +95,14 @@ ifdef UNICODE
 # lib	= -lunicows
 endif
 
-lib	+=	-luser32 -lgdi32 -lcomdlg32 -lcomctl32 -lshell32 -lwinmm -lshlwapi -ladvapi32 -lsetupapi -lole32 -luuid -lwininet
-		
+lib	+=	-luser32 -lgdi32 -lcomdlg32 -lcomctl32 -lshell32 -lwinmm -lshlwapi -ladvapi32 -lsetupapi -lole32 -luuid -lwininet 
+
+ifdef INCLUDE_AVI_RECORDING
+lib +=	-lvfw32
+endif
 
 depobj	+=	resource.o \
-		
+
 autdep	= $(depobj:.o=.d)
 drvdep	= $(drvsrc:.o=.d)
 
@@ -132,7 +135,7 @@ allobj	= $(objdir)cpu/m68k/m68kcpu.o $(objdir)cpu/m68k/m68kops.o \
 	  $(foreach file,$(autobj:.o=.rc), \
 		$(foreach dir,$(alldir),$(subst $(srcdir),$(objdir), \
 		$(firstword $(subst .rc,.o,$(wildcard $(srcdir)$(dir)/$(file)))))))
-		
+
 ifdef BUILD_A68K
 allobj += $(a68k.o)
 endif
@@ -240,7 +243,8 @@ ifdef BUILD_X86_ASM
 endif
 
 ifdef BUILD_X64_EXE
-	DEF := $(DEF) -DBUILD_X64_EXE -DXBYAK_NO_OP_NAMES -DMIPS3_X64_DRC
+	DEF := $(DEF) -DBUILD_X64_EXE
+	# -DXBYAK_NO_OP_NAMES -DMIPS3_X64_DRC
 endif
 
 ifdef	SYMBOL
@@ -267,12 +271,18 @@ ifdef BUILD_X86_ASM
 	CXXFLAGS += -mmmx
 endif
 
+ifdef BUILD_NATIVE
+	CFLAGS	 += -march=native -mtune=native
+	CXXFLAGS += -march=native -mtune=native 
+endif
+
+
 # For zlib
 DEF := $(DEF) -DNO_VIZ -D_LARGEFILE64_SOURCE=0 -D_FILE_OFFSET_BITS=32
 
 # For lib7z
 ifdef INCLUDE_7Z_SUPPORT
-DEF := $(DEF) -D_7ZIP_PPMD_SUPPPORT
+DEF := $(DEF) -D_7ZIP_PPMD_SUPPPORT -D_7ZIP_ST
 endif
 
 #
@@ -544,7 +554,7 @@ $(pgm_sprite.h):	pgm_sprite_create.cpp
 	obj\\$(COMPILENAME)\\burn\\drv\\pgm\\pgm_sprite_create.exe >$@
 
 
-	
+
 ifeq ($(MAKELEVEL),2)
 ifdef DEPEND
 
@@ -632,8 +642,10 @@ else
 	@echo Making normal build...
 endif
 	@echo
-	@mingw-mkdir -p $(foreach dir, $(alldir),$(objdir)$(dir))
-	@mingw-mkdir -p $(srcdir)dep/generated
+	-@cmd /q /e:on /c for %i in ($(foreach dir,$(alldir),$(subst /,\,$(objdir)$(dir))),) do mkdir %i \>nul 2\>nul
+	-@cmd /q /e:on /c mkdir $(subst /,\,$(srcdir))dep\generated
+
+
 
 cleandep:
 	@echo Removing depend files from $(objdir)...

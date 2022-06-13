@@ -1,6 +1,9 @@
 // Burner Input module
 #include "burner.h"
+
+#if defined(__APPLE__)
 #include <vector>
+#endif
 
 UINT32 nInputSelect = 0;
 bool bInputOkay = false;
@@ -10,13 +13,15 @@ static bool bCinpOkay;
 #if defined (BUILD_WIN32)
 	extern struct InputInOut InputInOutDInput;
 #elif defined (BUILD_MACOS)
-    extern struct InputInOut InputInOutMacOS;
+	extern struct InputInOut InputInOutMacOS;
 #elif defined (BUILD_SDL)
 	extern struct InputInOut InputInOutSDL;
+#elif defined (BUILD_SDL2)
+		extern struct InputInOut InputInOutSDL2;
 #elif defined (_XBOX)
 	extern struct InputInOut InputInOutXInput2;
 #elif defined (BUILD_QT)
-    extern struct InputInOut InputInOutQt;
+	extern struct InputInOut InputInOutQt;
 #endif
 
 static struct InputInOut *pInputInOut[]=
@@ -24,25 +29,29 @@ static struct InputInOut *pInputInOut[]=
 #if defined (BUILD_WIN32)
 	&InputInOutDInput,
 #elif defined (BUILD_MACOS)
-    &InputInOutMacOS,
+	&InputInOutMacOS,
+#elif defined (BUILD_SDL2)
+		&InputInOutSDL2,
 #elif defined (BUILD_SDL)
 	&InputInOutSDL,
 #elif defined (_XBOX)
 	&InputInOutXInput2,
 #elif defined (BUILD_QT)
-    &InputInOutQt,
+	&InputInOutQt,
 #endif
 };
 
 #define INPUT_LEN (sizeof(pInputInOut) / sizeof(pInputInOut[0]))
 
+#if defined(__APPLE__)
 std::vector<const InputInOut *> InputGetInterfaces()
 {
-    std::vector<const InputInOut *> list;
-    for (unsigned int i = 0; i < INPUT_LEN; i++)
-        list.push_back(pInputInOut[i]);
-    return list;
+	std::vector<const InputInOut *> list;
+	for (unsigned int i = 0; i < INPUT_LEN; i++)
+		list.push_back(pInputInOut[i]);
+	return list;
 }
+#endif
 
 static InterfaceInfo InpInfo = { NULL, NULL, NULL };
 
@@ -79,6 +88,8 @@ static INT32 InputTick()
 
 	for (i = 0, pgi = GameInp; i < nGameInpCount; i++, pgi++) {
 		INT32 nAdd = 0;
+		INT32 bGotKey = 0;
+
 		if ((pgi->nInput &  GIT_GROUP_SLIDER) == 0) {				// not a slider
 			continue;
 		}
@@ -86,9 +97,11 @@ static INT32 InputTick()
 		if (pgi->nInput == GIT_KEYSLIDER) {
 			// Get states of the two keys
 			if (CinpState(pgi->Input.Slider.SliderAxis.nSlider[0]))	{
+				bGotKey = 1;
 				nAdd -= 0x100;
 			}
 			if (CinpState(pgi->Input.Slider.SliderAxis.nSlider[1]))	{
+				bGotKey = 1;
 				nAdd += 0x100;
 			}
 		}
@@ -96,6 +109,9 @@ static INT32 InputTick()
 		if (pgi->nInput == GIT_JOYSLIDER) {
 			// Get state of the axis
 			nAdd = CinpJoyAxis(pgi->Input.Slider.JoyAxis.nJoy, pgi->Input.Slider.JoyAxis.nAxis);
+
+			if (nAdd != 0) bGotKey = 1;
+
 			nAdd /= 0x80;
 				// May 30, 2019 -dink
 				// Was "nAdd /= 0x100;" - Current gamepads w/ thumbsticks
@@ -109,21 +125,26 @@ static INT32 InputTick()
 		nAdd *= pgi->Input.Slider.nSliderSpeed;
 		nAdd /= 0x100;
 
-		if (pgi->Input.Slider.nSliderCenter) {						// Attact to center
-			INT32 v = pgi->Input.Slider.nSliderValue - 0x8000;
-			v *= (pgi->Input.Slider.nSliderCenter - 1);
-			v /= pgi->Input.Slider.nSliderCenter;
-			v += 0x8000;
-			pgi->Input.Slider.nSliderValue = v;
+		if (pgi->Input.Slider.nSliderCenter && !bGotKey) {						// Attact to center
+			if (pgi->Input.Slider.nSliderCenter == 1) {
+				// Fastest Auto-Center speed, center immediately when key/button is released
+				pgi->Input.Slider.nSliderValue = 0x8000;
+			} else {
+				INT32 v = pgi->Input.Slider.nSliderValue - 0x8000;
+				v *= (pgi->Input.Slider.nSliderCenter - 1);
+				v /= pgi->Input.Slider.nSliderCenter;
+				v += 0x8000;
+				pgi->Input.Slider.nSliderValue = v;
+			}
 		}
 
 		pgi->Input.Slider.nSliderValue += nAdd;
 		// Limit slider
-		if (pgi->Input.Slider.nSliderValue < 0x0100) {
-			pgi->Input.Slider.nSliderValue = 0x0100;
+		if (pgi->Input.Slider.nSliderValue < 0x0000) {
+			pgi->Input.Slider.nSliderValue = 0x0000;
 		}
-		if (pgi->Input.Slider.nSliderValue > 0xFF00) {
-			pgi->Input.Slider.nSliderValue = 0xFF00;
+		if (pgi->Input.Slider.nSliderValue > 0xFFFF) {
+			pgi->Input.Slider.nSliderValue = 0xFFFF;
 		}
 	}
 	return 0;
@@ -175,11 +196,20 @@ INT32 InputSetCooperativeLevel(const bool bExclusive, const bool bForeground)
 	return pInputInOut[nInputSelect]->SetCooperativeLevel(bExclusive, bForeground);
 }
 
-static bool bLastAF[1000];
+// Auto-Fire!  git 'r dun!!
+static INT32 AF[1000] = { 0, };
 INT32 nAutoFireRate = 12;
 
-static inline INT32 AutofirePick() {
-	return ((nCurrentFrame % nAutoFireRate) > nAutoFireRate-4);
+static inline INT32 AutofirePick(INT32 buttonOffset)
+{
+	INT32 onTime = nAutoFireRate - ((nAutoFireRate < 4) ? nAutoFireRate : 4);
+
+	return ((nCurrentFrame - AF[buttonOffset] + onTime) % nAutoFireRate) > onTime;
+}
+
+static inline void AutofireOff(INT32 buttonOffset)
+{
+	AF[buttonOffset] = nCurrentFrame;
 }
 
 // This will process all PC-side inputs and optionally update the emulated game side.
@@ -246,6 +276,17 @@ INT32 InputMake(bool bCopy)
 				if (pgi->nType == BIT_ANALOG_REL) {
 					nSlider -= 0x8000;
 					nSlider >>= 4;
+				}
+
+				nSlider *= nAnalogSpeed;
+				nSlider >>= 8;
+
+				// Clip axis to 16 bits (signed)
+				if (nSlider < -32768) {
+					nSlider = -32768;
+				}
+				if (nSlider >  32767) {
+					nSlider =  32767;
 				}
 
 				pgi->Input.nVal = (UINT16)nSlider;
@@ -363,20 +404,26 @@ INT32 InputMake(bool bCopy)
 			if (CinpState(pgi->Macro.Switch.nCode)) {
 				if (pgi->Macro.pVal[0]) {
 					*(pgi->Macro.pVal[0]) = pgi->Macro.nVal[0];
-					if (pgi->Macro.nSysMacro==15) { //Auto-Fire mode!
-						if (AutofirePick() || bLastAF[i]==0)
-							*(pgi->Macro.pVal[0]) = pgi->Macro.nVal[0];
+					if (pgi->Macro.nSysMacro == 15) { //Auto-Fire mode!
+						if (AutofirePick(i)) {
+							for (INT32 j = 0; j < 4; j++) {
+								if (pgi->Macro.pVal[j]) {
+									*(pgi->Macro.pVal[j]) = pgi->Macro.nVal[j];
+								}
+							}
+						}
 						else
 							*(pgi->Macro.pVal[0]) = 0;
-						bLastAF[i] = 1;
 					}
 				}
-			} else { // Disable System-Macro when key up
+			}
+			else { // Disable System-Macro when key up
 				if (pgi->Macro.pVal[0] && pgi->Macro.nSysMacro == 1) {
 					*(pgi->Macro.pVal[0]) = 0;
-				} else {
+				}
+				else {
 					if (pgi->Macro.nSysMacro == 15)
-						bLastAF[i] = 0;
+						AutofireOff(i);
 				}
 			}
 		}
@@ -500,7 +547,7 @@ InterfaceInfo* InputGetInfo()
 	if (bInputOkay) {
 		InpInfo.pszModuleName = pInputInOut[nInputSelect]->szModuleName;
 
-	 	if (pInputInOut[nInputSelect]->GetPluginSettings) {
+		if (pInputInOut[nInputSelect]->GetPluginSettings) {
 			pInputInOut[nInputSelect]->GetPluginSettings(&InpInfo);
 		}
 

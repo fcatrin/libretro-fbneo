@@ -2,7 +2,10 @@
 #ifdef FBNEO_DEBUG
  #define PRINT_DEBUG_INFO
 #endif
+
+#if defined(__APPLE__)
 #include <vector>
+#endif
 
 // GameInp structure
 #include "gameinp.h"
@@ -49,7 +52,10 @@ INT32 InputMake(bool bCopy);
 INT32 InputFind(const INT32 nFlags);
 INT32 InputGetControlName(INT32 nCode, TCHAR* pszDeviceName, TCHAR* pszControlName);
 InterfaceInfo* InputGetInfo();
-std::vector<const InputInOut *> InputGetInterfaces();
+
+#if defined(__APPLE__)
+std::vector<const InputInOut *> InputGetInterfaces();  // this & include @ top is breaking the build..
+#endif
 
 extern bool bInputOkay;
 extern UINT32 nInputSelect;
@@ -159,7 +165,7 @@ INT32 VidInit();
 INT32 VidExit();
 INT32 VidReInitialise();
 INT32 VidFrame();
-extern void (*pVidTransCallback)(void);
+INT32 VidFrameCallback(bool bRedraw);        // Called from blitter  (VidFrame() -> VidDoFrame() -> Blitter -> this.)
 INT32 VidRedraw();
 INT32 VidRecalcPal();
 INT32 VidPaint(INT32 bValidate);
@@ -194,6 +200,7 @@ extern INT32 nVidFeedbackIntensity;
 extern INT32 nVidFeedbackOverSaturation;
 extern INT32 bVidCorrectAspect;
 extern INT32 bVidArcaderes;
+extern INT32 nVidDX9HardFX;
 
 extern INT32 bVidArcaderesHor;
 extern INT32 bVidArcaderesVer;
@@ -225,6 +232,7 @@ extern INT32 nVidScrnAspectX, nVidScrnAspectY;
 extern INT32 nVidVerScrnAspectX, nVidVerScrnAspectY;
 
 extern UINT8* pVidImage;
+extern INT32 pVidImageSize;
 extern INT32 nVidImageWidth, nVidImageHeight;
 extern INT32 nVidImageLeft, nVidImageTop;
 extern INT32 nVidImagePitch, nVidImageBPP;
@@ -253,7 +261,3 @@ extern bool bEditActive;
 extern bool bEditTextChanged;
 extern TCHAR EditText[MAX_CHAT_SIZE + 1];
 
-// osd text display for dx9
-extern TCHAR OSDMsg[MAX_PATH];
-extern UINT32 nOSDTimer;
-void VidSKillOSDMsg();

@@ -80,6 +80,8 @@ void konamigx_precache_registers()
 
 void konamigx_mixer_init(INT32 objdma)
 {
+	KonamiIC_GX_MixerInUse = 1;
+
 	m_gx_objdma = 0;
 	m_gx_primode = 0;
 
@@ -114,6 +116,18 @@ void konamigx_mixer_exit()
 	BurnFree(gx_objpool);
 	m_gx_objdma = 0;
 	konamigx_mystwarr_kludge = 0;
+}
+
+void konamigx_scan(INT32 nAction)
+{
+	if (nAction & ACB_MEMORY_RAM) {
+		ScanVar(gx_shdzbuf, 512 * 256 * 2, "gx shd z buf");
+		ScanVar(gx_objzbuf, 512 * 256 * 2, "gx obj z buf");
+		if (m_gx_objdma && gx_spriteram) {
+			ScanVar(gx_spriteram, 0x1000, "gx spriteram");
+		}
+		ScanVar(gx_objpool, GX_MAX_OBJECTS * sizeof(GX_OBJ), "gx obj pool");
+	}
 }
 
 static void gx_wipezbuf(INT32 noshadow)
@@ -554,16 +568,16 @@ void konamigx_mixer(INT32 sub1 /*extra tilemap 1*/, INT32 sub1flags, INT32 sub2 
 	{
 		INT32 pri = 0;
 
-		if (!(gx_spriteram[offs] & 0x8000)) continue;
+		if (!(BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs]) & 0x8000)) continue;
 
-		INT32 zcode = gx_spriteram[offs] & 0xff;
+		INT32 zcode = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs]) & 0xff;
 
 		// invert z-order when opset_pri is set (see p.51 OPSET PRI)
 		if (k053247_opset & 0x10) zcode = 0xff - zcode;
 
-		INT32 code  = gx_spriteram[offs+1];
-		INT32 color = k = gx_spriteram[offs+6];
-		l     = gx_spriteram[offs+7];
+		INT32 code  = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+1]);
+		INT32 color = k = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+6]);
+		l     = BURN_ENDIAN_SWAP_INT16(gx_spriteram[offs+7]);
 
 		K053247Callback(&code, &color, &pri);
 

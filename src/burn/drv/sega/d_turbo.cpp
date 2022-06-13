@@ -3,11 +3,8 @@
 // Alex Pasadyn, Howie Cohen, Frank Palazzolo, Ernesto Corvi, and Aaron Giles
 
 // to do:
-//	add 9-seg support (i8279)
-//	bug testing
-//	fixing sounds (subroc3d is bad)
-//	sound disabling
-//	clean up
+//	add 9-seg support (i8279) (not really needed)
+//  buck rogers sound fixups
 
 #include "tiles_generic.h"
 #include "z80_intf.h"
@@ -35,6 +32,7 @@ static UINT8 *DrvSprPOS;
 static UINT8 *DrvScrRAM;
 static UINT8 *DrvBmpRAM;
 static UINT8 *DrvSubRAM;
+static UINT8 *sound_data_cache;
 static UINT16 *DrvBitmap;
 
 static UINT32 *DrvPalette;
@@ -50,10 +48,13 @@ static UINT8 turbo_bsel;
 static UINT8 turbo_accel;
 
 static UINT8 sound_data[3];
+static UINT8 ppi_data[3];
 
 static UINT8 subroc3d_ply;
 static UINT8 subroc3d_flip;
 static UINT8 subroc3d_col;
+
+static UINT8 sound_mute;
 
 static UINT8 buckrog_status;
 static UINT8 buckrog_command;
@@ -69,6 +70,9 @@ static UINT8 DrvJoy4[8]; //fake
 static UINT8 DrvDips[3];
 static UINT8 DrvInputs[2];
 static UINT8 DrvReset;
+
+static INT32 is_turbo = 0;
+static INT32 is_subroc3d = 0;
 
 static struct BurnInputInfo TurboInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
@@ -94,8 +98,8 @@ static struct BurnInputInfo Subroc3dInputList[] = {
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 start"	},
 	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
 	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 left"	},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 1"	},
 
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
@@ -468,10 +472,10 @@ static UINT8 __fastcall subroc3d_read(UINT16 address)
 			return DrvInputs[1];
 
 		case 0xa802:
-			return DrvDips[1];
+			return DrvDips[0];
 
 		case 0xa803:
-			return DrvDips[2];
+			return DrvDips[1];
 
 		case 0xe800:
 		case 0xe801:
@@ -486,7 +490,7 @@ static UINT8 __fastcall subroc3d_read(UINT16 address)
 			return ppi8255_r(1, address & 3);
 
 		case 0xf800: // should use i8279 device
-			return DrvDips[0];
+			return 0x00; //DrvDips[0];
 
 		case 0xf801:// i8279 read
 			return 0x10;
@@ -724,10 +728,18 @@ static void subroc3d_ppi0a_write(UINT8 data)
 
 static void subroc3d_ppi0b_write(UINT8 data)
 {
-	// coin counter = data & 3
-	// lame = data & 4;
+	// lamp = data & 4;
 
 	subroc3d_flip = (data >> 4) & 1;
+	if ((data & 3) == 0 && ppi_data[1] & 3)
+	{
+		// coin-up!
+		BurnSamplePlay(5);
+		BurnSamplePlay(9);
+		BurnSamplePlay(10);
+		sound_mute = 0;
+	}
+	ppi_data[1] = data;
 }
 
 static void subroc3d_ppi0c_write(UINT8 data)
@@ -735,9 +747,18 @@ static void subroc3d_ppi0c_write(UINT8 data)
 	subroc3d_col = data & 0x0f;
 }
 
-#if 0
-static void subroc3d_update_volume(INT32 leftchan, UINT8 dis, UINT8 dir)
+static void subroc3d_vol(INT32 samplenum, INT32 fromcache)
 {
+	UINT8 dis = 0;
+	UINT8 dir = 0;
+
+	if (!fromcache)	{
+		sound_data_cache[samplenum] = sound_data[0];
+	}
+
+	dis = sound_data_cache[samplenum] & 0x0f;
+	dir = (sound_data_cache[samplenum] >> 4) & 0x07;
+
 	float volume = (float)(15 - dis) / 16.0f;
 	float lvol, rvol;
 
@@ -751,10 +772,9 @@ static void subroc3d_update_volume(INT32 leftchan, UINT8 dis, UINT8 dir)
 		lvol = rvol = 0;
 
 	/* if the sample is playing, adjust it */
-	sample_set_volume(leftchan + 0, lvol);
-	sample_set_volume(leftchan + 1, rvol);
+	BurnSampleSetRouteFade(samplenum, BURN_SND_SAMPLE_ROUTE_1, lvol, BURN_SND_ROUTE_LEFT);	\
+	BurnSampleSetRouteFade(samplenum, BURN_SND_SAMPLE_ROUTE_2, rvol, BURN_SND_ROUTE_RIGHT);	\
 }
-#endif
 
 static void subroc3d_ppi1a_write(UINT8 data)
 {
@@ -768,43 +788,34 @@ static void subroc3d_ppi1b_write(UINT8 data)
 
 	if ((diff & 0x01) && (data & 0x01))
 	{
-	//	subroc3d_mdis = sound_data[0] & 0x0f;
-	//	subroc3d_mdir = (sound_data[0] >> 4) & 0x07;
-		
 		if (!BurnSampleGetStatus(0))
 		{
 			BurnSamplePlay(0);
 		}
-	//	subroc3d_update_volume(0, subroc3d_mdis, subroc3d_mdir);
+		subroc3d_vol(0, 0);
 	}
 
 	if ((diff & 0x02) && (data & 0x02))
 	{
-	//	subroc3d_tdis = sound_data[0] & 0x0f;
-	//	subroc3d_tdir = (sound_data[0] >> 4) & 0x07;
 		if (!BurnSampleGetStatus(1))
 		{
 			BurnSamplePlay(1);
 		}
-	//	subroc3d_update_volume(2, subroc3d_tdis, subroc3d_tdir);
+		subroc3d_vol(1, 0);
 	}
 
 	if ((diff & 0x04) && (data & 0x04))
 	{
-	//	subroc3d_fdis = sound_data[0] & 0x0f;
-	//	subroc3d_fdir = (sound_data[0] >> 4) & 0x07;
 		if (!BurnSampleGetStatus(2))
 		{
 			BurnSamplePlay(2);
 		}
-	//	subroc3d_update_volume(4, subroc3d_fdis, subroc3d_fdir);
+		subroc3d_vol(2, 0);
 	}
 
 	if ((diff & 0x08) && (data & 0x08))
 	{
-	//	subroc3d_hdis = sound_data[0] & 0x0f;
-	//	subroc3d_hdir = (sound_data[0] >> 4) & 0x07;
-	//	subroc3d_update_volume(6, subroc3d_hdis, subroc3d_hdir);
+		subroc3d_vol(3, 0);
 	}
 }
 
@@ -816,8 +827,11 @@ static void subroc3d_ppi1c_write(UINT8 data)
 	if ((diff & 0x01) && (data & 0x01))
 		BurnSamplePlay((data & 0x02) ? 6 : 5);
 
-	if ((diff & 0x04) && (data & 0x04))
+	if ((diff & 0x04) && (data & 0x04)) {
+		BurnSamplePlay(3);
+		BurnSamplePlay(4);
 		BurnSamplePlay(7);
+	}
 
 	if ((diff & 0x08) && (data & 0x08))
 	{
@@ -830,9 +844,9 @@ static void subroc3d_ppi1c_write(UINT8 data)
 	if (!BurnSampleGetStatus(8))
 		BurnSamplePlay(8);
 
-//	sample_set_volume(11, (data & 0x40) ? 0 : 1.0);
+	BurnSampleSetAllRoutes(8, (data & 0x40) ? 0 : 0.20, BURN_SND_ROUTE_BOTH);
 
-//	sound_global_enable(!(data & 0x80));
+	sound_mute = data & 0x80;
 }
 
 static void buckrog_ppi0a_write(UINT8 data)
@@ -952,6 +966,8 @@ static INT32 DrvDoReset()
 	turbo_bsel = 3;
 	turbo_accel = 0;
 	memset (sound_data, 0, 3);
+	memset (ppi_data, 0, 3);
+	sound_mute = 0;
 
 	subroc3d_ply = 0;
 	subroc3d_flip = 0;
@@ -996,7 +1012,7 @@ static INT32 MemIndex()
 	DrvScrRAM		= Next; Next += 0x000800;
 	DrvSubRAM		= Next; Next += 0x000800;
 	DrvBmpRAM		= Next; Next += 0x00e000;
-
+	sound_data_cache= Next; Next += 0x000010;
 	RamEnd			= Next;
 
 	MemEnd			= Next;
@@ -1052,12 +1068,7 @@ static INT32 DrvGfxDecode()
 
 static INT32 TurboInit(INT32 encrypted)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if ((BurnDrvGetFlags() & BDF_BOOTLEG) == 0)
 	{
@@ -1181,6 +1192,7 @@ static INT32 TurboInit(INT32 encrypted)
 
 	BurnSampleInit(0);
 	BurnSampleSetAllRoutesAllSamples(0.20, BURN_SND_ROUTE_BOTH);
+	BurnSampleSetBuffered(ZetTotalCycles, 4992000);
 
 	BurnShiftInit(SHIFT_POSITION_BOTTOM_RIGHT, SHIFT_COLOR_WHITE, 80);
 
@@ -1190,6 +1202,8 @@ static INT32 TurboInit(INT32 encrypted)
 
 	DrvDoReset();
 
+	is_turbo = 1;
+
 	return 0;
 }
 
@@ -1198,12 +1212,7 @@ static INT32 TurboDecInit() { return TurboInit(0); }
 
 static INT32 Subroc3dInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM   + 0x00000,  0, 1)) return 1;
@@ -1269,12 +1278,15 @@ static INT32 Subroc3dInit()
 
 	BurnSampleInit(0);
 	BurnSampleSetAllRoutesAllSamples(0.20, BURN_SND_ROUTE_BOTH);
+	BurnSampleSetBuffered(ZetTotalCycles, 4992000);
 
 	BurnShiftInit(SHIFT_POSITION_BOTTOM_RIGHT, SHIFT_COLOR_RED, 80); // not used in this game
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, fg_map_callback, 8, 8, 32, 32);
 	GenericTilemapSetGfx(0, DrvFgROM, 2, 8, 8, 0x4000, 0, 0x3f);
+
+	is_subroc3d = 1;
 
 	DrvDoReset();
 
@@ -1342,12 +1354,7 @@ static void buckrog_decode(UINT8 *rom, UINT8 *dec, INT32 len)
 
 static INT32 BuckrogInit(INT32 encrypted)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM   + 0x00000,  0, 1)) return 1;
@@ -1417,6 +1424,7 @@ static INT32 BuckrogInit(INT32 encrypted)
 
 	BurnSampleInit(0);
 	BurnSampleSetAllRoutesAllSamples(0.20, BURN_SND_ROUTE_BOTH);
+	BurnSampleSetBuffered(ZetTotalCycles, 4992000);
 
 	BurnShiftInit(SHIFT_POSITION_BOTTOM_RIGHT, SHIFT_COLOR_RED, 80); // not used in this game
 
@@ -1447,7 +1455,10 @@ static INT32 DrvExit()
 	BurnSampleExit();
 	BurnShiftExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
+
+	is_turbo = 0;
+	is_subroc3d = 0;
 
 	return 0;
 }
@@ -2287,6 +2298,8 @@ static INT32 TurboFrame()
 		DrvDoReset();
 	}
 
+	ZetNewFrame();
+
 	{
 		DrvInputs[0] = 0xff;
 		DrvInputs[1] = 0xff;
@@ -2301,7 +2314,7 @@ static INT32 TurboFrame()
 		if (DrvDial > 0xff) DrvDial = 0;
 		if (DrvDial < 0x00) DrvDial = 0xff;
 
-		{ // gear shifter stuff
+		if (is_turbo) { // gear shifter stuff
 			BurnShiftInputCheckToggle(DrvJoy1[2]);
 
 			DrvInputs[0] &= ~4;
@@ -2309,34 +2322,25 @@ static INT32 TurboFrame()
 		}
 	}
 
-	INT32 nInterleave = 128; // 256/2
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[1] = { 4992000 / 60 };
 	INT32 nCyclesDone[1] = { 0 };
-	INT32 nSoundBufferPos = 0;
 
 	ZetOpen(0);
-	
+
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		CPU_RUN(0, Zet);
-		if (i == 224/2) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
-
-		if (pBurnSoundOut && i&1) { // samplizer needs less update-latency for the speed changes.
-			INT32 nSegmentLength = nBurnSoundLen / (nInterleave/2);
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnSampleRender(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		if (i == 224) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 	}
-	
+
 	ZetClose();
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			BurnSampleRender(pSoundBuf, nSegmentLength);
-		}
+		BurnSampleRender(pBurnSoundOut, nBurnSoundLen);
+
+		if (sound_mute) BurnSoundClear();
+		BurnSoundDCFilter();
 	}
 
 	if (pBurnDraw) {
@@ -2424,6 +2428,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(turbo_bsel);
 		SCAN_VAR(turbo_accel);
 		SCAN_VAR(sound_data);
+		SCAN_VAR(ppi_data);
 		
 		SCAN_VAR(subroc3d_ply);
 		SCAN_VAR(subroc3d_flip);
@@ -2434,6 +2439,12 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(buckrog_mov);
 		SCAN_VAR(buckrog_fchg);
 		SCAN_VAR(buckrog_obch);
+	}
+
+	if (nAction & ACB_VOLATILE && is_subroc3d) {
+		for (INT32 i = 0; i < 4; i++) {
+			subroc3d_vol(i, 1);
+		}
 	}
 
 	return 0;
@@ -2510,7 +2521,7 @@ struct BurnDriver BurnDrvTurbo = {
 	"turbo", NULL, NULL, "turbo", "1981",
 	"Turbo (program 1513-1515)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
 	NULL, turboRomInfo, turboRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboDecInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
@@ -2571,19 +2582,19 @@ struct BurnDriver BurnDrvTurboa = {
 	"turboa", "turbo", NULL, "turbo", "1981",
 	"Turbo (encrypted, program 1262-1264)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
 	NULL, turboaRomInfo, turboaRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboEncInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
 };
 
 
-// Turbo (encrypted, program 1363-1365 rev B)
+// Turbo (encrypted, program 1363-1365 rev C)
 
 static struct BurnRomInfo turbobRomDesc[] = {
-	{ "epr-1363_t5b.ic76",	0x2000, 0xf7f28149, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
-	{ "epr-1364_t5a.ic89",	0x2000, 0x6a341693, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "epr-1365_t5a.ic103",	0x2000, 0x3b6b0dc8, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "epr-1363_t5c.ic76",	0x2000, 0xa9c9571e, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
+	{ "epr-1364_t5c.ic89",	0x2000, 0xdc1f8352, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "epr-1365_t5c.ic103",	0x2000, 0x6edc455f, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "epr-1246.prom-ic84",	0x2000, 0x555bfe9a, 2 | BRF_GRA },           //  3 Sprites
 	{ "epr-1247.prom-ic86",	0x2000, 0xc8c5e4d5, 2 | BRF_GRA },           //  4
@@ -2630,19 +2641,19 @@ STD_ROM_FN(turbob)
 
 struct BurnDriver BurnDrvTurbob = {
 	"turbob", "turbo", NULL, "turbo", "1981",
-	"Turbo (encrypted, program 1363-1365 rev B)\0", NULL, "Sega", "Z80-3D",
+	"Turbo (encrypted, program 1363-1365 rev C)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
 	NULL, turbobRomInfo, turbobRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboEncInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
 };
 
 
-// Turbo (encrypted, program 1363-1365 rev A)
+// Turbo (encrypted, program 1363-1365 rev B)
 
 static struct BurnRomInfo turbocRomDesc[] = {
-	{ "epr-1363_t5a.ic76",	0x2000, 0x5c110fb6, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
+	{ "epr-1363_t5b.ic76",	0x2000, 0xf7f28149, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
 	{ "epr-1364_t5a.ic89",	0x2000, 0x6a341693, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "epr-1365_t5a.ic103",	0x2000, 0x3b6b0dc8, 1 | BRF_PRG | BRF_ESS }, //  2
 
@@ -2691,21 +2702,21 @@ STD_ROM_FN(turboc)
 
 struct BurnDriver BurnDrvTurboc = {
 	"turboc", "turbo", NULL, "turbo", "1981",
-	"Turbo (encrypted, program 1363-1365 rev A)\0", NULL, "Sega", "Z80-3D",
+	"Turbo (encrypted, program 1363-1365 rev B)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
 	NULL, turbocRomInfo, turbocRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboEncInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
 };
 
 
-// Turbo (encrypted, program 1363-1365)
+// Turbo (encrypted, program 1363-1365 rev A)
 
 static struct BurnRomInfo turbodRomDesc[] = {
-	{ "1363.ic76",			0x2000, 0xb6329a00, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
-	{ "1364.ic89",			0x2000, 0x3192f83b, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "1365.ic103",			0x2000, 0x23a3303a, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "epr-1363_t5a.ic76",	0x2000, 0x5c110fb6, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
+	{ "epr-1364_t5a.ic89",	0x2000, 0x6a341693, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "epr-1365_t5a.ic103",	0x2000, 0x3b6b0dc8, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "epr-1246.prom-ic84",	0x2000, 0x555bfe9a, 2 | BRF_GRA },           //  3 Sprites
 	{ "epr-1247.prom-ic86",	0x2000, 0xc8c5e4d5, 2 | BRF_GRA },           //  4
@@ -2752,10 +2763,71 @@ STD_ROM_FN(turbod)
 
 struct BurnDriver BurnDrvTurbod = {
 	"turbod", "turbo", NULL, "turbo", "1981",
+	"Turbo (encrypted, program 1363-1365 rev A)\0", NULL, "Sega", "Z80-3D",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	NULL, turbodRomInfo, turbodRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
+	TurboEncInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
+	224, 512, 3, 4
+};
+
+
+// Turbo (encrypted, program 1363-1365)
+
+static struct BurnRomInfo turboeRomDesc[] = {
+	{ "1363.ic76",			0x2000, 0xb6329a00, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code (Encrypted)
+	{ "1364.ic89",			0x2000, 0x3192f83b, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "1365.ic103",			0x2000, 0x23a3303a, 1 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "epr-1246.prom-ic84",	0x2000, 0x555bfe9a, 2 | BRF_GRA },           //  3 Sprites
+	{ "epr-1247.prom-ic86",	0x2000, 0xc8c5e4d5, 2 | BRF_GRA },           //  4
+	{ "epr-1248.prom-ic88",	0x2000, 0x82fe5b94, 2 | BRF_GRA },           //  5
+	{ "epr-1249.prom-ic90",	0x2000, 0xe258e009, 2 | BRF_GRA },           //  6
+	{ "epr-1250.prom-ic108",0x2000, 0xaee6e05e, 2 | BRF_GRA },           //  7
+	{ "epr-1251.prom-ic92",	0x2000, 0x292573de, 2 | BRF_GRA },           //  8
+	{ "epr-1252.prom-ic110",0x2000, 0xaee6e05e, 2 | BRF_GRA },           //  9
+	{ "epr-1253.prom-ic94",	0x2000, 0x92783626, 2 | BRF_GRA },           // 10
+	{ "epr-1254.prom-ic112",0x2000, 0xaee6e05e, 2 | BRF_GRA },           // 11
+	{ "epr-1255.prom-ic32",	0x2000, 0x485dcef9, 2 | BRF_GRA },           // 12
+	{ "epr-1256.prom-ic47",	0x2000, 0xaee6e05e, 2 | BRF_GRA },           // 13
+	{ "epr-1257.prom-ic34",	0x2000, 0x4ca984ce, 2 | BRF_GRA },           // 14
+	{ "epr-1258.prom-ic49",	0x2000, 0xaee6e05e, 2 | BRF_GRA },           // 15
+
+	{ "epr-1244.cpu-ic111",	0x0800, 0x17f67424, 3 | BRF_GRA },           // 16 Foreground Tiles
+	{ "epr-1245.cpu-ic122",	0x0800, 0x2ba0b46b, 3 | BRF_GRA },           // 17
+
+	{ "epr-1125.cpu-ic1",	0x0800, 0x65b5d44b, 4 | BRF_GRA },           // 18 Road Data
+	{ "epr-1126.cpu-ic2",	0x0800, 0x685ace1b, 4 | BRF_GRA },           // 19
+	{ "epr-1127.cpu-ic13",	0x0800, 0x9233c9ca, 4 | BRF_GRA },           // 20
+	{ "epr-1238.cpu-ic14",	0x0800, 0xd94fd83f, 4 | BRF_GRA },           // 21
+	{ "epr-1239.cpu-ic27",	0x0800, 0x4c41124f, 4 | BRF_GRA },           // 22
+	{ "epr-1240.cpu-ic28",	0x0800, 0x371d6282, 4 | BRF_GRA },           // 23
+	{ "epr-1241.cpu-ic41",	0x0800, 0x1109358a, 4 | BRF_GRA },           // 24
+	{ "epr-1242.cpu-ic42",	0x0800, 0x04866769, 4 | BRF_GRA },           // 25
+	{ "epr-1243.cpu-ic74",	0x0800, 0x29854c48, 4 | BRF_GRA },           // 26
+
+	{ "pr-1114.prom-ic13",	0x0020, 0x78aded46, 5 | BRF_GRA },           // 27 Color / Video PROMs
+	{ "pr-1115.prom-ic18",	0x0020, 0x5394092c, 5 | BRF_GRA },           // 28
+	{ "pr-1116.prom-ic20",	0x0020, 0x3956767d, 5 | BRF_GRA },           // 29
+	{ "pr-1117.prom-ic21",	0x0020, 0xf06d9907, 5 | BRF_GRA },           // 30
+	{ "pr-1118.cpu-ic99",	0x0100, 0x07324cfd, 5 | BRF_GRA },           // 31
+	{ "pr-1119.cpu-ic50",	0x0200, 0x57ebd4bc, 5 | BRF_GRA },           // 32
+	{ "pr-1120.cpu-ic62",	0x0200, 0x8dd4c8a8, 5 | BRF_GRA },           // 33
+	{ "pr-1121.prom-ic29",	0x0200, 0x7692f497, 5 | BRF_GRA },           // 34
+	{ "pr-1122.prom-ic11",	0x0400, 0x1a86ce70, 5 | BRF_GRA },           // 35
+	{ "pr-1123.prom-ic12",	0x0400, 0x02d2cb52, 5 | BRF_GRA },           // 36
+	{ "pr-1279.sound-ic40",	0x0020, 0xb369a6ae, 5 | BRF_GRA },           // 37
+};
+
+STD_ROM_PICK(turboe)
+STD_ROM_FN(turboe)
+
+struct BurnDriver BurnDrvTurboe = {
+	"turboe", "turbo", NULL, "turbo", "1981",
 	"Turbo (encrypted, program 1363-1365)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
-	NULL, turbodRomInfo, turbodRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	NULL, turboeRomInfo, turboeRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboEncInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
 };
@@ -2813,7 +2885,7 @@ struct BurnDriver BurnDrvTurbobl = {
 	"turbobl", "turbo", NULL, "turbo", "1981",
 	"Indianapolis (bootleg of Turbo)\0", NULL, "bootleg", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_RACING, 0,
 	NULL, turboblRomInfo, turboblRomName, NULL, NULL, turboSampleInfo, turboSampleName, TurboInputInfo, TurboDIPInfo,
 	TurboDecInit, DrvExit, TurboFrame, TurboDraw, DrvScan, &DrvRecalc, 0x100,
 	224, 512, 3, 4
@@ -2889,7 +2961,7 @@ struct BurnDriver BurnDrvSubroc3d = {
 	"subroc3d", NULL, NULL, "subroc3d", "1982",
 	"Subroc-3D\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
 	NULL, subroc3dRomInfo, subroc3dRomName, NULL, NULL, subroc3dSampleInfo, subroc3dSampleName, Subroc3dInputInfo, Subroc3dDIPInfo,
 	Subroc3dInit, DrvExit, TurboFrame, Subroc3dDraw, DrvScan, &DrvRecalc, 0x100,
 	512, 224, 4, 3
@@ -2954,7 +3026,7 @@ struct BurnDriver BurnDrvBuckrog = {
 	"buckrog", NULL, NULL, "buckrog", "1982",
 	"Buck Rogers: Planet of Zoom\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
 	NULL, buckrogRomInfo, buckrogRomName, NULL, NULL, BuckrogSampleInfo, BuckrogSampleName, BuckrogInputInfo, BuckrogDIPInfo,
 	BuckrogEncInit, DrvExit, BuckrogFrame, BuckrogDraw, DrvScan, &DrvRecalc, 0x400,
 	512, 224, 4, 3
@@ -3001,7 +3073,7 @@ struct BurnDriver BurnDrvBuckrogn = {
 	"buckrogn", "buckrog", NULL, "buckrog", "1982",
 	"Buck Rogers: Planet of Zoom (not encrypted, set 1)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
 	NULL, buckrognRomInfo, buckrognRomName, NULL, NULL, BuckrogSampleInfo, BuckrogSampleName, BuckrogInputInfo, BuckrogDIPInfo,
 	BuckrogDecInit, DrvExit, BuckrogFrame, BuckrogDraw, DrvScan, &DrvRecalc, 0x400,
 	512, 224, 4, 3
@@ -3048,7 +3120,7 @@ struct BurnDriver BurnDrvBuckrogn2 = {
 	"buckrogn2", "buckrog", NULL, "buckrog", "1982",
 	"Buck Rogers: Planet of Zoom (not encrypted, set 2)\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
 	NULL, buckrogn2RomInfo, buckrogn2RomName, NULL, NULL, BuckrogSampleInfo, BuckrogSampleName, BuckrogInputInfo, BuckrogDIPInfo,
 	BuckrogDecInit, DrvExit, BuckrogFrame, BuckrogDraw, DrvScan, &DrvRecalc, 0x400,
 	512, 224, 4, 3
@@ -3095,7 +3167,7 @@ struct BurnDriver BurnDrvZoom909 = {
 	"zoom909", "buckrog", NULL, "buckrog", "1982",
 	"Zoom 909\0", NULL, "Sega", "Z80-3D",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_SEGA_MISC, GBF_VERSHOOT, 0,
 	NULL, zoom909RomInfo, zoom909RomName, NULL, NULL, BuckrogSampleInfo, BuckrogSampleName, BuckrogInputInfo, BuckrogDIPInfo,
 	BuckrogEncInit, DrvExit, BuckrogFrame, BuckrogDraw, DrvScan, &DrvRecalc, 0x400,
 	512, 224, 4, 3

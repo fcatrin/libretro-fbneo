@@ -5,7 +5,7 @@
  #include "vid_directx_support.h"
 #endif
 
-#include <InitGuid.h>
+#include <initguid.h>
 #define DIRECT3D_VERSION 0x0700							// Use this Direct3D version
 
 #if defined BUILD_X64_EXE
@@ -336,7 +336,7 @@ int VidSEnterFullscreenMode(int nZoom, int nDepth)
 		nDepth = 16;
 	}
 
-	if (FAILED(pDD->SetCooperativeLevel(hVidWnd, DDSCL_ALLOWREBOOT | DDSCL_EXCLUSIVE | DDSCL_FULLSCREEN))) {
+	if (FAILED(pDD->SetCooperativeLevel(hVidWnd, DDSCL_ALLOWREBOOT | DDSCL_EXCLUSIVE | DDSCL_FPUPRESERVE | DDSCL_FULLSCREEN))) {
 		return 1;
 	}
 
@@ -453,7 +453,7 @@ bool VidSGetArcaderes(int* pWidth, int* pHeight)
 // - The window size
 int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanlines)
 {
-	int xm, ym;											// The multiple of nScrnWidth and nScrnHeight we can fit in
+	float xm, ym;											// The multiple of nScrnWidth and nScrnHeight we can fit in
 	int nScrnWidth, nScrnHeight;
 	int nScrnAspectX, nScrnAspectY;
 
@@ -469,7 +469,7 @@ int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanl
 	nScrnAspectY = nVidScrnAspectY;
 
 	if (bDrvOkay) {
-		if ((BurnDrvGetFlags() & (BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED)) && (nVidRotationAdjust & 1)) {
+		if ((BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL) && (nVidRotationAdjust & 1)) {
 			BurnDrvGetAspect(&nGameAspectY, &nGameAspectX);
 		} else {
 			BurnDrvGetAspect(&nGameAspectX, &nGameAspectY);
@@ -483,8 +483,10 @@ int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanl
 		}
 	}
 
-	xm = nWidth / nGameWidth;
-	ym = nHeight / nGameHeight;
+	//xm = (nWidth / nGameWidth) + (nWidth / nGameWidth) * 0.166666667;
+	//ym = (nHeight / nGameHeight) + (nWidth / nGameWidth) * 0.166666667;
+	xm = (float)nWidth / nGameWidth;
+	ym = (float)nHeight / nGameHeight;
 
 	if (nVidFullscreen) {
 		nScrnWidth = nVidScrnWidth;
@@ -495,36 +497,36 @@ int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanl
 	}
 
 	if (bVidCorrectAspect && bVidScanlines && ((ym >= 2 && xm) || (ym && xm >= 2 && bVertScanlines))) {	// Correct aspect ratio with scanlines
-		int nWidthScratch, nHeightScratch;
+		float nWidthScratch, nHeightScratch;
 		if (nGameWidth < nGameHeight && bVertScanlines) {
-			int xmScratch = xm;
+			float xmScratch = xm;
 			do {
 				nWidthScratch = nGameWidth * xmScratch;
-				nHeightScratch = nWidthScratch * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
+				nHeightScratch = (INT64)nWidthScratch * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
 				xmScratch--;
 			} while (nHeightScratch > nHeight && xmScratch >= 2);
 			if (nHeightScratch > nHeight) {				// The image is too high
 				if (nGameWidth < nGameHeight) {			// Vertical games
-					nWidth = nHeight * nScrnAspectX * nGameAspectX * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectY);
+					nWidth = (INT64)nHeight * nScrnAspectX * nGameAspectX * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectY);
 				} else {								// Horizontal games
-					nWidth = nHeight * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
+					nWidth = (INT64)nHeight * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
 				}
 			} else {
 				nWidth = nWidthScratch;
 				nHeight = nHeightScratch;
 			}
 		} else {
-			int ymScratch = ym;
+			float ymScratch = ym;
 			do {
 				nHeightScratch = nGameHeight * ymScratch;
-				nWidthScratch = nHeightScratch * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
+				nWidthScratch = (INT64)nHeightScratch * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
 				ymScratch--;
 			} while (nWidthScratch > nWidth && ymScratch >= 2);
 			if (nWidthScratch > nWidth) {				// The image is too wide
 				if (nGameWidth < nGameHeight) {			// Vertical games
-					nHeight = nWidth * nScrnAspectY * nGameAspectY * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectX);
+					nHeight = (INT64)nWidth * nScrnAspectY * nGameAspectY * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectX);
 				} else {								// Horizontal games
-					nHeight = nWidth * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
+					nHeight = (INT64)nWidth * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
 				}
 			} else {
 				nWidth = nWidthScratch;
@@ -533,13 +535,13 @@ int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanl
 		}
 	} else {
 		if (bVidCorrectAspect) {					// Correct aspect ratio
-			int nWidthScratch;
-			nWidthScratch = nHeight * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
+			float nWidthScratch;
+			nWidthScratch = (INT64)nHeight * nScrnAspectY * nGameAspectX * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectY);
 			if (nWidthScratch > nWidth) {			// The image is too wide
 				if (nGameWidth < nGameHeight) {		// Vertical games
-					nHeight = nWidth * nScrnAspectY * nGameAspectY * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectX);
+					nHeight = (INT64)nWidth * nScrnAspectY * nGameAspectY * nScrnWidth / (nScrnHeight * nScrnAspectX * nGameAspectX);
 				} else {							// Horizontal games
-					nHeight = nWidth * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
+					nHeight = (INT64)nWidth * nScrnAspectX * nGameAspectY * nScrnHeight / (nScrnWidth * nScrnAspectY * nGameAspectX);
 				}
 			} else {
 				nWidth = nWidthScratch;
@@ -579,8 +581,23 @@ int VidSScaleImage(RECT* pRect, int nGameWidth, int nGameHeight, bool bVertScanl
 // ---------------------------------------------------------------------------
 // Text display routines
 
-static struct { TCHAR pMsgText[32]; COLORREF nColour; int nPriority; unsigned int nTimer; } VidSShortMsg = { _T(""), 0, 0, 0,};
+struct sMsgStruct {
+	TCHAR pMsgText[8][64];
+	COLORREF nColour;
+	DWORD nRGB;
+	int nPriority;
+	unsigned int nTimer;
+	int players_active; // for drawing mini joypad image
+};
+
+sMsgStruct VidSShortMsg = { _T(""), 0, 0, 0, 0 };
 static HFONT ShortMsgFont = NULL;
+
+sMsgStruct VidSTinyMsg = { _T(""), 0, 0, 0, 0 };
+static HFONT TinyMsgFont = NULL;
+
+sMsgStruct VidSJoystickMsg = { _T(""), 0, 0, 0, 0 };
+static HFONT JoystickMsgFont = NULL;
 
 static unsigned char nStatusSymbols[4] = {0x3B, 0xC2, 0x3D, 0x34}; //"pause", "record", "kaillera" and "play" in font Webdings, respectivelly
 static HFONT StatusFont = NULL;
@@ -588,7 +605,7 @@ static HFONT StatusFontTiny = NULL;
 
 #define CHAT_SIZE 11
 
-static struct { TCHAR* pIDText; COLORREF nIDColour; TCHAR* pMainText; COLORREF nMainColour; } VidSChatMessage[CHAT_SIZE];
+struct { TCHAR* pIDText; COLORREF nIDColour; TCHAR* pMainText; COLORREF nMainColour; } VidSChatMessage[CHAT_SIZE];
 static bool bChatInitialised = false;
 
 static HFONT ChatIDFont = NULL;
@@ -606,12 +623,6 @@ static int nCursorTime;
 static int nCursorState = 0;
 static int nEditSize;
 static int nEditShadowOffset;
-
-static struct { TCHAR pMsgText[64]; COLORREF nColour; int nPriority; unsigned int nTimer; } VidSTinyMsg = {_T(""), 0, 0, 0};
-static HFONT TinyMsgFont = NULL;
-
-static struct { TCHAR pMsgText[64]; COLORREF nColour; int nLineNo; unsigned int nTimer; } VidSJoystickMsg = {_T(""), 0, 0, 0};
-static HFONT JoystickMsgFont = NULL;
 
 static IDirectDrawSurface7* pShortMsgSurf = NULL;
 static IDirectDrawSurface7* pStatusSurf = NULL;
@@ -638,9 +649,6 @@ static int nStatusFlags;
 bool bEditActive = false;
 bool bEditTextChanged = false;
 TCHAR EditText[MAX_CHAT_SIZE + 1] = _T("");
-
-TCHAR OSDMsg[MAX_PATH] = _T("");
-unsigned int nOSDTimer = 0;
 
 static BOOL MyTextOut(HDC hdc, int nXStart, int nYStart, LPCTSTR lpString, int cbString, int nShadowOffset, int nColour)
 {
@@ -700,6 +708,7 @@ static void VidSExitTinyMsg()
 
 static void VidSExitJoystickMsg()
 {
+	memset(&VidSJoystickMsg, 0, sizeof(VidSJoystickMsg));
 	VidSJoystickMsg.nTimer = 0;
 
 	if (JoystickMsgFont) {
@@ -833,7 +842,7 @@ static int VidSInitJoystickMsg(int /*nFlags*/)
 	VidSExitJoystickMsg();
 
 	//JoystickMsgFont = CreateFont(12, 0, 0, 0, FW_DEMIBOLD, 0, 0, 0, 0, 0, 0, ANTIALIASED_QUALITY, FF_SWISS, _T("Courier New"));
-	JoystickMsgFont = CreateFont(8, 0, 0, 0, FW_THIN, 0, 0, 0, OUT_OUTLINE_PRECIS, 0, 0, NONANTIALIASED_QUALITY, FF_SWISS, _T("Courier New"));
+	JoystickMsgFont = CreateFont(12, 0, 0, 0, FW_THIN, 0, 0, 0, OUT_OUTLINE_PRECIS, 0, 0, ANTIALIASED_QUALITY, FIXED_PITCH || MONO_FONT, _T("Courier New"));
 	VidSJoystickMsg.nTimer = 0;
 
 	// create surface to display the text
@@ -1145,16 +1154,27 @@ int VidSRestoreOSD()
 	return 0;
 }
 
+void VidSDisplayCheckTimers()
+{
+	// Switch off message display when the message has been displayed long enough
+	if (nFramesEmulated > VidSTinyMsg.nTimer) {
+		VidSTinyMsg.nTimer = 0;
+	}
+	if (nFramesEmulated > VidSJoystickMsg.nTimer) {
+		VidSJoystickMsg.nTimer = 0;
+	}
+	if (nFramesEmulated > VidSShortMsg.nTimer) {
+		VidSShortMsg.nTimer = 0;
+	}
+}
+
 static void VidSDisplayTinyMsg(IDirectDrawSurface7* pSurf, RECT* pRect)
 {
 	if (VidSTinyMsg.nTimer) {
 		RECT src = { 0, 0, 300, 20 };
 		RECT dest = { pRect->right - 320, pRect->bottom - 24, pRect->right - 8, pRect->bottom - 4 };
 
-		// Switch off message display when the message has been displayed long enough
-		if (nFramesEmulated > VidSTinyMsg.nTimer) {
-			VidSTinyMsg.nTimer = 0;
-		}
+		VidSDisplayCheckTimers();
 
 		if (dest.left < pRect->left) {
 			src.left = pRect->left - dest.left;
@@ -1182,10 +1202,7 @@ static void VidSDisplayJoystickMsg(IDirectDrawSurface7* pSurf, RECT* pRect)
 		RECT src = { 0, 0, 300, 60 }; // left top right bottom
 		RECT dest = { pRect->left, pRect->bottom - 60, pRect->left + 300, pRect->bottom };
 
-		// Switch off message display when the message has been displayed long enough
-		if (nFramesEmulated > VidSJoystickMsg.nTimer) {
-			VidSJoystickMsg.nTimer = 0;
-		}
+		VidSDisplayCheckTimers();
 
 		if (dest.left < pRect->left) {
 			src.left = pRect->left - dest.left;
@@ -1213,10 +1230,7 @@ static void VidSDisplayShortMsg(IDirectDrawSurface7* pSurf, RECT* pRect)
 		RECT src = { 0, 0, 256, 32 };
 		RECT dest = { 0, pRect->top + 4, pRect->right - 8, pRect->top + 36 };
 
-		// Switch off message display when the message has been displayed long enough
-		if (nFramesEmulated > VidSShortMsg.nTimer) {
-			VidSShortMsg.nTimer = 0;
-		}
+		VidSDisplayCheckTimers();
 
 		if (nStatus) {
 			for (int x = 0; x < 4; x++) {
@@ -1250,6 +1264,57 @@ static void VidSDisplayShortMsg(IDirectDrawSurface7* pSurf, RECT* pRect)
 	}
 }
 
+int VidSGetnZoom()
+{
+	return nZoom;
+}
+
+UINT8 VidSGetnStatus()
+{
+	INT32 nStat = 0;
+
+	if (bRunPause) {
+		nStat |= 1;
+	}
+	if (kNetGame) {
+		nStat |= 2;
+	}
+	if (nReplayStatus == 1) {
+		nStat |= 4;
+	}
+	if (nReplayStatus == 2) {
+		nStat |= 8;
+	}
+
+	return nStat;
+}
+
+TCHAR *VidSGetStatus()
+{
+	static TCHAR szStatus[8] = _T("");
+
+	nStatus = 0;
+
+	if (nVidSDisplayStatus == 0) {
+		szStatus[0] = 0x00;
+		return &szStatus[0];
+	}
+
+	nStatus = VidSGetnStatus();
+
+	// Make the status string
+	memset(szStatus, 0, sizeof(szStatus));
+	for (int i = 0, j = 0; i < 4; i++) {
+		if (nStatus & (1 << i)) {
+			szStatus[j] = nStatusSymbols[i];
+			szStatus[j + 1] = 0x00;
+			j++;
+		}
+	}
+
+	return &szStatus[0];
+}
+
 static void VidSDisplayStatus(IDirectDrawSurface7* pSurf, RECT* pRect)
 {
 	nStatus = 0;
@@ -1258,18 +1323,7 @@ static void VidSDisplayStatus(IDirectDrawSurface7* pSurf, RECT* pRect)
 		return;
 	}
 
-	if (bRunPause) {
-		nStatus |= 1;
-	}
-	if (kNetGame) {
-		nStatus |= 2;
-	}
-	if (nReplayStatus == 1) {
-		nStatus |= 4;
-	}
-	if (nReplayStatus == 2) {
-		nStatus |= 8;
-	}
+	nStatus = VidSGetnStatus();
 
 	if (nStatus != nPrevStatus) {
 		nPrevStatus = nStatus;
@@ -1277,19 +1331,10 @@ static void VidSDisplayStatus(IDirectDrawSurface7* pSurf, RECT* pRect)
 			// Print the message
 			HDC hDC;
 			HFONT hFont;
-			TCHAR szStatus[8];
+			TCHAR *szStatus = VidSGetStatus();
 
 			// Clear the surface first
 			VidSClearSurface(pStatusSurf, nKeyColour, NULL);
-
-			// Make the status string
-			memset(szStatus, 0, sizeof(szStatus));
-			for (int i = 0, j = 0; i < 4; i++) {
-				if (nStatus & (1 << i)) {
-					szStatus[j] = nStatusSymbols[i];
-					j++;
-				}
-			}
 
 			pStatusSurf->GetDC(&hDC);
 			SetBkMode(hDC, TRANSPARENT);
@@ -1619,15 +1664,17 @@ int VidSNewTinyMsg(const TCHAR* pText, int nRGB, int nDuration, int nPriority)	/
 	if (nSize > 63) {
 		nSize = 63;
 	}
-	_tcsncpy(VidSTinyMsg.pMsgText, pText, nSize);
-	VidSTinyMsg.pMsgText[nSize] = 0;
+	_tcsncpy(VidSTinyMsg.pMsgText[0], pText, nSize);
+	VidSTinyMsg.pMsgText[0][nSize] = 0;
 
 	if (nRGB) {
 		// Convert RGB value to COLORREF
 		VidSTinyMsg.nColour = RGB((nRGB >> 16), ((nRGB >> 8) & 0xFF), (nRGB & 0xFF));
+		VidSTinyMsg.nRGB = nRGB | (0xff << 24);
 	} else {
 		// Default message colour (yellow)
 		VidSTinyMsg.nColour = RGB(0xFF, 0xFF, 0x7F);
+		VidSTinyMsg.nRGB = 0xffffff7fUL;
 	}
 	if (nDuration) {
 		VidSTinyMsg.nTimer = nFramesEmulated + nDuration;
@@ -1655,10 +1702,10 @@ int VidSNewTinyMsg(const TCHAR* pText, int nRGB, int nDuration, int nPriority)	/
 
 		// Print a black shadow
 		SetTextColor(hDC, 0);
-		TextOut(hDC, 300, 20, VidSTinyMsg.pMsgText, _tcslen(VidSTinyMsg.pMsgText));
+		TextOut(hDC, 300, 20, VidSTinyMsg.pMsgText[0], _tcslen(VidSTinyMsg.pMsgText[0]));
 		// Print the text on top
 		SetTextColor(hDC, VidSTinyMsg.nColour);
-		TextOut(hDC, 300 - 1, 20 - 1, VidSTinyMsg.pMsgText, _tcslen(VidSTinyMsg.pMsgText));
+		TextOut(hDC, 300 - 1, 20 - 1, VidSTinyMsg.pMsgText[0], _tcslen(VidSTinyMsg.pMsgText[0]));
 
 		// Clean up
 		SelectObject(hDC, hFont);
@@ -1671,30 +1718,40 @@ int VidSNewTinyMsg(const TCHAR* pText, int nRGB, int nDuration, int nPriority)	/
 int VidSNewJoystickMsg(const TCHAR* pText, int nRGB, int nDuration, int nLineNo)	// int nRGB = 0, int nDuration = 0, int nLineNo = 0
 {
 	if (!pText) { // NULL passed, clear surface
+		memset(&VidSJoystickMsg.pMsgText, 0, sizeof(VidSJoystickMsg.pMsgText));
 		VidSClearSurface(pJoystickMsgSurf, nKeyColour, NULL);
 		return 0;
+	}
+
+	VidSJoystickMsg.players_active = nLineNo & 0x30;
+
+	// dx9 draws shadow on 4,5,6 and on-buttons on 0,1,2
+	if (pJoystickMsgSurf) { // basic - enh. blitters only!
+		nLineNo &= 3; // draw all on 0,1,2
 	}
 
 	int nSize = _tcslen(pText);
 	if (nSize > 63) {
 		nSize = 63;
 	}
-	_tcsncpy(VidSJoystickMsg.pMsgText, pText, nSize);
-	VidSJoystickMsg.pMsgText[nSize] = 0;
+	_tcsncpy(VidSJoystickMsg.pMsgText[nLineNo & 7], pText, nSize);
+	VidSJoystickMsg.pMsgText[nLineNo & 7][nSize] = 0;
 
 	if (nRGB) {
 		// Convert RGB value to COLORREF
 		VidSJoystickMsg.nColour = RGB((nRGB >> 16), ((nRGB >> 8) & 0xFF), (nRGB & 0xFF));
+		VidSJoystickMsg.nRGB = nRGB | (0xff << 24);
 	} else {
 		// Default message colour (yellow)
 		VidSJoystickMsg.nColour = RGB(0xFF, 0xFF, 0x7F);
+		VidSJoystickMsg.nRGB = 0xffffff7fUL;
 	}
 	if (nDuration) {
 		VidSJoystickMsg.nTimer = nFramesEmulated + nDuration;
 	} else {
 		VidSJoystickMsg.nTimer = nFramesEmulated + 120;
 	}
-	VidSJoystickMsg.nLineNo = nLineNo;
+//	VidSJoystickMsg.nLineNo = nLineNo;
 
 	{
 		if (pJoystickMsgSurf == NULL) {
@@ -1710,7 +1767,7 @@ int VidSNewJoystickMsg(const TCHAR* pText, int nRGB, int nDuration, int nLineNo)
 		hFont = (HFONT)SelectObject(hDC, JoystickMsgFont);
 		SetTextAlign(hDC, TA_TOP | TA_LEFT);
 
-		MyTextOut(hDC, 40, 7+(nLineNo*8), VidSJoystickMsg.pMsgText, _tcslen(VidSJoystickMsg.pMsgText), 0, VidSJoystickMsg.nColour);
+		MyTextOut(hDC, 40, 7+(nLineNo*8), VidSJoystickMsg.pMsgText[nLineNo & 3], _tcslen(VidSJoystickMsg.pMsgText[nLineNo & 3]), 0, VidSJoystickMsg.nColour);
 
 		// Clean up
 		SelectObject(hDC, hFont);
@@ -1731,26 +1788,24 @@ int VidSNewShortMsg(const TCHAR* pText, int nRGB, int nDuration, int nPriority)	
 	if (nSize > 31) {
 		nSize = 31;
 	}
-	_tcsncpy(VidSShortMsg.pMsgText, pText, nSize);
-	VidSShortMsg.pMsgText[nSize] = 0;
-
-	// copy osd message
-	memset(OSDMsg, '\0', MAX_PATH * sizeof(TCHAR));
-	_tcsncpy(OSDMsg, pText, nSize);
+	_tcsncpy(VidSShortMsg.pMsgText[0], pText, nSize);
+	VidSShortMsg.pMsgText[0][nSize] = 0;
 
 	if (nRGB) {
 		// Convert RGB value to COLORREF
 		VidSShortMsg.nColour = RGB((nRGB >> 16), ((nRGB >> 8) & 0xFF), (nRGB & 0xFF));
+		VidSShortMsg.nRGB = nRGB | (0xff << 24);
 	} else {
 		// Default message colour (yellow)
 		VidSShortMsg.nColour = RGB(0xFF, 0xFF, 0x7F);
+		VidSShortMsg.nRGB = 0xffffff7fUL;
 	}
 	if (nDuration) {
 		VidSShortMsg.nTimer = nFramesEmulated + nDuration;
 	} else {
 		VidSShortMsg.nTimer = nFramesEmulated + 120;
 	}
-	nOSDTimer = VidSShortMsg.nTimer;
+
 	VidSShortMsg.nPriority = nPriority;
 
 	{
@@ -1770,7 +1825,7 @@ int VidSNewShortMsg(const TCHAR* pText, int nRGB, int nDuration, int nPriority)	
 		hFont = (HFONT)SelectObject(hDC, ShortMsgFont);
 		SetTextAlign(hDC, TA_TOP | TA_RIGHT);
 
-		MyTextOut(hDC, 256 - 2, 0, VidSShortMsg.pMsgText, _tcslen(VidSShortMsg.pMsgText), 2, VidSShortMsg.nColour);
+		MyTextOut(hDC, 256 - 2, 0, VidSShortMsg.pMsgText[0], _tcslen(VidSShortMsg.pMsgText[0]), 2, VidSShortMsg.nColour);
 
 		// Clean up
 		SelectObject(hDC, hFont);
@@ -1793,11 +1848,6 @@ void VidSKillTinyMsg()
 void VidSKillJoystickMsg()
 {
 	VidSTinyMsg.nTimer = 0;
-}
-
-void VidSKillOSDMsg()
-{
-	nOSDTimer = 0;
 }
 
 int VidSAddChatMsg(const TCHAR* pID, int nIDRGB, const TCHAR* pMain, int nMainRGB)

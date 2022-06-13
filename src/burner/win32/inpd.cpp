@@ -8,6 +8,10 @@ static int bLastValDefined = 0;					//
 
 static HWND hInpdGi = NULL, hInpdPci = NULL, hInpdAnalog = NULL;	// Combo boxes
 
+int bClearInputIgnoreCheckboxMessage = 0;		// For clear input on afire macro.
+
+static int bInittingCheckboxes = 0;
+
 // Update which input is using which PC input
 static int InpdUseUpdate()
 {
@@ -174,8 +178,8 @@ static int InpdListBegin()
 		return 1;
 	}
 
-	// Full row select style:
-	SendMessage(hInpdList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
+	// Full row select style: Add checkbox for marco Autofire.
+	SendMessage(hInpdList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
 
 	// Make column headers
 	memset(&LvCol, 0, sizeof(LvCol));
@@ -209,7 +213,7 @@ int InpdListMake(int bBuild)
 	if (bBuild)	{
 		SendMessage(hInpdList, LVM_DELETEALLITEMS, 0, 0);
 	}
-
+	
 	// Add all the input names to the list
 	for (unsigned int i = 0; i < nGameInpCount; i++) {
 		struct BurnInputInfo bii;
@@ -228,7 +232,7 @@ int InpdListMake(int bBuild)
 		}
 
 		memset(&LvItem, 0, sizeof(LvItem));
-		LvItem.mask = LVIF_TEXT | LVIF_PARAM;
+		LvItem.mask = LVIF_TEXT |  LVIF_PARAM;
 		LvItem.iItem = j;
 		LvItem.iSubItem = 0;
 		LvItem.pszText = ANSIToTCHAR(bii.szName, NULL, 0);
@@ -238,6 +242,9 @@ int InpdListMake(int bBuild)
 
 		j++;
 	}
+
+	// Init Autofire checkboxes.
+	bInittingCheckboxes = 1;
 
 	struct GameInp* pgi = GameInp + nGameInpCount;
 	for (unsigned int i = 0; i < nMacroCount; i++, pgi++) {
@@ -252,10 +259,17 @@ int InpdListMake(int bBuild)
 			LvItem.lParam = (LPARAM)j;
 
 			SendMessage(hInpdList, bBuild ? LVM_INSERTITEM : LVM_SETITEM, 0, (LPARAM)&LvItem);
+
+			// When Macro is auto-fire, the checkbox is checked.
+			if (pgi->Macro.nSysMacro != 1) { // only non-system Macros!
+				ListView_SetCheckState(hInpdList, j, (pgi->Macro.nSysMacro == 15 && pgi->Input.pVal) ? TRUE : FALSE);
+			}
 		}
 
 		j++;
 	}
+
+	bInittingCheckboxes = 0;
 
 	InpdUseUpdate();
 
@@ -307,6 +321,8 @@ static int InpdInit()
 	int nMemLen;
 
 	hInpdList = GetDlgItem(hInpdDlg, IDC_INPD_LIST);
+
+	bClearInputIgnoreCheckboxMessage = 0;
 
 	// Allocate a last val array for the last input values
 	nMemLen = nGameInpCount * sizeof(char);
@@ -590,29 +606,70 @@ static int InitAnalogOptions(int nGi, int nPci)
 	return 0;
 }
 
+INT32 HardwarePresetWrite(FILE* h)
+{
+	// Write input types
+	for (UINT32 i = 0; i < nGameInpCount; i++) {
+		TCHAR* szName = NULL;
+		INT32 nPad = 0;
+		szName = InputNumToName(i);
+		_ftprintf(h, _T("input  \"%s\" "), szName);
+		nPad = 16 - _tcslen(szName);
+		for (INT32 j = 0; j < nPad; j++) {
+			_ftprintf(h, _T(" "));
+		}
+		_ftprintf(h, _T("%s\n"), InpToString(GameInp + i));
+	}
+
+	_ftprintf(h, _T("\n"));
+
+	struct GameInp* pgi = GameInp + nGameInpCount;
+	for (UINT32 i = nGameInpCount; i < nGameInpCount + nMacroCount; i++, pgi++) {
+		INT32 nPad = 0;
+
+		if (pgi->nInput & GIT_GROUP_MACRO) {
+			switch (pgi->nInput) {
+			case GIT_MACRO_AUTO:									// Auto-assigned macros
+				if (pgi->Macro.nSysMacro == 15) { // Autofire magic number
+					_ftprintf(h, _T("afire  \"%hs\"\n"), pgi->Macro.szName);  // Create autofire (afire) tag
+				}
+				_ftprintf(h, _T("macro  \"%hs\" "), pgi->Macro.szName);
+				break;
+			case GIT_MACRO_CUSTOM:									// Custom macros
+				_ftprintf(h, _T("custom \"%hs\" "), pgi->Macro.szName);
+				break;
+			default:												// Unknown -- ignore
+				continue;
+			}
+
+			nPad = 16 - strlen(pgi->Macro.szName);
+			for (INT32 j = 0; j < nPad; j++) {
+				_ftprintf(h, _T(" "));
+			}
+			_ftprintf(h, _T("%s\n"), InpMacroToString(pgi));
+		}
+	}
+
+	return 0;
+}
+
 static void SaveHardwarePreset()
 {
-	TCHAR *szDefaultCpsFile = _T("config\\presets\\cps.ini");
-	TCHAR *szDefaultNeogeoFile = _T("config\\presets\\neogeo.ini");
-	TCHAR *szDefaultPgmFile = _T("config\\presets\\pgm.ini");
 	TCHAR *szFileName = _T("config\\presets\\preset.ini");
 	TCHAR *szHardwareString = _T("Generic hardware");
 
 	int nHardwareFlag = (BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK);
 
-	if (nHardwareFlag == HARDWARE_CAPCOM_CPS1 || nHardwareFlag == HARDWARE_CAPCOM_CPS1_QSOUND || nHardwareFlag == HARDWARE_CAPCOM_CPS1_GENERIC || nHardwareFlag == HARDWARE_CAPCOM_CPSCHANGER || nHardwareFlag == HARDWARE_CAPCOM_CPS2 || nHardwareFlag == HARDWARE_CAPCOM_CPS3) {
-		szFileName = szDefaultCpsFile;
-		szHardwareString = _T("CPS-1/CPS-2/CPS-3 hardware");
-	}
-
-	if (nHardwareFlag == HARDWARE_SNK_NEOGEO) {
-		szFileName = szDefaultNeogeoFile;
-		szHardwareString = _T("Neo-Geo hardware");
-	}
-
-	if (nHardwareFlag == HARDWARE_IGS_PGM) {
-		szFileName = szDefaultPgmFile;
-		szHardwareString = _T("PGM hardware");
+	// See if nHardwareFlag belongs to any systems (nes.ini, neogeo.ini, etc) in gamehw_config (see: burner/gami.cpp)
+	for (INT32 i = 0; gamehw_cfg[i].ini[0] != '\0'; i++) {
+		for (INT32 hw = 0; gamehw_cfg[i].hw[hw] != 0; hw++) {
+			if (gamehw_cfg[i].hw[hw] == nHardwareFlag)
+			{
+				szFileName = gamehw_cfg[i].ini;
+				szHardwareString = gamehw_cfg[i].system;
+				break;
+			}
+		}
 	}
 
 	FILE *fp = _tfopen(szFileName, _T("wt"));
@@ -620,7 +677,7 @@ static void SaveHardwarePreset()
 		_ftprintf(fp, _T(APP_TITLE) _T(" - Hardware Default Preset\n\n"));
 		_ftprintf(fp, _T("%s\n\n"), szHardwareString);
 		_ftprintf(fp, _T("version 0x%06X\n\n"), nBurnVer);
-		GameInpWrite(fp);
+		HardwarePresetWrite(fp);
 		fclose(fp);
 	}
 
@@ -772,7 +829,7 @@ static void SliderExit()
 	}
 
 	nAnalogSpeed = (int)((double)nVal * 256.0 / 100.0 + 0.5);
-	bprintf(0, _T("  * Analog Speed: %X\n"), nAnalogSpeed);
+	//bprintf(0, _T("  * Analog Speed: %X\n"), nAnalogSpeed);
 }
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lParam)
@@ -809,7 +866,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			return 0;
 		}
 		if (Id == IDCANCEL && Notify == BN_CLICKED) {
+
 			SendMessage(hDlg, WM_CLOSE, 0, 0);
+
 			return 0;
 		}
 
@@ -961,13 +1020,53 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				ListItemDelete();
 			}
 		}
+		if (Id == IDC_INPD_LIST && pnm->code == LVN_ITEMCHANGED) {
+			/* Clear the checkboxs before the non Macro buttons
+			   After that, you should not access these checkboxes that have been eliminated
+			   Otherwise, the program will throw an exception due to incorrect access */
+			NMLISTVIEW* pNMListView = (NMLISTVIEW*)pnm;
+			struct GameInp *pgi = GameInp + pNMListView->iItem;
 
+			if (pNMListView->iItem < nGameInpCount || pgi->Macro.nSysMacro == 1) {
+				// Item is a normal game input or system macro, tell system not to draw
+				// checkbox.
+				LVITEM LvItem;
+				memset(&LvItem, 0, sizeof(LvItem));
+
+				LvItem.iItem = pNMListView->iItem;
+				LvItem.mask = LVIF_STATE;
+				LvItem.stateMask = LVIS_STATEIMAGEMASK;
+				LvItem.state = 0;
+
+				SendMessage(hInpdList, LVM_SETITEM, 0, (LPARAM)&LvItem);
+				return 0;
+			}
+
+			// Avoid setting checkboxes that haven't been mapped yet
+			if (!pgi->Input.pVal && pgi->Macro.nSysMacro != 1 && pgi->Macro.szName) {
+				// Check that the checkbox is properly checked
+				if (ListView_GetCheckState(hInpdList, pNMListView->iItem)) {
+					ListView_SetCheckState(hInpdList, pNMListView->iItem, 0);
+					if (bClearInputIgnoreCheckboxMessage == 0) {
+						MessageBox(hInpdDlg, FBALoadStringEx(hAppInst, IDS_ERR_MACRO_NOT_MAPPING, true), NULL, MB_ICONWARNING);
+					}
+					bClearInputIgnoreCheckboxMessage = 0;
+				}
+			} else {
+				if (bInittingCheckboxes == 0) { // Avoid race-condition w/InpdListMake()
+					// Checkbox value changed, update input struct
+					if (pgi->Macro.szName && pgi->Macro.nSysMacro != 1) { // Exclude System Macro's
+						pgi->Macro.nSysMacro = ListView_GetCheckState(hInpdList, pNMListView->iItem) ? 15 : 0;
+					}
+				}
+			}
+		}
 		if (Id == IDC_INPD_LIST && pnm->code == NM_CUSTOMDRAW) {
 			NMLVCUSTOMDRAW* plvcd = (NMLVCUSTOMDRAW*)lParam;
 
 			switch (plvcd->nmcd.dwDrawStage) {
 				case CDDS_PREPAINT:
-                    SetWindowLongPtr(hInpdDlg, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
+					SetWindowLongPtr(hInpdDlg, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
 					return 1;
 				case CDDS_ITEMPREPAINT:
 					if (plvcd->nmcd.dwItemSpec < nGameInpCount) {
@@ -1002,6 +1101,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 					return 1;
 			}
 		}
+
 		return 0;
 	}
 

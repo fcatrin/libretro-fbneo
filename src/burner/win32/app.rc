@@ -66,7 +66,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDCANCEL,228,225,50,14
     GROUPBOX        "", IDC_STATIC, 3, 0, 277, 220
-    CTEXT           "Double-click an input to change its mapping",IDC_STATIC,7,7,265,15,SS_CENTERIMAGE
+    CTEXT           "Double-click an input to change its mapping, Check the macro to auto-fire",IDC_STATIC,7,7,265,15,SS_CENTERIMAGE
     CONTROL         "List1",IDC_INPD_LIST,"SysListView32",LVS_REPORT | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP, 9, 24, 265, 128
 
     CONTROL         "", IDC_STATIC, "Static", SS_SUNKEN, 9, 156, 265, 58
@@ -78,7 +78,7 @@ BEGIN
     PUSHBUTTON      "Save preset",IDC_INPD_SAVE_AS_PRESET,15,194,81,14
     PUSHBUTTON      "Make default",IDC_INPD_DEFAULT,101,194,81,14
     PUSHBUTTON      "Use preset",IDC_INPD_USE,187,194,81,14
-    CTEXT           "Analog Sensitivity",IDC_STATIC,13,215,58,10,SS_CENTERIMAGE
+    CTEXT           "Analog Sensitivity",IDC_STATIC,13,215,72,10,SS_CENTERIMAGE
 	CONTROL			"Analog Sensitivity",IDC_INPD_ANSLIDER,"msctls_trackbar32",WS_TABSTOP,11,225,152,18
 	EDITTEXT		IDC_INPD_ANEDIT,167,225,20,14,SS_CENTERIMAGE
 	LTEXT			"%", IDC_STATIC,167+20, 225, 25, 10, SS_CENTERIMAGE
@@ -90,12 +90,19 @@ CAPTION "Select control"
 FONT 8, "MS Shell Dlg"
 BEGIN
     CONTROL         "Grab mouse",IDC_INPS_GRABMOUSE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,5,50,10
+//    PUSHBUTTON      "Map Digital",IDC_INPS_MAPDIG,5,15,50,11
+    CONTROL         "Map Digital",IDC_INPS_MAPDIG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,15,50,11
     PUSHBUTTON      "Activate",IDC_INPS_PUSH,5,15,50,11
 //    PUSHBUTTON      "Cancel",IDCANCEL,5,35,50,15
     PUSHBUTTON      "Clear Input",IDCANCEL+1,5,26,50,11
     CONTROL         "Clear Lock",IDC_INPS_CLEARLOCK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,5,38,50,10
     CONTROL         "",IDC_INPS_CONTROL,"Static",SS_SUNKEN | SS_CENTER | SS_CENTERIMAGE,60,5,130,45, WS_EX_STATICEDGE
+	CONTROL         "", IDC_INPS_CONTROL_S1, "Static", SS_SUNKEN | SS_CENTER | SS_CENTERIMAGE, 60, 5, 63, 45, WS_EX_STATICEDGE
+	CONTROL         "", IDC_INPS_CONTROL_S2, "Static", SS_SUNKEN | SS_CENTER | SS_CENTERIMAGE, 127, 5, 63, 45, WS_EX_STATICEDGE
     CONTROL         "",IDC_INPS_CONTROL_NAME,"Edit",ES_CENTER | ES_AUTOHSCROLL | ES_READONLY,5,53,185,8
+
+	LTEXT           "Speed: ", IDC_INPS_DIGLABEL, 5, 60, 25, 12, SS_CENTERIMAGE
+	CONTROL			"", IDC_INPS_DIGSLIDER, "msctls_trackbar32", WS_TABSTOP, 30, 63, 160, 12
 END
 
 IDD_INPC DIALOGEX 0, 0, 97, 26
@@ -216,7 +223,7 @@ BEGIN
     CONTROL         BMP_ABOUT,IDC_STATIC,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,3,3,100,50
     CONTROL         "version",IDC_FBA_VER,"Static",SS_OWNERDRAW | WS_GROUP,83,65,269,10
     CONTROL         "specialbuild",IDC_SPECIALSTRING,"Static",SS_OWNERDRAW | WS_GROUP,83,73,269,10
-    LTEXT           "FB Neo contains parts of MAME && Final Burn.\n© 2004-2019, Team FBNeo.",IDC_STATIC,6,88,235,16,WS_DISABLED
+    LTEXT           "FB Neo contains parts of MAME && Final Burn.\n© 2004-2022, Team FBNeo.",IDC_STATIC,6,88,235,16,WS_DISABLED
     DEFPUSHBUTTON   "OK",IDOK,305,90,50,14
     PUSHBUTTON      "License",IDC_SHOWLICENSE,251,90,50,14
     CONTROL         "",IDC_LICENSE,"RICHEDIT20A",ES_MULTILINE | ES_READONLY | WS_VSCROLL | ES_NOIME,3,109,353,77, WS_EX_STATICEDGE | ES_EX_NOCALLOLEINIT
@@ -266,11 +273,11 @@ BEGIN
     LTEXT           "",IDC_DRVCOUNT,10,345,241,8
     CONTROL         "Game Info",IDGAMEINFO,"Button",WS_TABSTOP,256,343,78,14
     GROUPBOX        "Options",IDC_STATIC_OPT,341,1,157,87
-    CONTROL         "Show available",IDC_CHECKAVAILABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,13,80,8
-	CONTROL         "Show unavailable",IDC_CHECKUNAVAILABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,24,80,8
-    CONTROL         "Always show clones",IDC_CHECKAUTOEXPAND,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,35,80,8
-    CONTROL         "Use zipnames",IDC_SEL_SHORTNAME,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,46,80,8
-    CONTROL         "Latin text only",IDC_SEL_ASCIIONLY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,57,80,8
+    CONTROL         "Show available",IDC_CHECKAVAILABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,13,140,8
+	CONTROL         "Show unavailable",IDC_CHECKUNAVAILABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,24,140,8
+    CONTROL         "Always show clones",IDC_CHECKAUTOEXPAND,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,35,140,8
+    CONTROL         "Use zipnames",IDC_SEL_SHORTNAME,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,46,140,8
+    CONTROL         "Latin text only",IDC_SEL_ASCIIONLY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,346,57,140,8
     CONTROL         "ROMs Dirs...",IDROM,"Button",WS_TABSTOP,346,70,72,14
     CONTROL         "Scan ROMs",IDRESCAN,"Button",WS_TABSTOP,422,70,72,14
     CONTROL         "Cancel",IDCANCEL,"Button",WS_TABSTOP,376,346,58,14
@@ -596,7 +603,7 @@ BEGIN
     GROUPBOX        "",IDC_STATIC1,2,0,470,298
     CONTROL         "",IDC_STATIC_INFOBOX,"Static",SS_WHITERECT | SS_SUNKEN,8,190,250,100
     EDITTEXT        IDC_TEXTCOMMENT,8,190,458,100,ES_MULTILINE | ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP | WS_VSCROLL
-    RTEXT           "Language:", IDC_IPSMAN_LANGUAGE, 8, 170, 40, 10, SS_CENTERIMAGE
+    LTEXT           "Language:", IDC_IPSMAN_LANGUAGE, 8, 170, 40, 10, SS_CENTERIMAGE
     COMBOBOX        IDC_CHOOSE_LIST, 60, 169, 100, 128, CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL
     CONTROL         "Deselect All",IDC_IPSMAN_DESELECTALL,"Button",WS_TABSTOP,170,169,58,13
     CONTROL         "",IDC_SCREENSHOT_H,"Static",SS_BITMAP | SS_REALSIZEIMAGE | SS_SUNKEN,262,10,106,100, WS_EX_CLIENTEDGE
@@ -673,7 +680,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDC_NCD_CANCEL_BUTTON,370,272,71,14
     PUSHBUTTON      "Scan Games",IDC_NCD_SCAN_BUTTON,366,236,71,14
     PUSHBUTTON      "Directories...",IDC_NCD_SEL_DIR_BUTTON,441,236,71,14
-    CONTROL         "Scan sub-dirs",IDC_NCD_SSUBDIR_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,367,255,71,10
+    CONTROL         "Scan sub-dirs",IDC_NCD_SSUBDIR_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,367,255,120,10
     GROUPBOX        "CD Cover",IDC_STATIC,362,1,156,108
     GROUPBOX        "Game Preview",IDC_STATIC,362,115,156,108
 //    GROUPBOX        "Selection Info",IDC_STATIC,7,256,348,59
@@ -683,10 +690,10 @@ BEGIN
     CONTROL         "",IDC_NCD_BACK_PIC,"Static",SS_BITMAP | SS_NOTIFY,368,126,17,15,WS_EX_CLIENTEDGE
     CONTROL         "",IDC_NCD_FRONT_PIC_FRAME,"Static",SS_BITMAP | NOT WS_VISIBLE,368,12,22,19,WS_EX_CLIENTEDGE
     CONTROL         "",IDC_NCD_BACK_PIC_FRAME,"Static",SS_BITMAP | NOT WS_VISIBLE,369,126,17,15,WS_EX_CLIENTEDGE
-    LTEXT           "Short name:",IDC_NCD_LABELSHORT,13,231,44,8,NOT WS_GROUP
-	LTEXT           "Released by:",IDC_NCD_LABELPUBLISHER,13,245,44,8,NOT WS_GROUP
-	LTEXT           "Disc Image:",IDC_NCD_LABELIMAGE,13,259,44,8,NOT WS_GROUP
-    LTEXT           "Audio Tracks:",IDC_NCD_LABELAUDIO,13,273,44,8,NOT WS_GROUP
+    LTEXT           "Short name:",IDC_NCD_LABELSHORT,13,231,64,8,NOT WS_GROUP
+	LTEXT           "Released by:",IDC_NCD_LABELPUBLISHER,13,245,64,8,NOT WS_GROUP
+	LTEXT           "Disc Image:",IDC_NCD_LABELIMAGE,13,259,64,8,NOT WS_GROUP
+    LTEXT           "Audio Tracks:",IDC_NCD_LABELAUDIO,13,273,64,8,NOT WS_GROUP
     EDITTEXT        IDC_NCD_TEXTSHORT,64,231,286,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP
 	EDITTEXT        IDC_NCD_TEXTPUBLISHER,64,245,286,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP
 	EDITTEXT        IDC_NCD_TEXTIMAGE,64,259,286,12,ES_AUTOHSCROLL | ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP
@@ -737,9 +744,9 @@ BEGIN
 	CONTROL         "List1",IDC_LIST1,"SysListView32",LVS_REPORT | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,8,94,504,247
 	CONTROL         "List2",IDC_LIST2,"SysListView32",LVS_REPORT | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,8,94,504,247
 	CONTROL         "List3",IDC_LIST3,"SysListView32",LVS_REPORT | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,8,94,504,247
-	CONTROL         "",IDC_MESSAGE_EDIT_ENG,"RICHEDIT20A",WS_VSCROLL | WS_SYSMENU | 0x804,8,94,504,247,WS_EX_STATICEDGE | ES_EX_NOCALLOLEINIT
-	CONTROL         "Favorite",IDFAVORITESET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,3,351,60,14
-	PUSHBUTTON      "Rescan Romset",IDRESCANSET,390,351,60,14
+	CONTROL         "",IDC_MESSAGE_EDIT_ENG,"RICHEDIT20W",WS_VSCROLL | WS_SYSMENU | 0x804,8,94,504,247,WS_EX_STATICEDGE | ES_EX_NOCALLOLEINIT
+	CONTROL         "Favorite",IDFAVORITESET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,3,351,120,14
+	PUSHBUTTON      "Rescan Romset",IDRESCANSET,390,351,64,14
 	DEFPUSHBUTTON   "Close",IDCANCEL,456,351,60,14
 END
 
@@ -779,9 +786,11 @@ BEGIN
     LTEXT           "",IDC_REPLAYRESET,76,80,190,8
     LTEXT           "",IDC_REPLAYTIME,76,89,190,8
     CONTROL         "Open Read-Only",IDC_READONLY,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,35,25,69,10
+                    WS_TABSTOP,14,25,69,10
     CONTROL         "Show Joystick Movement",IDC_SHOWMOVEMENT,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,120,25,100,10
+                    WS_TABSTOP,97,25,99,10
+    CONTROL         "Start Paused",IDC_STARTPAUSED,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,207,25,57,10
 END
 
 IDD_RECORDINP DIALOGEX 0, 0, 276, 98
@@ -807,12 +816,27 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
 	GROUPBOX        "",IDC_STATIC1,2,0,236,56
 	LTEXT           "These only apply to the DirectX Graphics 9 blitters.",IDC_CHOOSE_MONITOR_TEXT,8,4,210,15,SS_CENTERIMAGE
-	LTEXT           "Horizontal Games:", IDC_CHOOSE_MONITOR_HOR, 8, 21, 60, 10, SS_CENTERIMAGE
+	LTEXT           "Horizontal Games:", IDC_CHOOSE_MONITOR_HOR, 8, 21, 80, 10, SS_CENTERIMAGE
     COMBOBOX        IDC_CHOOSE_MONITOR_HOR_LIST, 80, 20, 150, 128, CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL
-	LTEXT           "Vertical Games:", IDC_CHOOSE_MONITOR_VER, 8, 39, 60, 10, SS_CENTERIMAGE
+	LTEXT           "Vertical Games:", IDC_CHOOSE_MONITOR_VER, 8, 39, 80, 10, SS_CENTERIMAGE
     COMBOBOX        IDC_CHOOSE_MONITOR_VER_LIST, 80, 38, 150, 128, CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL
     CONTROL         "Cancel",IDCANCEL,"Button",WS_TABSTOP,117,59,58,14
     CONTROL         "OK",IDOK,"Button",WS_TABSTOP,180,59,58,14
+END
+
+IDD_LUA DIALOGEX 0, 0, 270, 150
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_POPUP | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Lua Script"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    PUSHBUTTON      "Browse...",IDC_BUTTON_LUABROWSE,7,31,48,16
+    PUSHBUTTON      "Run",IDC_BUTTON_LUARUN,213,31,50,16
+    PUSHBUTTON      "Stop",IDC_BUTTON_LUASTOP,160,31,50,16
+    EDITTEXT        IDC_EDIT_LUAPATH,7,16,256,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_LUACONSOLE,7,61,256,81,ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL
+    LTEXT           "Output Console",IDC_LUACONSOLE_OUTPUT,7,51,51,8
+    LTEXT           "Script File",IDC_LUACONSOLE_SCRIPTFILE,7,7,32,8
+    PUSHBUTTON      "Edit",IDC_BUTTON_LUAEDIT,58,31,46,16
 END
 
 /////////////////////////////////////////////////////////////////////////////
@@ -827,7 +851,7 @@ BEGIN
         MENUITEM "Load game...\tF6",					MENU_LOAD
         MENUITEM "Play via Kaillera...",				MENU_STARTNET
         POPUP "Most recent games..."
-	BEGIN
+		BEGIN
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES1, GRAYED
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES2, GRAYED
             MENUITEM "no game selected",				MENU_PREVIOUSGAMES3, GRAYED
@@ -847,10 +871,16 @@ BEGIN
 		MENUITEM "Start Neo Geo CDZ...\tCtrl+Shift+F6",	MENU_START_NEOGEO_CD
 		MENUITEM SEPARATOR
         MENUITEM "Exit game\tCtrl+F4",					MENU_QUIT, GRAYED
-        MENUITEM "Pause game\tPause",					MENU_PAUSE, GRAYED        
+        MENUITEM "Pause game\tPause",					MENU_PAUSE, GRAYED
 		MENUITEM SEPARATOR
         MENUITEM "Adjust CPU speed...",					MENU_SETCPUCLOCK, GRAYED
         MENUITEM "Reset CPU speed to 100%",				MENU_RESETCPUCLOCK, GRAYED
+        MENUITEM SEPARATOR
+		POPUP "Lua Scripting..."
+        BEGIN
+            MENUITEM "&New Lua Script Window...",		ID_LUA_OPEN, GRAYED
+            MENUITEM "&Close Script Window",			ID_LUA_CLOSE_ALL, GRAYED
+        END
         MENUITEM SEPARATOR
         POPUP "Memory Card..."
         BEGIN
@@ -865,18 +895,18 @@ BEGIN
 	        MENUITEM "Replay input...",					MENU_STARTREPLAY, GRAYED
         	MENUITEM "Record input...",					MENU_STARTRECORD, GRAYED
 	        MENUITEM "Stop replay/record",					MENU_STOPREPLAY, GRAYED
-	END
+		END
         MENUITEM SEPARATOR
         POPUP "Save states..."
         BEGIN
 	        MENUITEM "Load state...\tCtrl+F9",				MENU_STATE_LOAD_DIALOG, GRAYED
         	MENUITEM "Save state...\tCtrl+F10",				MENU_STATE_SAVE_DIALOG, GRAYED
 	        POPUP "State slots..."
-		BEGIN
+			BEGIN
 	            MENUITEM "Activate previous slot\tF8",			MENU_STATE_PREVSLOT
         	    MENUITEM "Activate next slot\tF11",				MENU_STATE_NEXTSLOT
     		    MENUITEM "MENU_STATE_LOAD_SLOT",				MENU_STATE_LOAD_SLOT, GRAYED
-            	    MENUITEM "MENU_STATE_SAVE_SLOT",				MENU_STATE_SAVE_SLOT, GRAYED
+            	MENUITEM "MENU_STATE_SAVE_SLOT",				MENU_STATE_SAVE_SLOT, GRAYED
         	    MENUITEM "Undo last state save\tShift+F8",			MENU_STATE_UNDO
         	END
         	MENUITEM "Restore full state on load",				MENU_ALLRAM
@@ -1004,6 +1034,7 @@ BEGIN
 		MENUITEM "Enable VSync (Windowed)",						MENU_VIDEOVSYNC
 		MENUITEM "Enable DWM Sync (Windowed)",				MENU_DWMFIX
 		MENUITEM "Auto Frameskip",								MENU_AUTOFRAMESKIP
+		MENUITEM "Enable RunAhead",								MENU_RUNAHEAD
     END
     POPUP "Audio"
     BEGIN
@@ -1013,6 +1044,20 @@ BEGIN
     	    MENUITEM "XAudio2",						MENU_AUD_PLUGIN_2
     	END
     	MENUITEM "Plugin &options",					MENU_AUDIO_OPTIONS, GRAYED
+		POPUP "&Audio Volume"
+		BEGIN
+			MENUITEM "100% (max)",					MENU_AUDIO_VOLUME_100
+			MENUITEM "90%",							MENU_AUDIO_VOLUME_90
+			MENUITEM "80%",							MENU_AUDIO_VOLUME_80
+			MENUITEM "70%",							MENU_AUDIO_VOLUME_70
+			MENUITEM "60%",							MENU_AUDIO_VOLUME_60
+			MENUITEM "50%",							MENU_AUDIO_VOLUME_50
+			MENUITEM "40%",							MENU_AUDIO_VOLUME_40
+			MENUITEM "30%",							MENU_AUDIO_VOLUME_30
+			MENUITEM "20%",							MENU_AUDIO_VOLUME_20
+			MENUITEM "10%",							MENU_AUDIO_VOLUME_10
+			MENUITEM "0% (mute)",					MENU_AUDIO_VOLUME_0
+		END
     	MENUITEM SEPARATOR
         MENUITEM "2-point 1st order sample interpolation",		MENU_INTERPOLATE_1
         MENUITEM "4-point 3rd order sample interpolation",		MENU_INTERPOLATE_3
@@ -1039,7 +1084,9 @@ BEGIN
     	    MENUITEM "Slow",						MENU_INPUT_AUTOFIRE_RATE_1
     	    MENUITEM "Medium",						MENU_INPUT_AUTOFIRE_RATE_2
     	    MENUITEM "Fast",						MENU_INPUT_AUTOFIRE_RATE_3
-    	    MENUITEM "Very Fast",					MENU_INPUT_AUTOFIRE_RATE_4
+    	    MENUITEM "Faster",						MENU_INPUT_AUTOFIRE_RATE_4
+    	    MENUITEM "Very Fast",					MENU_INPUT_AUTOFIRE_RATE_5
+    	    MENUITEM "Very Faster",					MENU_INPUT_AUTOFIRE_RATE_6
     	END
     	MENUITEM SEPARATOR
         MENUITEM "Map game inputs...\tF5",				MENU_INPUT, GRAYED
@@ -1054,10 +1101,11 @@ BEGIN
            MENUITEM "Display mode indicator",				MENU_DISPLAYINDICATOR
            MENUITEM "Modeless menu",					MENU_MODELESS
            MENUITEM "Don't change Num Lock status",			MENU_NOCHANGENUMLOCK
-	   MENUITEM "Create support folders at runtime",		MENU_CREATEDIRS
+	       MENUITEM "Create support folders at runtime",		MENU_CREATEDIRS
            MENUITEM "Show Game List at start-up",			MENU_AUTOLOADGAMELIST
+           MENUITEM "Scan ROMs at start-up (if needed)",	MENU_AUTOSCANGAMELIST
            MENUITEM SEPARATOR
-           POPUP "Set application thread priority"
+           POPUP "Set application process priority"
            BEGIN
 //              MENUITEM "Realtime",					MENU_PRIORITY_REALTIME
               MENUITEM "High",						MENU_PRIORITY_HIGH
@@ -1067,17 +1115,13 @@ BEGIN
               MENUITEM "Low",						MENU_PRIORITY_LOW
            END
            MENUITEM "Enable high resolution system timer",		MENU_HIGHRESTIMER
-#ifdef FBNEO_DEBUG
            MENUITEM "Show Debug console (requires restart)",						MENU_DEBUGCONSOLE
-#endif
            MENUITEM SEPARATOR
-#ifdef BUILD_A68K
-           MENUITEM "Use assembly MC68000 core (this session only)",				MENU_ASSEMBLYCORE
-           MENUITEM SEPARATOR
-#endif
            MENUITEM "Save High Scores when supported",			MENU_SAVEHISCORES
 	   MENUITEM "Use alpha blend effects when supported",		MENU_USEBLEND
 	   MENUITEM "Display Gear-Shift Indicator when supported",	MENU_GEARSHIFT
+	   MENUITEM "Display Lightgun Reticles when supported",	MENU_LIGHTGUNRETICLES
+
 #ifdef INCLUDE_AVI_RECORDING
 	   POPUP "AVI Writer Output size"
        	   BEGIN
@@ -1101,6 +1145,10 @@ BEGIN
 			MENUITEM "Generate dat (Game Gear only)...",		MENU_CLRMAME_PRO_XML_GG_ONLY
 			MENUITEM "Generate dat (MSX 1 Games only)...",		MENU_CLRMAME_PRO_XML_MSX_ONLY
 			MENUITEM "Generate dat (ZX Spectrum Games only)...",MENU_CLRMAME_PRO_XML_SPECTRUM_ONLY
+			MENUITEM "Generate dat (NES Games only)...",		MENU_CLRMAME_PRO_XML_NES_ONLY
+			MENUITEM "Generate dat (FDS Games only)...",		MENU_CLRMAME_PRO_XML_FDS_ONLY
+			MENUITEM "Generate dat (Neo Geo Pocket Games only)...",	MENU_CLRMAME_PRO_XML_NGP_ONLY
+			MENUITEM "Generate dat (Fairchild Channel F Games only)...",	MENU_CLRMAME_PRO_XML_CHANNELF_ONLY
 			MENUITEM SEPARATOR
 			MENUITEM "Generate all dats...",					MENU_CLRMAME_PRO_ALL_DATS
 	END
@@ -1395,6 +1443,17 @@ BEGIN
 		MENUITEM "Point filtering",                             MENU_DX9_ALT_POINT
 		MENUITEM "Linear filtering",                            MENU_DX9_ALT_LINEAR
 		MENUITEM SEPARATOR
+        POPUP "HardFX algorithm"
+        BEGIN
+            MENUITEM "None",                    				MENU_DX9_ALT_HARD_FX_NONE
+            MENUITEM "CRT Aperture",            				MENU_DX9_ALT_HARD_FX_CRT_APERTURE
+            MENUITEM "CRT Caligari",            				MENU_DX9_ALT_HARD_FX_CRT_CALIGARI
+            MENUITEM "CRT CGWG Fast",           				MENU_DX9_ALT_HARD_FX_CRT_CGWG_FAST
+            MENUITEM "CRT Easy Mode",           				MENU_DX9_ALT_HARD_FX_CRT_EASY_MODE
+			MENUITEM "CRT Standard",            				MENU_DX9_ALT_HARD_FX_CRT_STANDARD
+			MENUITEM "CRT Bicubic",								MENU_DX9_ALT_HARD_FX_CRT_BICUBIC
+			MENUITEM "CRT CGA",									MENU_DX9_ALT_HARD_FX_CRT_CGA
+        END        
 		POPUP "SoftFX algorithm"
 		BEGIN
 			MENUITEM "Double pixels (3D hardware)",				MENU_DX9_ALT_SOFT_STRETCH
@@ -1452,8 +1511,6 @@ BEGIN
 		MENUITEM "Use Low-pass filter",					MENU_DSOUND_BASS
 		MENUITEM SEPARATOR
 		MENUITEM "Sound disabled",					MENU_DSOUND_NOSOUND
-        	MENUITEM "11025Hz samplerate",					MENU_DSOUND_11025
-        	MENUITEM "22050Hz samplerate",					MENU_DSOUND_22050
         	MENUITEM "44100Hz samplerate",					MENU_DSOUND_44100
         	MENUITEM "48000Hz samplerate",					MENU_DSOUND_48000
 	END
@@ -1467,8 +1524,6 @@ BEGIN
 		MENUITEM "Use reverb",						MENU_XAUDIO_REVERB
 		MENUITEM SEPARATOR
 		MENUITEM "Sound disabled",					MENU_XAUDIO_NOSOUND
-        	MENUITEM "11025Hz samplerate",					MENU_XAUDIO_11025
-        	MENUITEM "22050Hz samplerate",					MENU_XAUDIO_22050
         	MENUITEM "44100Hz samplerate",					MENU_XAUDIO_44100
         	MENUITEM "48000Hz samplerate",					MENU_XAUDIO_48000
 	END
@@ -1482,10 +1537,19 @@ BEGIN
 		MENUITEM SEPARATOR
 		MENUITEM "View Game Information",				GAMESEL_MENU_GAMEINFO
 		MENUITEM SEPARATOR
-		MENUITEM "View in Progetto EMMA",				GAMESEL_MENU_VIEWEMMA
+		MENUITEM "View in Arcade Database",				GAMESEL_MENU_VIEWEMMA
 		MENUITEM SEPARATOR
 		MENUITEM "Favorite",						GAMESEL_MENU_FAVORITE
 	END
+END
+
+IDR_MENU_LUAWINDOW MENU
+BEGIN
+    POPUP "Console"
+    BEGIN
+        MENUITEM "&Font...",                    IDC_LUACONSOLE_CHOOSEFONT
+        MENUITEM "Clear",                       IDC_LUACONSOLE_CLEAR
+    END
 END
 
 /////////////////////////////////////////////////////////////////////////////

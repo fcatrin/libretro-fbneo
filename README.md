@@ -1,14 +1,16 @@
 # FinalBurn Neo
 Official Forum: https://neo-source.com
 
+Discord: https://discord.gg/8EGVd9v
+
 This is the official repository of FinalBurn Neo, an Emulator for Arcade Games & Select Consoles. It is based on the emulators FinalBurn and old versions of [MAME](https://www.mamedev.org)
 
 Use of this program and its source code is subject to the license conditions provided in the [license.txt](/src/license.txt) file in the src folder.
 
 # Work in Progress builds
-If the below build status badge is green, you can download the latest builds from [this repository](https://github.com/finalburnneo/FBNeo-WIP-Storage-Facility/releases/tag/appveyor-build). Please note that if the below build status badge is not green then the build will be out of date. As this build is of the last commit occasionally you might run into incomplete code, crashes or other issues that [official releases](https://github.com/finalburnneo/FBNeo/releases) will not have. 
+You can download the latest builds by clicking on the badge below. Please note that the downloads might not be available immediately after a new commit. As this build is of the last commit occasionally you might run into incomplete code, crashes or other issues that [official releases](https://github.com/finalburnneo/FBNeo/releases) will not have.
 
-[![Build status](https://ci.appveyor.com/api/projects/status/8rkefxtvxd3cllag/branch/master?svg=true)](https://ci.appveyor.com/project/tmaul/fbneo-kbhgd/branch/master)
+[![nightly-release](https://github.com/finalburnneo/FBNeo/actions/workflows/nightly-release.yml/badge.svg)](https://github.com/finalburnneo/FBNeo/releases/tag/latest)
 
 # Ports
 
@@ -16,13 +18,15 @@ Raspberry Pi [build instructions](README-PI.md).
 
 macOS [build instructions](README-macOS.md) and [releases](https://github.com/fbn-mac/FBNeo/releases).
 
-[LibRetro port](https://github.com/libretro/FBNeo) with builds availble via [RetroArch](https://www.retroarch.com/) for most platforms.
+[LibRetro port](https://github.com/libretro/FBNeo) with builds availble via [RetroArch](https://www.retroarch.com/) for a lot of cool platforms.
 
-For SDL builds just type `make sdl` (requires SDL1.2 and GCC, make, perl and nasm)
+For SDL1.2 builds just type `make sdl` (requires SDL1.2 and GCC, make, perl and nasm) [instructions](README-SDL.md)
+
+For SDL2 builds just type `make sdl2` (requires SDL2, SDL2_image, gcc, make, perl and nasm) [instructions](README-SDL.md)
 
 # Reporting Issues
 
-Please raise an issue on the [project GitHub](https://github.com/finalburnneo/FBNeo) or report on the forums at [Neosource](https://neo-source.com)
+Please raise an issue on the [project GitHub](https://github.com/finalburnneo/FBNeo/issues) or report on the forums at [Neosource](https://neo-source.com)
 
 # What about FB Alpha?
 
@@ -58,13 +62,13 @@ void FunctionName(UINT8 var1, UINT16 var2)
 ```
 ## Source tree structure
 
-The source for FBNeo is layed out in a similar way to how things were in the days of the original FinalBurn. It's just that there are now more of them as the emulator has grown significantly.
+The source for FBNeo is layed out in a similar way to how things were in the days of the original FinalBurn. It's just that there are now more directories and source files as the emulator has grown significantly.
 ```
 src/
 --/burn			<-- This is where the emulation code lives
 ----/devices		<-- This is where emulated devices (EEPROMS, etc) live
 ----/drv		<-- This is where the drivers for Games and Systems live
-----/snd		<-- This is where the emulation for sound chips and other sound generate devices live
+----/snd		<-- This is where the emulation for sound chips and other sound generating devices live
 --/burner		<-- This is where the frontend code lives
 --/cpu			<-- This is where the CPU emulation lives
 --/dep			<-- This is where external dependencies live (such as libpng)
@@ -73,7 +77,6 @@ src/
 ## Porting FBNeo to different systems
 
 In the main source tree, you will see in the intf directory various implementations for different platforms. You should look in here when porting to new platforms. We also encourage new ports, and are happy to have them merged in to the main sourcetree. There is probably a project there for someone to re-implement some of the older ports using the intf standard, should they want to.
-
 
 For portability we define the following types
 ```
@@ -87,4 +90,4 @@ signed int64	INT64;
 unsigned int64  UINT64;
 
 ```
-It is recommended that you take a look at the other #defines and things in the header files in Burn and Burner, and don't forget that some of the existing code in the intf directory will come in handy for new ports. 
+It is recommended that you take a look at the other #defines and structs in the header files in Burn and Burner, and don't forget that some of the existing code in the intf directory will come in handy for new ports. 

@@ -42,26 +42,26 @@ static struct BurnInputInfo MirageInputList[] = {
 	{"Coin 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
 	{"Coin 2",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 coin"	},
 	{"P1 Start",	BIT_DIGITAL,	DrvJoy2 + 5,	"p1 start"	},
-	{"A",			BIT_DIGITAL,	DrvJoy2 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy6 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy2 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy2 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy2 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy2 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy2 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah reach"	},
-	{"Flip Flip",	BIT_DIGITAL,	DrvJoy4 + 3,	"mah ff"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy2 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy5 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy6 + 0,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy2 + 1,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy4 + 3,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy2 + 2,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy2 + 4,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy2 + 3,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy2 + 4,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy5 + 4,	"mah reach"	},
+	{"P1 Flip Flip",BIT_DIGITAL,	DrvJoy4 + 3,	"mah ff"	},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 0,	"service"	},
@@ -378,9 +378,9 @@ static void DrvPaletteUpdate()
 	
 	for (INT32 i = 0; i < 0x800/2; i++)
 	{
-		INT32 r = (p[i] >>  0) & 0x1f;
-		INT32 g = (p[i] >>  5) & 0x1f;
-		INT32 b = (p[i] >> 10) & 0x1f;
+		INT32 r = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 0) & 0x1f;
+		INT32 g = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 5) & 0x1f;
+		INT32 b = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 10) & 0x1f;
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
@@ -397,14 +397,14 @@ static void draw_sprites()
 	for (INT32 offs = 0x400-4; offs >= 0; offs -= 4)
 	{
 		INT32 inc, mult;
-		INT32 y = spriteram[offs];
+		INT32 y = BURN_ENDIAN_SWAP_INT16(spriteram[offs]);
 		INT32 flash = y & 0x1000;
 
 		if (!(flash && (nCurrentFrame & 1)))
 		{
-			INT32 sprite = spriteram[offs + 1] & 0x7fff;
+			INT32 sprite = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 1]) & 0x7fff;
 			INT32 w = y & 0x0800;
-			INT32 x = spriteram[offs + 2];
+			INT32 x = BURN_ENDIAN_SWAP_INT16(spriteram[offs + 2]);
 
 			INT32 colour = (x >> 9) & 0x3f;
 

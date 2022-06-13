@@ -524,22 +524,23 @@ STD_ROM_PICK(Newfant)
 STD_ROM_FN(Newfant)
 
 // Rom information
+// Comad 940630 PCB
 static struct BurnRomInfo NewfantaRomDesc[] = {
-	{ "prog2.12",   		0x080000, 0xde43a457, BRF_ESS | BRF_PRG }, // 68000 code
-	{ "prog1.07",   		0x080000, 0x370b45be, BRF_ESS | BRF_PRG },
-	{ "iscr2.10",  			0x080000, 0x4f2da2eb, BRF_ESS | BRF_PRG },
-	{ "iscr1.05",			0x080000, 0x63c6894f, BRF_ESS | BRF_PRG },
-	{ "iscr4.09",  			0x080000, 0x725741ec, BRF_ESS | BRF_PRG },
-	{ "iscr3.04",			0x080000, 0x51d6b362, BRF_ESS | BRF_PRG },
-	{ "iscr6.08", 			0x080000, 0x178b2ef3, BRF_ESS | BRF_PRG },
-	{ "iscr5.03",			0x080000, 0xd2b5c5fa, BRF_ESS | BRF_PRG },
-	{ "iscr8.11", 			0x080000, 0xf4148528, BRF_ESS | BRF_PRG },
-	{ "iscr7.06",			0x080000, 0x2dee0c31, BRF_ESS | BRF_PRG },
+	{ "12.ue17",   			0x080000, 0xde43a457, BRF_ESS | BRF_PRG }, // 68000 code
+	{ "7.ud17",   			0x080000, 0x370b45be, BRF_ESS | BRF_PRG },
+	{ "10.ue16b",  			0x080000, 0x4f2da2eb, BRF_ESS | BRF_PRG },
+	{ "5.ue16a",			0x080000, 0x63c6894f, BRF_ESS | BRF_PRG },
+	{ "9.ue15b",  			0x080000, 0x725741ec, BRF_ESS | BRF_PRG },
+	{ "4.ue15a",			0x080000, 0x51d6b362, BRF_ESS | BRF_PRG },
+	{ "8.ue14b", 			0x080000, 0x178b2ef3, BRF_ESS | BRF_PRG },
+	{ "3.ue14a",			0x080000, 0xd2b5c5fa, BRF_ESS | BRF_PRG },
+	{ "11.ue20b", 			0x080000, 0xf4148528, BRF_ESS | BRF_PRG },
+	{ "6.ue20a",			0x080000, 0x2dee0c31, BRF_ESS | BRF_PRG },
 
-	{ "obj1.13",    		0x080000, 0x832cd451, BRF_GRA },			  // graphics
+	{ "13.u5",    			0x080000, 0x832cd451, BRF_GRA },			  // graphics
 
-	{ "musc1.01",   		0x080000, 0x10347fce, BRF_SND },			  // PCM
-	{ "musc2.02",   		0x080000, 0xb9646a8c, BRF_SND },
+	{ "1.ub6",   			0x080000, 0x10347fce, BRF_SND },			  // PCM
+	{ "2.uc6",   			0x080000, 0xb9646a8c, BRF_SND },
 };
 
 STD_ROM_PICK(Newfanta)
@@ -1452,7 +1453,7 @@ static INT32 WownfantInit()
 static INT32 GalhustlInit()
 {
 	INT32 nRet;
-
+	
 	Mem = NULL;
 	MemIndex2();
 	INT32 nLen = MemEnd - (UINT8 *)0;
@@ -1866,7 +1867,7 @@ static INT32 GalpanicDraw()
 	}
 
  	for (INT32 i = 0; i < 1024; i++) {
- 		UINT16 nColour = RamPal[i];
+ 		UINT16 nColour = BURN_ENDIAN_SWAP_INT16(RamPal[i]);
  		INT32 r = pal5bit(nColour >> 6);
  		INT32 g = pal5bit(nColour >> 11);
  		INT32 b = pal5bit(nColour >> 1);
@@ -1878,8 +1879,8 @@ static INT32 GalpanicDraw()
  	UINT16 * f = (UINT16 *)RamFg;
 	for (INT32 j=0;j<224;j++) {
 		for (INT32 i=0;i<256;i++) {
-			if (*f)	*d = RamCurPal[*f];
-			else 	*d = RamCTB64k[*s >> 1];
+			if (*f)	*d = RamCurPal[BURN_ENDIAN_SWAP_INT16(*f)];
+			else 	*d = RamCTB64k[BURN_ENDIAN_SWAP_INT16(*s) >> 1];
 			d--;
 			s++;
 			f++;
@@ -1891,9 +1892,9 @@ static INT32 GalpanicDraw()
 	for (INT32 offs=0; offs<0x002400; offs+=0x08) {
 		INT32 x,y,code,color,flipx,flipy,attr1,attr2;
 
-		attr1 = RamSpr[offs + 3];
-		x = RamSpr[offs + 4] - ((attr1 & 0x01) << 8);
-		y = RamSpr[offs + 5] + ((attr1 & 0x02) << 7);
+		attr1 = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 3]);
+		x = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 4]) - ((attr1 & 0x01) << 8);
+		y = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 5]) + ((attr1 & 0x02) << 7);
 		if (attr1 & 0x04)	/* multi sprite */
 		{
 			sx += x;
@@ -1909,8 +1910,8 @@ static INT32 GalpanicDraw()
 
 		/* bit 0 [offs + 0] is used but I don't know what for */
 
-		attr2 = RamSpr[offs + 7];
-		code = RamSpr[offs + 6] + ((attr2 & 0x1f) << 8);
+		attr2 = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 7]);
+		code = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 6]) + ((attr2 & 0x1f) << 8);
 		flipx = attr2 & 0x80;
 		flipy = attr2 & 0x40;
 
@@ -1935,7 +1936,7 @@ static INT32 ComadDraw()
 	}
 
  	for (INT32 i = 0; i < 1024; i++) {
- 		UINT16 nColour = RamPal[i];
+ 		UINT16 nColour = BURN_ENDIAN_SWAP_INT16(RamPal[i]);
  		INT32 r = pal5bit(nColour >> 6);
  		INT32 g = pal5bit(nColour >> 11);
  		INT32 b = pal5bit(nColour >> 1);
@@ -1947,8 +1948,8 @@ static INT32 ComadDraw()
  	UINT16 * f = (UINT16 *)RamFg;
 	for (INT32 j=0;j<224;j++) {
 		for (INT32 i=0;i<256;i++) {
-			if (*f)	*d = RamCurPal[*f];
-			else 	*d = RamCTB64k[*s >> 1];
+			if (*f)	*d = RamCurPal[BURN_ENDIAN_SWAP_INT16(*f)];
+			else 	*d = RamCTB64k[BURN_ENDIAN_SWAP_INT16(*s) >> 1];
 			d--;
 			s++;
 			f++;
@@ -1960,20 +1961,20 @@ static INT32 ComadDraw()
 	for (INT32 offs=0; offs<0x000800; offs+=4) {
 		INT32 code,color,flipx,flipy;
 
-		code = RamSpr[offs + 1] & 0x1fff;
-		color = (RamSpr[offs] & 0x003c) << 2;
-		flipx = RamSpr[offs] & 0x0002;
-		flipy = RamSpr[offs] & 0x0001;
+		code = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 1]) & 0x1fff;
+		color = (BURN_ENDIAN_SWAP_INT16(RamSpr[offs]) & 0x003c) << 2;
+		flipx = BURN_ENDIAN_SWAP_INT16(RamSpr[offs]) & 0x0002;
+		flipy = BURN_ENDIAN_SWAP_INT16(RamSpr[offs]) & 0x0001;
 
-		if((RamSpr[offs] & 0x6000) == 0x6000) /* Link bits */
+		if((BURN_ENDIAN_SWAP_INT16(RamSpr[offs]) & 0x6000) == 0x6000) /* Link bits */
 		{
-			sx += RamSpr[offs + 2] >> 6;
-			sy += RamSpr[offs + 3] >> 6;
+			sx += BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 2]) >> 6;
+			sy += BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 3]) >> 6;
 		}
 		else
 		{
-			sx = RamSpr[offs + 2] >> 6;
-			sy = RamSpr[offs + 3] >> 6;
+			sx = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 2]) >> 6;
+			sy = BURN_ENDIAN_SWAP_INT16(RamSpr[offs + 3]) >> 6;
 		}
 
 		sx = (sx&0x1ff) - (sx&0x200);

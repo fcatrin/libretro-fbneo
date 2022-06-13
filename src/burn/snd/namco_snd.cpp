@@ -74,7 +74,7 @@ static INT32 SyncInternal()
 
 static void UpdateStream(INT32 samples_len)
 {
-    if (!namco_buffered) return;
+    if (!namco_buffered || !pBurnSoundOut) return;
     if (samples_len > nBurnSoundLen) samples_len = nBurnSoundLen;
 
 	INT32 nSamplesNeeded = samples_len;
@@ -764,7 +764,14 @@ void NamcoSoundExit()
 	if (!DebugSnd_NamcoSndInitted) bprintf(PRINT_ERROR, _T("NamcoSoundExit called without init\n"));
 #endif
 
-	if (!DebugSnd_NamcoSndInitted) return;
+	if (!DebugSnd_NamcoSndInitted) {
+		NamcoSoundProm = NULL; // sometimes drivers set this in MemIndex, if DrvInit fails, this must be cleared.
+		namco_wavedata = NULL; // this is important.
+
+		enable_ram = 0;
+
+		return;
+	}
 
 	BurnFree(chip);
 	BurnFree(namco_soundregs);
@@ -834,4 +841,6 @@ void NamcoSoundScan(INT32 nAction, INT32 *pnMin)
 	ba.nAddress = 0;
 	ba.szName	= szName;
 	BurnAcb(&ba);
+
+	SCAN_VAR(chip->sound_enable);
 }

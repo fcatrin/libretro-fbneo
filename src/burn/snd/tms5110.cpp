@@ -61,6 +61,7 @@ struct tms5110
 	INT32 x[10];
 
 	INT32 RNG;	/* the random noise generator configuration is: 1 + x + x^3 + x^4 + x^13 */
+	INT32 our_freq; // samplerate of chip
 
 	INT32 (*M0_callback)();
 };
@@ -71,10 +72,26 @@ static void parse_frame(struct tms5110 *tms);
 
 #define DEBUG_5110	0
 
+// for resampling
+#include "stream.h"
+static Stream stream;
+
 static struct tms5110 *our_chip = NULL;
 static INT32 tms5110_initted = 0;
-static INT16 *soundbuf = NULL;
-static INT32 samples_from; // "re"sampler
+
+void tms5110_process(INT16 **streams, INT32 size); //forward
+
+void tms5110_set_buffered(INT32 (*pCPUCyclesCB)(), INT32 nCpuMhz)
+{
+    bprintf(0, _T("*** Using BUFFERED tms5110-mode.\n"));
+
+	stream.set_buffered(pCPUCyclesCB, nCpuMhz);
+}
+
+void tms5110_volume(double vol)
+{
+	stream.set_volume(vol);
+}
 
 static void *tms5110_create(void)
 {
@@ -93,9 +110,13 @@ static void tms5110_destroy(void *chip)
 void tms5110_init(UINT32 freq)
 {
 	our_chip = (tms5110 *)tms5110_create();
-	soundbuf = (INT16*)malloc(0x800);
 
-	tms5110_set_frequency(freq);
+	our_chip->our_freq = freq/80;
+
+	// init stream/resampler
+	stream.init(our_chip->our_freq, nBurnSoundRate, 1, 1, tms5110_process);
+    stream.set_volume(1.00);
+
 	tms5110_initted = 1;
 }
 
@@ -107,9 +128,10 @@ void tms5110_exit()
 	}
 
 	tms5110_destroy(our_chip);
-	free(soundbuf);
 
 	tms5110_initted = 0;
+
+	stream.exit();
 }
 
 void tms5110_scan(INT32 nAction, INT32 *pnMin)
@@ -119,9 +141,13 @@ void tms5110_scan(INT32 nAction, INT32 *pnMin)
 	if (nAction & ACB_DRIVER_DATA) {
 		memset(&ba, 0, sizeof(ba));
 		ba.Data		= our_chip;
-		ba.nLen		= STRUCT_SIZE_HELPER(tms5110, M0_callback);
+		ba.nLen		= STRUCT_SIZE_HELPER(tms5110, our_freq);
 		ba.szName	= "TMS5110 SpeechSynth Chip";
 		BurnAcb(&ba);
+	}
+
+	if (nAction & ACB_WRITE) {
+		stream.set_rate(our_chip->our_freq);
 	}
 }
 
@@ -273,7 +299,8 @@ static INT32 tms5110_status_read_internal(void *chip)
 
 INT32 tms5110_status_read()
 {
-	 return tms5110_status_read_internal(our_chip);
+	stream.update();
+	return tms5110_status_read_internal(our_chip);
 }
 
 /**********************************************************************************************
@@ -290,7 +317,8 @@ static INT32 tms5110_ready_read_internal(void *chip)
 
 INT32 tms5110_ready_read()
 {
-	 return tms5110_ready_read_internal(our_chip);
+	stream.update();
+	return tms5110_ready_read_internal(our_chip);
 }
 
 
@@ -300,11 +328,13 @@ INT32 tms5110_ready_read()
 
 ***********************************************************************************************/
 
-void tms5110_process(void *chip, INT16 *buffer, INT32 size)
+void tms5110_process(INT16 **streams, INT32 size)
 {
-	struct tms5110 *tms = (tms5110 *)chip;
+	struct tms5110 *tms = our_chip;
     INT32 buf_count=0;
     INT32 i, interp_period;
+
+	INT16 *buffer = streams[0];
 
     /* if we're not speaking, fill with nothingness */
     if (!tms->speaking_now)
@@ -533,32 +563,21 @@ empty:
     }
 }
 
-static INT32 our_freq = 0;
-
 void tms5110_set_frequency(UINT32 freq)
 {
-	our_freq = freq/80;
-	samples_from = (INT32)((double)((our_freq * 100) / nBurnFPS) + 0.5);
+	our_chip->our_freq = freq/80;
+
+	stream.set_rate(our_chip->our_freq);
 }
 
-void tms5110_update(INT16 *buffer, INT32 samples_len)
+void tms5110_update(INT16 *output, INT32 samples_len)
 {
-	INT32 samples = (samples_from * samples_len) / nBurnSoundLen;
-
-	tms5110_process(our_chip, soundbuf, samples);
-
-	INT16 *mix = soundbuf;
-
-	for (INT32 j = 0; j < samples_len; j++)
-	{
-		INT32 k = (samples_from * j) / nBurnSoundLen;
-
-		INT32 s = mix[k];
-		buffer[0] = BURN_SND_CLIP(buffer[0] + s);
-		buffer[1] = BURN_SND_CLIP(buffer[1] + s);
-		buffer += 2;
+	if (samples_len != nBurnSoundLen) {
+		bprintf(0, _T("tms5110_update(): once per frame, please!\n"));
+		return;
 	}
 
+	stream.render(output, samples_len);
 }
 
 
@@ -576,6 +595,7 @@ void tms5110_CTL_set_internal(void *chip, INT32 data)
 
 void tms5110_CTL_set(UINT8 data)
 {
+	stream.update();
 	tms5110_CTL_set_internal(our_chip, data);
 }
 
@@ -618,6 +638,7 @@ void tms5110_PDC_set_internal(void *chip, INT32 data)
 
 void tms5110_PDC_set(UINT8 data)
 {
+	stream.update();
 	tms5110_PDC_set_internal(our_chip, data);
 }
 

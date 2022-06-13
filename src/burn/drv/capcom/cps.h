@@ -43,6 +43,7 @@ INT32 CpsLoadTilesPang(UINT8 *Tile,INT32 nStart);
 INT32 CpsLoadTilesSf2ebbl(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2b(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2koryuExtra(UINT8 *Tile, INT32 nStart);
+INT32 CpsLoadTilesSf2mkotExtra(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesHack160(INT32 nStart);
 INT32 CpsLoadTilesHack160Alt(INT32 nStart);
 INT32 CpsLoadTilesSf2koryu(INT32 nStart);
@@ -51,13 +52,14 @@ INT32 CpsLoadTilesSf2mdt(INT32 nStart);
 INT32 CpsLoadTilesSf2mdta(INT32 nStart);
 INT32 CpsLoadTilesSf2m8(INT32 nStart);
 INT32 CpsLoadTilesSf2ceeabl(INT32 nStart);
-INT32 CpsLoadTilesSf2ceblp(INT32 nStart);
+INT32 CpsLoadTilesSf2ceuab7(INT32 nStart);
 INT32 CpsLoadTilesSf2ebbl3(INT32 nStart);
+INT32 CpsLoadTilesSf2amf10(INT32 nStart);
 INT32 CpsLoadTilesFcrash(INT32 nStart);
 INT32 CpsLoadTilesCawingbl(INT32 nStart);
 INT32 CpsLoadTilesCaptcommb(INT32 nStart);
 INT32 CpsLoadTilesDinopic(INT32 nStart);
-INT32 CpsLoadTilesDinopic4(INT32 nStart);
+INT32 CpsLoadTilesDinopic5(INT32 nStart);
 INT32 CpsLoadTilesSlampic(INT32 nStart);
 INT32 CpsLoadTilesKodb(INT32 nStart);
 INT32 CpsLoadTilesWonder3b(INT32 nStart);
@@ -157,6 +159,7 @@ INT32 Cps2LoadTilesGigaman2(UINT8 *Tile, UINT8 *pSrc);
 #define mapper_frog			41
 #define mapper_pokon		42
 #define mapper_KNM10B		43
+#define mapper_gulun		44
 extern void SetGfxMapper(INT32 MapperId);
 extern INT32 GfxRomBankMapper(INT32 Type, INT32 Code);
 extern void SetCpsBId(INT32 CpsBId, INT32 bStars);
@@ -461,6 +464,8 @@ INT32 PsmInit();
 INT32 PsmExit();
 void PsmNewFrame();
 INT32 PsmUpdate(INT32 nEnd);
+INT32 PsmUpdateEnd();
+void PsndEndFrame();
 
 // kabuki.cpp
 void wof_decode();

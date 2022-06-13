@@ -8,20 +8,14 @@
 #include "upd7759.h"
 
 // Notes:
-//   March 11, 2016: hooked up rotational code to SAR and Ikari 3, left in old
-//   analogue rotational code (see #if 0's) just incase we need to base
-//   something else off of it in the future.
+//   March 11, 2016: hooked up rotational code to SAR and Ikari 3,
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
 static UINT8 DrvJoy3[8];
 static UINT8 DrvInputs[8];
-static UINT8 DrvDips[2];
+static UINT8 DrvDips[3];
 static UINT8 DrvReset;
-#if 0
-static UINT32 nAnalogAxis[2] = {0,0};
-static UINT16 DrvAxis[2];
-#endif
 
 static INT32 Rotary1 = 0;
 static INT32 Rotary1OldVal = 0;
@@ -57,7 +51,7 @@ static INT32 sprite_flip;
 static INT32 pow_charbase;
 
 // Rotation stuff! -dink
-static UINT8  DrvFakeInput[6]       = {0, 0, 0, 0, 0, 0};
+static UINT8  DrvFakeInput[14]      = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 0-5 legacy; 6-9 P1, 10-13 P2
 static UINT8  nRotateHoldInput[2]   = {0, 0};
 static INT32  nRotate[2]            = {0, 0};
 static INT32  nRotateTarget[2]      = {0, 0};
@@ -65,6 +59,7 @@ static INT32  nRotateTry[2]         = {0, 0};
 static UINT32 nRotateTime[2]        = {0, 0};
 static UINT8  game_rotates = 0;
 static UINT8  game_rotates_inverted = 0;
+static UINT8  nAutoFireCounter[2] 	= {0, 0};
 
 #define A(a, b, c, d) { a, b, (UINT8*)(c), d }
 
@@ -108,7 +103,13 @@ static struct BurnInputInfo IkariInputList[] = {
 	{"P1 Button 1"  , BIT_DIGITAL  , DrvJoy1 + 4,	"p1 fire 1"},
 	{"P1 Button 2"  , BIT_DIGITAL  , DrvJoy1 + 5,	"p1 fire 2"},
 	{"P1 Button 3"  , BIT_DIGITAL  , DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Rotate Left"       , BIT_DIGITAL  , DrvFakeInput + 0, "p1 rotate left" },
+	{"P1 Rotate Right"      , BIT_DIGITAL  , DrvFakeInput + 1, "p1 rotate right" },
 	{"P1 Button 4 (rotate)" , BIT_DIGITAL  , DrvFakeInput + 4,  "p1 fire 4" },
+	{"P1 Shoot Up"       	, BIT_DIGITAL  , DrvFakeInput + 6,  "p1 up 2" }, // 6
+	{"P1 Shoot Down"      	, BIT_DIGITAL  , DrvFakeInput + 7,  "p1 down 2" }, // 7
+	{"P1 Shoot Left"       	, BIT_DIGITAL  , DrvFakeInput + 8,  "p1 left 2" }, // 8
+	{"P1 Shoot Right"      	, BIT_DIGITAL  , DrvFakeInput + 9,  "p1 right 2" }, // 9
 
 	//A("P1 Right / left",	BIT_ANALOG_REL, DrvAxis + 0,	"p1 z-axis"),
 
@@ -121,7 +122,13 @@ static struct BurnInputInfo IkariInputList[] = {
 	{"P2 Button 1"  , BIT_DIGITAL  , DrvJoy2 + 4,	"p2 fire 1"},
 	{"P2 Button 2"  , BIT_DIGITAL  , DrvJoy2 + 5,	"p2 fire 2"},
 	{"P2 Button 3"  , BIT_DIGITAL  , DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Rotate Left"  , BIT_DIGITAL  , DrvFakeInput + 2, "p2 rotate left" },
+	{"P2 Rotate Right" , BIT_DIGITAL  , DrvFakeInput + 3, "p2 rotate right" },
 	{"P2 Button 4 (rotate)" , BIT_DIGITAL  , DrvFakeInput + 5,  "p2 fire 4" },
+	{"P2 Shoot Up"       	, BIT_DIGITAL  , DrvFakeInput + 10, "p2 up 2" },
+	{"P2 Shoot Down"      	, BIT_DIGITAL  , DrvFakeInput + 11, "p2 down 2" },
+	{"P2 Shoot Left"       	, BIT_DIGITAL  , DrvFakeInput + 12, "p2 left 2" },
+	{"P2 Shoot Right"      	, BIT_DIGITAL  , DrvFakeInput + 13, "p2 right 2" },
 
 	//A("P2 Right / left",	BIT_ANALOG_REL, DrvAxis + 1,	"p2 z-axis"),
 
@@ -130,6 +137,8 @@ static struct BurnInputInfo IkariInputList[] = {
 	{"Reset",	  BIT_DIGITAL  , &DrvReset,	"reset"    },
 	{"Dip 1",	  BIT_DIPSWITCH, DrvDips + 0,	"dip"	   },
 	{"Dip 2",	  BIT_DIPSWITCH, DrvDips + 1,	"dip"	   },
+	// Auto-fire on right stick
+	{"Dip 3",	  BIT_DIPSWITCH, DrvDips + 2,	"dip"	   },
 };
 
 STDINPUTINFO(Ikari)
@@ -366,116 +375,133 @@ STDDIPINFO(Streetsj)
 
 static struct BurnDIPInfo SarDIPList[]=
 {
-	{0x16, 0xff, 0xff, 0x00, NULL                     },
-	{0x17, 0xff, 0xff, 0x00, NULL                     },
+	DIP_OFFSET(0x22)
+
+	{0x00, 0xff, 0xff, 0x00, NULL                     },
+	{0x01, 0xff, 0xff, 0x00, NULL                     },
+	{0x02, 0xff, 0xff, 0x00, NULL                     },
 
 	{0   , 0xfe, 0   , 2   , "Joystick"               },
-	{0x16, 0x01, 0x01, 0x00, "Rotary"                 },
-	{0x16, 0x01, 0x01, 0x01, "Standard"               },
+	{0x00, 0x01, 0x01, 0x00, "Rotary"                 },
+	{0x00, 0x01, 0x01, 0x01, "Standard"               },
 
 	{0   , 0xfe, 0   , 4   , "Lives"                  },
-	{0x16, 0x01, 0x0c, 0x08, "2"                      },
-	{0x16, 0x01, 0x0c, 0x00, "3"                      },
-	{0x16, 0x01, 0x0c, 0x04, "4"                      },
-	{0x16, 0x01, 0x0c, 0x0c, "5"                      },
+	{0x00, 0x01, 0x0c, 0x08, "2"                      },
+	{0x00, 0x01, 0x0c, 0x00, "3"                      },
+	{0x00, 0x01, 0x0c, 0x04, "4"                      },
+	{0x00, 0x01, 0x0c, 0x0c, "5"                      },
 
 	{0   , 0xfe, 0   , 4   , "Coin A & B"             },
-	{0x16, 0x01, 0x30, 0x16, "2 Coins 1 Credit"       },
-	{0x16, 0x01, 0x30, 0x00, "1 Coin  1 Credit"       },
-	{0x16, 0x01, 0x30, 0x10, "1 Coin  2 Credits"      },
-	{0x16, 0x01, 0x30, 0x30, "Free Play"              },
+	{0x00, 0x01, 0x30, 0x16, "2 Coins 1 Credit"       },
+	{0x00, 0x01, 0x30, 0x00, "1 Coin  1 Credit"       },
+	{0x00, 0x01, 0x30, 0x10, "1 Coin  2 Credits"      },
+	{0x00, 0x01, 0x30, 0x30, "Free Play"              },
 
 	{0   , 0xfe, 0   , 2   , "Bonus Ocurrence"        },
-	{0x16, 0x01, 0x40, 0x00, "1st & 2nd only"         },
-	{0x16, 0x01, 0x40, 0x40, "1st & every 2nd"        },
+	{0x00, 0x01, 0x40, 0x00, "1st & 2nd only"         },
+	{0x00, 0x01, 0x40, 0x40, "1st & every 2nd"        },
 
 	{0   , 0xfe, 0   , 2   , "Flip Screen"            },
-	{0x16, 0x01, 0x80, 0x00, "Off"                    },
-	{0x16, 0x01, 0x80, 0x80, "On"                     },
+	{0x00, 0x01, 0x80, 0x00, "Off"                    },
+	{0x00, 0x01, 0x80, 0x80, "On"                     },
 	
 	{0   , 0xfe, 0   , 2   , "Service Mode"           },
-	{0x17, 0x01, 0x01, 0x00, "Off"                    },
-	{0x17, 0x01, 0x01, 0x01, "On"                     },
+	{0x01, 0x01, 0x01, 0x00, "Off"                    },
+	{0x01, 0x01, 0x01, 0x01, "On"                     },
 
 	{0   , 0xfe, 0   , 2   , "Allow Continue"         },
-	{0x17, 0x01, 0x02, 0x02, "No"                     },
-	{0x17, 0x01, 0x02, 0x00, "Yes"                    },
+	{0x01, 0x01, 0x02, 0x02, "No"                     },
+	{0x01, 0x01, 0x02, 0x00, "Yes"                    },
 
 	{0   , 0xfe, 0   , 4   , "Bonus Life"             },
-	{0x17, 0x01, 0x0c, 0x00, "50k 200k"               },
-	{0x17, 0x01, 0x0c, 0x08, "70k 270k"               },
-	{0x17, 0x01, 0x0c, 0x04, "90k 350k"               },
-	{0x17, 0x01, 0x0c, 0x0c, "None"                   },
+	{0x01, 0x01, 0x0c, 0x00, "50k 200k"               },
+	{0x01, 0x01, 0x0c, 0x08, "70k 270k"               },
+	{0x01, 0x01, 0x0c, 0x04, "90k 350k"               },
+	{0x01, 0x01, 0x0c, 0x0c, "None"                   },
 
 	{0   , 0xfe, 0   , 4   , "Game Mode"              },
-	{0x17, 0x01, 0x30, 0x16, "Demo Sounds Off"        },
-	{0x17, 0x01, 0x30, 0x00, "Demo Sounds On"         },
-	{0x17, 0x01, 0x30, 0x30, "Freeze"                 },
-	{0x17, 0x01, 0x30, 0x10, "Infinite Lives (Cheat)" },	
+	{0x01, 0x01, 0x30, 0x16, "Demo Sounds Off"        },
+	{0x01, 0x01, 0x30, 0x00, "Demo Sounds On"         },
+	{0x01, 0x01, 0x30, 0x30, "Freeze"                 },
+	{0x01, 0x01, 0x30, 0x10, "Infinite Lives (Cheat)" },	
 
 	{0   , 0xfe, 0   , 4   , "Difficulty"             },
-	{0x17, 0x01, 0xc0, 0x80, "Easy"                   },
-	{0x17, 0x01, 0xc0, 0x00, "Normal"                 },
-	{0x17, 0x01, 0xc0, 0x40, "Hard"                   },
-	{0x17, 0x01, 0xc0, 0xc0, "Hardest"                },
+	{0x01, 0x01, 0xc0, 0x80, "Easy"                   },
+	{0x01, 0x01, 0xc0, 0x00, "Normal"                 },
+	{0x01, 0x01, 0xc0, 0x40, "Hard"                   },
+	{0x01, 0x01, 0xc0, 0xc0, "Hardest"                },
+
+	// Dip 3
+	{0   , 0xfe, 0   , 2   , "Second Stick"           },
+	{0x02, 0x01, 0x01, 0x00, "Moves & Shoots"         },
+	{0x02, 0x01, 0x01, 0x01, "Moves"                  },
 };
 
 STDDIPINFO(Sar)
 
 static struct BurnDIPInfo IkariDIPList[]=
 {
-	{0x16, 0xff, 0xff, 0x00, NULL                     },
-	{0x17, 0xff, 0xff, 0x00, NULL                     },
+
+	DIP_OFFSET(0x22)
+
+	{0x00, 0xff, 0xff, 0x00, NULL                     },
+	{0x01, 0xff, 0xff, 0x00, NULL                     },
+	{0x02, 0xff, 0xff, 0x00, NULL                     },
 
 	{0   , 0xfe, 0   , 4   , "Lives"                  },
-	{0x16, 0x01, 0x03, 0x02, "2"                      },
-	{0x16, 0x01, 0x03, 0x00, "3"                      },
-	{0x16, 0x01, 0x03, 0x01, "4"                      },
-	{0x16, 0x01, 0x03, 0x03, "5"                      },
+	{0x00, 0x01, 0x03, 0x02, "2"                      },
+	{0x00, 0x01, 0x03, 0x00, "3"                      },
+	{0x00, 0x01, 0x03, 0x01, "4"                      },
+	{0x00, 0x01, 0x03, 0x03, "5"                      },
 
 	{0   , 0xfe, 0   , 4   , "Coin A & B"             },
-	{0x16, 0x01, 0x0c, 0x08, "First 2C_1C, then 1C_1C"},
-	{0x16, 0x01, 0x0c, 0x00, "1 Coin 1 Credit"        },
-	{0x16, 0x01, 0x0c, 0x04, "First 1C_2C, then 1C_1C"},
-	{0x16, 0x01, 0x0c, 0x0c, "Free Play"              },
+	{0x00, 0x01, 0x0c, 0x08, "First 2C_1C, then 1C_1C"},
+	{0x00, 0x01, 0x0c, 0x00, "1 Coin 1 Credit"        },
+	{0x00, 0x01, 0x0c, 0x04, "First 1C_2C, then 1C_1C"},
+	{0x00, 0x01, 0x0c, 0x0c, "Free Play"              },
 
 	{0   , 0xfe, 0   , 2   , "Bonus Ocurrence"        },
-	{0x16, 0x01, 0x16, 0x00, "1st & 2nd only"         },
-	{0x16, 0x01, 0x16, 0x16, "1st & every 2nd"        },
+	{0x00, 0x01, 0x16, 0x00, "1st & 2nd only"         },
+	{0x00, 0x01, 0x16, 0x16, "1st & every 2nd"        },
 
 	{0   , 0xfe, 0   , 2   , "Blood"                  },
-	{0x16, 0x01, 0x40, 0x40, "Off"                    },
-	{0x16, 0x01, 0x40, 0x00, "On"                     },
+	{0x00, 0x01, 0x40, 0x40, "Off"                    },
+	{0x00, 0x01, 0x40, 0x00, "On"                     },
 
 	{0   , 0xfe, 0   , 2   , "Flip Screen"            },
-	{0x16, 0x01, 0x80, 0x00, "Off"                    },
-	{0x16, 0x01, 0x80, 0x80, "On"                     },
+	{0x00, 0x01, 0x80, 0x00, "Off"                    },
+	{0x00, 0x01, 0x80, 0x80, "On"                     },
 	
 	{0   , 0xfe, 0   , 2   , "Service Mode"           },
-	{0x17, 0x01, 0x01, 0x00, "Off"                    },
-	{0x17, 0x01, 0x01, 0x01, "On"                     },
+	{0x01, 0x01, 0x01, 0x00, "Off"                    },
+	{0x01, 0x01, 0x01, 0x01, "On"                     },
 
 	{0   , 0xfe, 0   , 2   , "Allow Continue"         },
-	{0x17, 0x01, 0x02, 0x02, "No"                     },
-	{0x17, 0x01, 0x02, 0x00, "Yes"                    },
+	{0x01, 0x01, 0x02, 0x02, "No"                     },
+	{0x01, 0x01, 0x02, 0x00, "Yes"                    },
 
 	{0   , 0xfe, 0   , 4   , "Bonus Life"             },
-	{0x17, 0x01, 0x0c, 0x00, "20k 50k"                },
-	{0x17, 0x01, 0x0c, 0x08, "40k 100k"               },
-	{0x17, 0x01, 0x0c, 0x04, "60k 150k"               },
-	{0x17, 0x01, 0x0c, 0x0c, "None"                   },
+	{0x01, 0x01, 0x0c, 0x00, "20k 50k"                },
+	{0x01, 0x01, 0x0c, 0x08, "40k 100k"               },
+	{0x01, 0x01, 0x0c, 0x04, "60k 150k"               },
+	{0x01, 0x01, 0x0c, 0x0c, "None"                   },
 
 	{0   , 0xfe, 0   , 4   , "Game Mode"              },
-	{0x17, 0x01, 0x30, 0x16, "Demo Sounds Off"        },
-	{0x17, 0x01, 0x30, 0x00, "Demo Sounds On"         },
-	{0x17, 0x01, 0x30, 0x30, "Freeze"                 },
-	{0x17, 0x01, 0x30, 0x10, "Infinite Lives (Cheat)" },	
+	{0x01, 0x01, 0x30, 0x16, "Demo Sounds Off"        },
+	{0x01, 0x01, 0x30, 0x00, "Demo Sounds On"         },
+	{0x01, 0x01, 0x30, 0x30, "Freeze"                 },
+	{0x01, 0x01, 0x30, 0x10, "Infinite Lives (Cheat)" },	
 
 	{0   , 0xfe, 0   , 4   , "Difficulty"             },
-	{0x17, 0x01, 0xc0, 0x00, "Easy"                   },
-	{0x17, 0x01, 0xc0, 0x80, "Normal"                 },
-	{0x17, 0x01, 0xc0, 0x40, "Hard"                   },
-	{0x17, 0x01, 0xc0, 0xc0, "Hardest"                },
+	{0x01, 0x01, 0xc0, 0x00, "Easy"                   },
+	{0x01, 0x01, 0xc0, 0x80, "Normal"                 },
+	{0x01, 0x01, 0xc0, 0x40, "Hard"                   },
+	{0x01, 0x01, 0xc0, 0xc0, "Hardest"                },
+
+	// Dip 3
+	{0   , 0xfe, 0   , 2   , "Second Stick"           },
+	{0x02, 0x01, 0x01, 0x00, "Moves & Shoots"         },
+	{0x02, 0x01, 0x01, 0x01, "Moves"                  },
 };
 
 STDDIPINFO(Ikari)
@@ -651,8 +677,47 @@ static void RotateDoTick() {
 }
 
 static void SuperJoy2Rotate() {
+	UINT8 FakeDrvInputPort0[4] = {0, 0, 0, 0};
+	UINT8 FakeDrvInputPort1[4] = {0, 0, 0, 0};
+	UINT8 NeedsSecondStick[2] = {0, 0};
+
+	// prepare for right-stick rotation
+	// this is not especially readable though
+	for (INT32 i = 0; i < 2; i++) {
+		for (INT32 n = 0; n < 4; n++) {
+			UINT8* RotationInput = (!i) ? &FakeDrvInputPort0[0] : &FakeDrvInputPort1[0];
+			RotationInput[n] = DrvFakeInput[6 + i*4 + n];
+			NeedsSecondStick[i] |= RotationInput[n];
+		}
+	}
+
 	for (INT32 i = 0; i < 2; i++) { // p1 = 0, p2 = 1
-		if (DrvFakeInput[4 + i]) { //  rotate-button had been pressed
+		if (!NeedsSecondStick[i])
+			nAutoFireCounter[i] = 0;
+		if (NeedsSecondStick[i]) { // or using Second Stick
+			UINT8 rot = Joy2Rotate(((!i) ? &FakeDrvInputPort0[0] : &FakeDrvInputPort1[0]));
+			if (rot != 0xff) {
+				nRotateTarget[i] = rot * rotate_gunpos_multiplier;
+			}
+			nRotateTry[i] = 0;
+
+			if (~DrvDips[2] & 1) {
+				// fake auto-fire - there's probably a more elegant solution for this
+				// DrvJoy1 + 4, DrvJoy2 + 4 - SAR
+				// Ikari3 should be Fire3, which uses the weapons they pick up: index 6
+				
+				UINT8 indexmask = ((game_select == 3) ? 0x40 : 0x10); 
+				if (nAutoFireCounter[i]++ & 0x4)
+				{
+					DrvInputs[i] &= ~indexmask; // remove the fire bit &= ~0x10; //
+				}
+				else
+				{
+					DrvInputs[i] |= indexmask; // turn on the fire bit
+				}
+			}
+		}
+		else if (DrvFakeInput[4 + i]) { //  rotate-button had been pressed
 			UINT8 rot = Joy2Rotate(((!i) ? &DrvJoy1[0] : &DrvJoy2[0]));
 			if (rot != 0xff) {
 				nRotateTarget[i] = rot * rotate_gunpos_multiplier;
@@ -697,17 +762,12 @@ static INT32 DrvDoReset()
 	pow_charbase = 0;
 	invert_controls = 0;
 
-#if 0
-	nAnalogAxis[1] = 0;
-	nAnalogAxis[0] = 0;
-#endif
-
 	RotateReset();
 
 	return 0;
 }
 
-void pow_paletteram16_word_w(UINT32 address)
+static void pow_paletteram16_word_w(UINT32 address)
 {
 	INT32 r,g,b;
 	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvPalRam + (address & 0x0ffe))));
@@ -723,7 +783,7 @@ void pow_paletteram16_word_w(UINT32 address)
 	DrvPalette[(address >> 1) & 0x7ff] = BurnHighCol(r, g, b, 0);
 }
 
-void __fastcall pow_write_word(UINT32 address, UINT16 data)
+static void __fastcall pow_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xffff8000) == 0x100000 && game_select & 1) {
 		if (!(address & 2))
@@ -743,7 +803,7 @@ void __fastcall pow_write_word(UINT32 address, UINT16 data)
 	}
 }
 
-void __fastcall pow_write_byte(UINT32 address, UINT8 data)
+static void __fastcall pow_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xffff8000) == 0x100000 && game_select == 1) {
 		if ((address & 3) == 3) data = 0xff;
@@ -781,7 +841,7 @@ void __fastcall pow_write_byte(UINT32 address, UINT8 data)
 }
 
 
-UINT16 __fastcall pow_read_word(UINT32 address)
+static UINT16 __fastcall pow_read_word(UINT32 address)
 {
 	if (address != 0xe0000)
 		bprintf (PRINT_NORMAL, _T("read %x, w\n"), address);
@@ -789,7 +849,7 @@ UINT16 __fastcall pow_read_word(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall pow_read_byte(UINT32 address)
+static UINT8 __fastcall pow_read_byte(UINT32 address)
 {
 	switch (address)
 	{
@@ -821,7 +881,7 @@ UINT8 __fastcall pow_read_byte(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall sar_read_byte(UINT32 address)
+static UINT8 __fastcall sar_read_byte(UINT32 address)
 {
 	switch (address)
 	{
@@ -872,11 +932,11 @@ UINT8 __fastcall sar_read_byte(UINT32 address)
 	return 0;
 }
 
-void __fastcall pow_sound_write(UINT16, UINT8)
+static void __fastcall pow_sound_write(UINT16, UINT8)
 {
 }
 
-void __fastcall pow_sound_out(UINT16 address, UINT8 data)
+static void __fastcall pow_sound_out(UINT16 address, UINT8 data)
 {
 	switch (address & 0xff)
 	{
@@ -898,14 +958,14 @@ void __fastcall pow_sound_out(UINT16 address, UINT8 data)
 
 }
 
-UINT8 __fastcall pow_sound_read(UINT16 address)
+static UINT8 __fastcall pow_sound_read(UINT16 address)
 {
 	if (address == 0xf800) return soundlatch;
 
 	return 0;
 }
 
-UINT8 __fastcall pow_sound_in(UINT16 address)
+static UINT8 __fastcall pow_sound_in(UINT16 address)
 {
 	address &= 0xff;
 
@@ -1171,6 +1231,7 @@ static INT32 DrvInit(INT32 game)
 	
 	UPD7759Init(0, UPD7759_STANDARD_CLOCK, DrvSnd0);
 	UPD7759SetRoute(0, ((game_select == 1) ? 1.50 : 0.50), BURN_SND_ROUTE_BOTH);
+	UPD7759SetSyncCallback(0, ZetTotalCycles, 4000000);
 
 	DrvDoReset();
 
@@ -1474,42 +1535,8 @@ static INT32 DrvFrame()
 			DrvInputs[1] ^= DrvJoy2[i] << i;
 			DrvInputs[2] ^= DrvJoy3[i] << i;
 		}
-
-#if 0
-		nAnalogAxis[0] -= DrvAxis[0];
-		DrvInputs[6] = (~nAnalogAxis[0] >> 8) & 0xfe;
-
-		nAnalogAxis[1] -= DrvAxis[1];
-		DrvInputs[7] = (~nAnalogAxis[1] >> 8) & 0xfe;
-#endif
 	}
 	
-#if 0
-	if (game_select == 1 || game_select == 3) {
-		if ((DrvInputs[6] >> 4) < Rotary1OldVal) {
-			Rotary1++;
-		}
-
-		if ((DrvInputs[6] >> 4) > Rotary1OldVal) {
-			Rotary1--;
-		}
-		Rotary1OldVal = DrvInputs[6] >> 4;
-		if (Rotary1 > 11) Rotary1 = 0;
-		if (Rotary1 < 0) Rotary1 = 11;
-		
-		if ((DrvInputs[7] >> 4) < Rotary2OldVal) {
-			Rotary2++;
-		}
-
-		if ((DrvInputs[7] >> 4) > Rotary2OldVal) {
-			Rotary2--;
-		}
-		Rotary2OldVal = DrvInputs[7] >> 4;
-		if (Rotary2 > 11) Rotary2 = 0;
-		if (Rotary2 < 0) Rotary2 = 11;
-	}
-#endif
-
 	if (game_rotates) {
 		SuperJoy2Rotate();
 	}
@@ -1528,7 +1555,7 @@ static INT32 DrvFrame()
 	BurnTimerEndFrameYM3812(nTotalCycles[1]);
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
-		UPD7759Update(0, pBurnSoundOut, nBurnSoundLen);
+		UPD7759Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
@@ -1542,7 +1569,7 @@ static INT32 DrvFrame()
 }
 
 
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -1550,16 +1577,13 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029682;
 	}
 
-	if (nAction & ACB_MEMORY_RAM) {	
+	if (nAction & ACB_MEMORY_RAM) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
 		ba.nLen	  = RamEnd - AllRam;
 		ba.szName = "All Ram";
 		BurnAcb(&ba);
-
-		if (nAction & ACB_WRITE)
-			DrvRecalc = 1;
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
@@ -1574,16 +1598,16 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(flipscreen);
 		SCAN_VAR(sprite_flip);
 		SCAN_VAR(pow_charbase);
-#if 0
-		SCAN_VAR(nAnalogAxis[0]);
-		SCAN_VAR(nAnalogAxis[1]);
-#endif
 		SCAN_VAR(Rotary1);
 		SCAN_VAR(Rotary1OldVal);
 		SCAN_VAR(Rotary2);
 		SCAN_VAR(Rotary2OldVal);
 		SCAN_VAR(nRotate);
+		SCAN_VAR(nRotateTarget);
 		SCAN_VAR(nRotateTry);
+		SCAN_VAR(nRotateTime);
+		SCAN_VAR(nRotateHoldInput);
+		SCAN_VAR(nAutoFireCounter);
 
 		if (nAction & ACB_WRITE) {
 			RotateStateload();
@@ -1597,34 +1621,34 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 // P.O.W. - Prisoners of War (US version 1)
 
 static struct BurnRomInfo powRomDesc[] = {
-	{ "dg1ver1.j14", 0x20000, 0x8e71a8af, 1 | BRF_PRG }, //  0 68k Code
-	{ "dg2ver1.l14", 0x20000, 0x4287affc, 1 | BRF_PRG }, //  1
+	{ "dg1ver1.j14", 	0x20000, 0x8e71a8af, 1 | BRF_PRG }, //  0 68k Code
+	{ "dg2ver1.l14", 	0x20000, 0x4287affc, 1 | BRF_PRG }, //  1
 
-	{ "dg8.e25",     0x10000, 0xd1d61da3, 2 | BRF_PRG }, //  2 Z80 Code
+	{ "dg8.e25",     	0x10000, 0xd1d61da3, 2 | BRF_PRG }, //  2 Z80 Code
 
-	{ "dg9.l25",     0x08000, 0xdf864a08, 3 | BRF_GRA }, //  3 Characters
-	{ "dg10.m25",    0x08000, 0x9e470d53, 3 | BRF_GRA }, //  4
+	{ "dg9.l25",     	0x08000, 0xdf864a08, 3 | BRF_GRA }, //  3 Characters
+	{ "dg10.m25",    	0x08000, 0x9e470d53, 3 | BRF_GRA }, //  4
 
-	{ "snk880.11a",  0x20000, 0xe70fd906, 4 | BRF_GRA }, //  5 Sprites
-	{ "snk880.12a",  0x20000, 0x628b1aed, 4 | BRF_GRA }, //  6
-	{ "snk880.13a",  0x20000, 0x19dc8868, 4 | BRF_GRA }, //  7
-	{ "snk880.14a",  0x20000, 0x47cd498b, 4 | BRF_GRA }, //  8
-	{ "snk880.15a",  0x20000, 0x7a90e957, 4 | BRF_GRA }, //  9
-	{ "snk880.16a",  0x20000, 0xe40a6c13, 4 | BRF_GRA }, // 10
-	{ "snk880.17a",  0x20000, 0xc7931cc2, 4 | BRF_GRA }, // 11
-	{ "snk880.18a",  0x20000, 0xeed72232, 4 | BRF_GRA }, // 12
-	{ "snk880.19a",  0x20000, 0x1775b8dd, 4 | BRF_GRA }, // 13
-	{ "snk880.20a",  0x20000, 0xf8e752ec, 4 | BRF_GRA }, // 14
-	{ "snk880.21a",  0x20000, 0x27e9fffe, 4 | BRF_GRA }, // 15
-	{ "snk880.22a",  0x20000, 0xaa9c00d8, 4 | BRF_GRA }, // 16
-	{ "snk880.23a",  0x20000, 0xadb6ad68, 4 | BRF_GRA }, // 17
-	{ "snk880.24a",  0x20000, 0xdd41865a, 4 | BRF_GRA }, // 18
-	{ "snk880.25a",  0x20000, 0x055759ad, 4 | BRF_GRA }, // 19
-	{ "snk880.26a",  0x20000, 0x9bc261c5, 4 | BRF_GRA }, // 20
+	{ "snk88011a.1a",  	0x20000, 0xe70fd906, 4 | BRF_GRA }, //  5 Sprites
+	{ "snk88012a.1b",  	0x20000, 0x628b1aed, 4 | BRF_GRA }, //  6
+	{ "snk88013a.1c",  	0x20000, 0x19dc8868, 4 | BRF_GRA }, //  7
+	{ "snk88014a.1d",  	0x20000, 0x47cd498b, 4 | BRF_GRA }, //  8
+	{ "snk88015a.2a",  	0x20000, 0x7a90e957, 4 | BRF_GRA }, //  9
+	{ "snk88016a.2b",  	0x20000, 0xe40a6c13, 4 | BRF_GRA }, // 10
+	{ "snk88017a.2c",  	0x20000, 0xc7931cc2, 4 | BRF_GRA }, // 11
+	{ "snk88018a.2d",  	0x20000, 0xeed72232, 4 | BRF_GRA }, // 12
+	{ "snk88019a.3a",  	0x20000, 0x1775b8dd, 4 | BRF_GRA }, // 13
+	{ "snk88020a.3b",  	0x20000, 0xf8e752ec, 4 | BRF_GRA }, // 14
+	{ "snk88021a.3c",  	0x20000, 0x27e9fffe, 4 | BRF_GRA }, // 15
+	{ "snk88022a.3d",  	0x20000, 0xaa9c00d8, 4 | BRF_GRA }, // 16
+	{ "snk88023a.4a",  	0x20000, 0xadb6ad68, 4 | BRF_GRA }, // 17
+	{ "snk88024a.4b",  	0x20000, 0xdd41865a, 4 | BRF_GRA }, // 18
+	{ "snk88025a.4c",  	0x20000, 0x055759ad, 4 | BRF_GRA }, // 19
+	{ "snk88026a.4d",  	0x20000, 0x9bc261c5, 4 | BRF_GRA }, // 20
 
-	{ "dg7.d20",     0x10000, 0xaba9a9d3, 5 | BRF_SND }, // 21 upd7759 samples
+	{ "dg7.d20",     	0x10000, 0xaba9a9d3, 5 | BRF_SND }, // 21 upd7759 samples
 
-	{ "pal20l10.a6", 0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 22 pld
+	{ "pal20l10.a6", 	0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 22 pld
 };
 
 STD_ROM_PICK(pow)
@@ -1646,37 +1670,72 @@ struct BurnDriver BurnDrvpow = {
 };
 
 
+// P.O.W. - Prisoners of War (US version 1, mask ROM sprites )
+
+static struct BurnRomInfo powaRomDesc[] = {
+	{ "dg1ver1.j14", 	0x20000, 0x8e71a8af, 1 | BRF_PRG }, //  0 68k Code
+	{ "dg2ver1.l14", 	0x20000, 0x4287affc, 1 | BRF_PRG }, //  1
+
+	{ "dg8.e25",     	0x10000, 0xd1d61da3, 2 | BRF_PRG }, //  2 Z80 Code
+
+	{ "dg9.l25",     	0x08000, 0xdf864a08, 3 | BRF_GRA }, //  3 Characters
+	{ "dg10.m25",    	0x08000, 0x9e470d53, 3 | BRF_GRA }, //  4
+
+	{ "pow8804_w50.4",  0x80000, 0x18fd04a3, 4 | BRF_GRA }, //  5 Sprites
+	{ "pow8806_w52.6",  0x80000, 0x09b654e9, 4 | BRF_GRA }, //  6
+	{ "pow8803_w49.3",  0x80000, 0xf68712a3, 4 | BRF_GRA }, //  7
+	{ "pow8805_w51.5",  0x80000, 0x8595cf76, 4 | BRF_GRA }, //  8
+	
+	{ "dg7.d20",     	0x10000, 0xaba9a9d3, 5 | BRF_SND }, //  9 upd7759 samples
+
+	{ "pal20l10.a6", 	0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 10 pld
+};
+
+STD_ROM_PICK(powa)
+STD_ROM_FN(powa)
+
+struct BurnDriver BurnDrvpowa = {
+	"powa", "pow", NULL, NULL, "1988",
+	"P.O.W. - Prisoners of War (US version 1, mask ROM sprites )\0", NULL, "SNK", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SCRFIGHT, 0,
+	NULL, powaRomInfo, powaRomName, NULL, NULL, NULL, NULL, DrvInputInfo, PowDIPInfo,
+	powInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	&DrvRecalc, 0x800, 256, 224, 4, 3
+};
+
+
 // Datsugoku - Prisoners of War (Japan)
 
 static struct BurnRomInfo powjRomDesc[] = {
-	{ "1-2",         0x20000, 0x2f17bfb0, 1 | BRF_PRG }, //  0 68k Code
-	{ "2-2",         0x20000, 0xbaa32354, 1 | BRF_PRG }, //  1
+	{ "1-2",         	0x20000, 0x2f17bfb0, 1 | BRF_PRG }, //  0 68k Code
+	{ "2-2",         	0x20000, 0xbaa32354, 1 | BRF_PRG }, //  1
 
-	{ "dg8.e25",     0x10000, 0xd1d61da3, 2 | BRF_PRG }, //  2 Z80 Code
+	{ "dg8.e25",     	0x10000, 0xd1d61da3, 2 | BRF_PRG }, //  2 Z80 Code
 
-	{ "dg9.l25",     0x08000, 0xdf864a08, 3 | BRF_GRA }, //  3 Characters
-	{ "dg10.m25",    0x08000, 0x9e470d53, 3 | BRF_GRA }, //  4
+	{ "dg9.l25",     	0x08000, 0xdf864a08, 3 | BRF_GRA }, //  3 Characters
+	{ "dg10.m25",    	0x08000, 0x9e470d53, 3 | BRF_GRA }, //  4
 
-	{ "snk880.11a",  0x20000, 0xe70fd906, 4 | BRF_GRA }, //  5 Sprites
-	{ "snk880.12a",  0x20000, 0x628b1aed, 4 | BRF_GRA }, //  6
-	{ "snk880.13a",  0x20000, 0x19dc8868, 4 | BRF_GRA }, //  7
-	{ "snk880.14a",  0x20000, 0x47cd498b, 4 | BRF_GRA }, //  8
-	{ "snk880.15a",  0x20000, 0x7a90e957, 4 | BRF_GRA }, //  9
-	{ "snk880.16a",  0x20000, 0xe40a6c13, 4 | BRF_GRA }, // 10
-	{ "snk880.17a",  0x20000, 0xc7931cc2, 4 | BRF_GRA }, // 11
-	{ "snk880.18a",  0x20000, 0xeed72232, 4 | BRF_GRA }, // 12
-	{ "snk880.19a",  0x20000, 0x1775b8dd, 4 | BRF_GRA }, // 13
-	{ "snk880.20a",  0x20000, 0xf8e752ec, 4 | BRF_GRA }, // 14
-	{ "snk880.21a",  0x20000, 0x27e9fffe, 4 | BRF_GRA }, // 15
-	{ "snk880.22a",  0x20000, 0xaa9c00d8, 4 | BRF_GRA }, // 16
-	{ "snk880.23a",  0x20000, 0xadb6ad68, 4 | BRF_GRA }, // 17
-	{ "snk880.24a",  0x20000, 0xdd41865a, 4 | BRF_GRA }, // 18
-	{ "snk880.25a",  0x20000, 0x055759ad, 4 | BRF_GRA }, // 19
-	{ "snk880.26a",  0x20000, 0x9bc261c5, 4 | BRF_GRA }, // 20
+	{ "snk88011a.1a",  	0x20000, 0xe70fd906, 4 | BRF_GRA }, //  5 Sprites
+	{ "snk88012a.1b",  	0x20000, 0x628b1aed, 4 | BRF_GRA }, //  6
+	{ "snk88013a.1c",  	0x20000, 0x19dc8868, 4 | BRF_GRA }, //  7
+	{ "snk88014a.1d",  	0x20000, 0x47cd498b, 4 | BRF_GRA }, //  8
+	{ "snk88015a.2a",  	0x20000, 0x7a90e957, 4 | BRF_GRA }, //  9
+	{ "snk88016a.2b",  	0x20000, 0xe40a6c13, 4 | BRF_GRA }, // 10
+	{ "snk88017a.2c",  	0x20000, 0xc7931cc2, 4 | BRF_GRA }, // 11
+	{ "snk88018a.2d",  	0x20000, 0xeed72232, 4 | BRF_GRA }, // 12
+	{ "snk88019a.3a",  	0x20000, 0x1775b8dd, 4 | BRF_GRA }, // 13
+	{ "snk88020a.3b",  	0x20000, 0xf8e752ec, 4 | BRF_GRA }, // 14
+	{ "snk88021a.3c",  	0x20000, 0x27e9fffe, 4 | BRF_GRA }, // 15
+	{ "snk88022a.3d",  	0x20000, 0xaa9c00d8, 4 | BRF_GRA }, // 16
+	{ "snk88023a.4a",  	0x20000, 0xadb6ad68, 4 | BRF_GRA }, // 17
+	{ "snk88024a.4b",  	0x20000, 0xdd41865a, 4 | BRF_GRA }, // 18
+	{ "snk88025a.4c",  	0x20000, 0x055759ad, 4 | BRF_GRA }, // 19
+	{ "snk88026a.4d",  	0x20000, 0x9bc261c5, 4 | BRF_GRA }, // 20
 
-	{ "dg7.d20",     0x10000, 0xaba9a9d3, 5 | BRF_SND }, // 21 upd7759 samples
+	{ "dg7.d20",     	0x10000, 0xaba9a9d3, 5 | BRF_SND }, // 21 upd7759 samples
 
-	{ "pal20l10.a6", 0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 22 pld
+	{ "pal20l10.a6", 	0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 22 pld
 };
 
 STD_ROM_PICK(powj)
@@ -2174,9 +2233,9 @@ static struct BurnRomInfo ikari3wRomDesc[] = {
 	
 	{ "ik3-6.18e",      	0x20000, 0x59d256a4, 5 | BRF_SND }, // 15 upd7759 samples
 	
-	{ "a_pal20110a.ic1",	0x000cc, 0x1cadf26d, 0 | BRF_OPT }, // 16 plds
-	{ "b_pal20110a.ic3",	0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 17
-	{ "c_pal1618a.ic2",		0x00104, 0xe258b8d6, 0 | BRF_OPT }, // 18
+	{ "a_pal20l10a.ic1",	0x000cc, 0x1cadf26d, 0 | BRF_OPT }, // 16 plds
+	{ "b_pal20l10a.ic3",	0x000cc, 0xc3d9e729, 0 | BRF_OPT }, // 17
+	{ "c_pal16l8a.ic2",		0x00104, 0xe258b8d6, 0 | BRF_OPT }, // 18
 };
 
 STD_ROM_PICK(ikari3w)

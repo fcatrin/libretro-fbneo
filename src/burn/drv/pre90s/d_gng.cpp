@@ -42,6 +42,8 @@ static UINT8 soundlatch;
 
 static INT32 nExtraCycles;
 
+static INT32 is_game = 0; // 0 gng+etc, 1 diamond
+
 static struct BurnInputInfo GngInputList[] =
 {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
@@ -352,7 +354,7 @@ static void main_write(UINT16 address, UINT8 data)
 			return;
 
 		case 0x3d01:
-			if (data & 1) {
+			if (data & 1 && is_game == 0) {
 				BurnYM2203Reset();
 				ZetReset();
 			}
@@ -406,7 +408,7 @@ static tilemap_callback( bg )
 	INT32 Code = DrvBgVideoRAM[offs] + ((Attr & 0xc0) << 2);
 
 	TILE_SET_INFO(0, Code, Attr/*&7*/, TILE_FLIPYX(Attr >> 4));
-	*category = (Attr >> 3) & 1;
+	sTile->category = (Attr >> 3) & 1;
 }
 
 static tilemap_callback( fg )
@@ -591,14 +593,14 @@ static INT32 DrvCommonInit(INT32 game) // 0 = gng, 1 = gnga, 2 = diamond
 
 	BurnYM2203Init(2, 1500000, NULL, 0);
 	BurnTimerAttachZet(3000000);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.20, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_YM2203_ROUTE, 0.20, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_1, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_2, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_3, 0.40, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_YM2203_ROUTE, 0.18, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_1, 0.38, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_2, 0.38, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(0, BURN_SND_YM2203_AY8910_ROUTE_3, 0.38, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_YM2203_ROUTE, 0.18, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_1, 0.38, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_2, 0.38, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetRoute(1, BURN_SND_YM2203_AY8910_ROUTE_3, 0.38, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_COLS, bg_map_callback, 16, 16, 32, 32);
@@ -629,6 +631,7 @@ static INT32 GngaInit()
 
 static INT32 DiamondInit()
 {
+	is_game = 1;
 	return DrvCommonInit(2);
 }
 
@@ -647,6 +650,8 @@ static INT32 DrvExit()
 	scrolly[0] = scrolly[1] = 0;
 	rom_bank = 0;
 	soundlatch = 0;
+
+	is_game = 0;
 
 	return 0;
 }

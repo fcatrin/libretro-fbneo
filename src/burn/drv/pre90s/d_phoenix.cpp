@@ -25,7 +25,6 @@
 
 #endif
 
-#include "tms36xx.h"
 #include "phoenixsound.h"
 #include "pleiadssound.h"
 
@@ -62,88 +61,88 @@ static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo PhoenixInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Phoenix)
 
 static struct BurnInputInfo Phoenix3InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Phoenix3)
 
 static struct BurnInputInfo CondorInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Condor)
 
 static struct BurnInputInfo PleiadsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 right"	},
 	{"P1 Button",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 fire 1"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 2,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Pleiads)
@@ -242,6 +241,40 @@ static struct BurnDIPInfo PleiadceDIPList[]=
 };
 
 STDDIPINFO(Pleiadce)
+
+static struct BurnDIPInfo CityattaDIPList[]=
+{
+	{0x0c, 0xff, 0xff, 0x60, NULL			},
+	{0x0e, 0xff, 0xff, 0x00, NULL			},
+
+	{0   , 0xfe, 0   ,    4, "Lives"		},
+	{0x0c, 0x01, 0x03, 0x00, "3"			},
+	{0x0c, 0x01, 0x03, 0x01, "4"			},
+	{0x0c, 0x01, 0x03, 0x02, "5"			},
+	{0x0c, 0x01, 0x03, 0x03, "6"			},
+
+	{0   , 0xfe, 0   ,    2, "Unknwon"		},
+	{0x0c, 0x01, 0x04, 0x00, "On"			},
+	{0x0c, 0x01, 0x04, 0x04, "Off"			},
+
+	{0   , 0xfe, 0   ,    2, "Bonus Life"	},
+	{0x0c, 0x01, 0x08, 0x00, "3K"			},
+	{0x0c, 0x01, 0x08, 0x04, "5K"			},
+	
+	{0   , 0xfe, 0   ,    2, "Coinage"		},
+	{0x0c, 0x01, 0x10, 0x10, "2 Coins 1 Credits"	},
+	{0x0c, 0x01, 0x10, 0x00, "1 Coin  1 Credits"	},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"	},
+	{0x0c, 0x01, 0x40, 0x00, "Off"			},
+	{0x0c, 0x01, 0x40, 0x40, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Cabinet"		},
+	{0x0e, 0x01, 0x01, 0x00, "Upright"		},
+	{0x0e, 0x01, 0x01, 0x01, "Cocktail"		},
+};
+
+STDDIPINFO(Cityatta)
 
 static struct BurnDIPInfo CondorDIPList[]=
 {
@@ -854,11 +887,14 @@ static INT32 DrvFrame()
 	i8080Close();
 
 	if (pBurnSoundOut) {
-		if (phoenixmode)
+		if (phoenixmode) {
 			phoenix_sound_update(pBurnSoundOut, nBurnSoundLen);
+		}
 
-		if (pleiads)
+		if (pleiads) {
 			pleiads_sound_update(pBurnSoundOut, nBurnSoundLen);
+		}
+		BurnSoundDCFilter();
 	}
 
 	return 0;
@@ -882,7 +918,13 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		i8080Scan(nAction);
 
-		tms36xx_scan(nAction, pnMin);
+		if (phoenixmode) {
+			phoenix_sound_scan(nAction, pnMin);
+		}
+
+		if (pleiads) {
+			pleiads_sound_scan(nAction, pnMin);
+		}
 
 		SCAN_VAR(scrollx);
 		SCAN_VAR(ram_bank);
@@ -1185,7 +1227,7 @@ struct BurnDriver BurnDrvPhoenix3 = {
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 1)
+// Phoenix (Irecsa / G.G.I. Corporation)
 
 static struct BurnRomInfo phoenixcRomDesc[] = {
 	{ "phoenix.45",		0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
@@ -1212,7 +1254,7 @@ STD_ROM_FN(phoenixc)
 
 struct BurnDriver BurnDrvPhoenixc = {
 	"phoenixc", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 1)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (Irecsa / G.G.I. Corporation)\0", NULL, "bootleg? (Irecsa / G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixcRomInfo, phoenixcRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
@@ -1221,7 +1263,7 @@ struct BurnDriver BurnDrvPhoenixc = {
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 2)
+// Phoenix (G.G.I. Corporation, set 1)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc2RomDesc[] = {
@@ -1253,7 +1295,7 @@ STD_ROM_FN(phoenixc2)
 
 struct BurnDriver BurnDrvPhoenixc2 = {
 	"phoenixc2", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 2)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 1)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc2RomInfo, phoenixc2RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
@@ -1262,7 +1304,7 @@ struct BurnDriver BurnDrvPhoenixc2 = {
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 3)
+// Phoenix (G.G.I. Corporation, set 2)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc3RomDesc[] = {
@@ -1290,7 +1332,7 @@ STD_ROM_FN(phoenixc3)
 
 struct BurnDriver BurnDrvPhoenixc3 = {
 	"phoenixc3", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 3)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 2)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc3RomInfo, phoenixc3RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
@@ -1299,7 +1341,7 @@ struct BurnDriver BurnDrvPhoenixc3 = {
 };
 
 
-// Phoenix (Irecsa / G.G.I Corp, set 4)
+// Phoenix (G.G.I. Corporation, set 3)
 // verified main and ROMs PCBs and 2 PROMs
 
 static struct BurnRomInfo phoenixc4RomDesc[] = {
@@ -1326,7 +1368,7 @@ STD_ROM_FN(phoenixc4)
 
 struct BurnDriver BurnDrvPhoenixc4 = {
 	"phoenixc4", "phoenix", NULL, NULL, "1981",
-	"Phoenix (Irecsa / G.G.I Corp, set 4)\0", NULL, "bootleg? (Irecsa / G.G.I Corp)", "Miscellaneous",
+	"Phoenix (G.G.I. Corporation, set 3)\0", NULL, "bootleg (G.G.I. Corporation)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, phoenixc4RomInfo, phoenixc4RomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PhoenixtDIPInfo,
@@ -1991,23 +2033,23 @@ struct BurnDriver BurnDrvPhoenixs = {
 // Phoenix (Assa, Spanish bootleg)
 
 static struct BurnRomInfo phoenixassRomDesc[] = {
-	{ "ic45.bin",		0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
-	{ "ic46.bin",		0x0800, 0xdbc942fa, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ic47.bin",		0x0800, 0xcbbb8839, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ic48.bin",		0x0800, 0x1e2e2fc7, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "ic49.bin",		0x0800, 0x1a1ce0d0, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "ic50.bin",		0x0800, 0xac5e9ec1, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "ic51.bin",		0x0800, 0x2eab35b4, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "ic52.bin",		0x0800, 0x15a02d87, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "00-811.ic45",	0x0800, 0x5b8c55a8, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
+	{ "01-811.ic46",	0x0800, 0xdbc942fa, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "02-811.ic47",	0x0800, 0xcbbb8839, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "03-811.ic48",	0x0800, 0x1e2e2fc7, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "04-811.ic49",	0x0800, 0x1a1ce0d0, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "05-811.ic50",	0x0800, 0xac5e9ec1, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "06-811.ic51",	0x0800, 0x2eab35b4, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "07-811.ic52",	0x0800, 0x15a02d87, 1 | BRF_PRG | BRF_ESS }, //  7
 
-	{ "ic23.bin",		0x0800, 0x3c7e623f, 2 | BRF_GRA },           //  8 Background Tiles
-	{ "ic24.bin",		0x0800, 0x59916d3b, 2 | BRF_GRA },           //  9
+	{ "10-811.ic23",	0x0800, 0x3c7e623f, 2 | BRF_GRA },           //  8 Background Tiles
+	{ "11-811.ic24",	0x0800, 0x59916d3b, 2 | BRF_GRA },           //  9
 
-	{ "ic39.bin",		0x0800, 0xbb0525ed, 3 | BRF_GRA },           // 10 Foreground Tiles
-	{ "ic40.bin",		0x0800, 0x4178aa4f, 3 | BRF_GRA },           // 11
+	{ "08-811.ic39",	0x0800, 0xbb0525ed, 3 | BRF_GRA },           // 10 Foreground Tiles
+	{ "09-811.ic40",	0x0800, 0x4178aa4f, 3 | BRF_GRA },           // 11
 
-	{ "prom.41",		0x0100, 0x7c9f2e00, 4 | BRF_GRA },           // 12 Color Proms
-	{ "prom.40",		0x0100, 0xe176b768, 4 | BRF_GRA },           // 13
+	{ "dm74s287n.ic41",	0x0100, 0x7c9f2e00, 4 | BRF_GRA },           // 12 Color Proms
+	{ "dm74s287n.ic40",	0x0100, 0xe176b768, 4 | BRF_GRA },           // 13
 };
 
 STD_ROM_PICK(phoenixass)
@@ -2195,7 +2237,7 @@ STD_ROM_FN(pleiadsi)
 
 struct BurnDriver BurnDrvPleiadsi = {
 	"pleiadsi", "pleiads", NULL, NULL, "1981",
-	"Pleiads (Irecsa)\0", NULL, "bootleg? (Irecsa)", "Miscellaneous",
+	"Pleiads (Irecsa)\0", NULL, "bootleg (Irecsa)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsiRomInfo, pleiadsiRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
@@ -2231,7 +2273,7 @@ STD_ROM_FN(pleiadsn)
 
 struct BurnDriver BurnDrvPleiadsn = {
 	"pleiadsn", "pleiads", NULL, NULL, "1981",
-	"Pleiads (Niemer S.A.)\0", NULL, "Niemer S.A.", "Miscellaneous",
+	"Pleiads (Niemer S.A.)\0", NULL, "bootleg (Niemer S.A.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadsnRomInfo, pleiadsnRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
@@ -2271,6 +2313,43 @@ struct BurnDriver BurnDrvPleiadss = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, pleiadssRomInfo, pleiadssRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, PleiadceDIPInfo,
+	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	208, 256, 3, 4
+};
+
+// City Attack (Petaco S.A., bootleg of Pleiads)
+/* PCB silkscreened as "H-P6 NO.085318"
+   On screen game title shows just "Attack", but the cabinet, manual and legal registry name (number A/20/00241) is "City Attack" */
+   
+static struct BurnRomInfo cityattaRomDesc[] = {
+	{ "1-2716.bin",		0x0800, 0xc013515f, 1 | BRF_PRG | BRF_ESS }, //  0 i8085 Code
+	{ "2-2716.bin",		0x0800, 0xb254217c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "3-2716.bin",		0x0800, 0x87e700bb, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "4-2716.bin",		0x0800, 0xbcda59ae, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "5-2716.bin",		0x0800, 0x49c629bc, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "6-2716.bin",		0x0800, 0xf1a8a00d, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "7-2716.bin",		0x0800, 0xb5f07fbc, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "8-2716.bin",		0x0800, 0xb1b5a8a6, 1 | BRF_PRG | BRF_ESS }, //  7
+
+	{ "11-2716.bin",	0x0800, 0x6694a80f, 2 | BRF_GRA },           //  8 Background Tiles
+	{ "12-2716.bin",	0x0800, 0x5188fc29, 2 | BRF_GRA },           //  9
+
+	{ "10-2716.bin",	0x0800, 0x85866607, 3 | BRF_GRA },           // 10 Foreground Tiles
+	{ "9-2716.bin",		0x0800, 0xa841d511, 3 | BRF_GRA },           // 11
+
+	{ "ic41a-7611.bin",	0x0100, 0xe38eeb83, 4 | BRF_GRA },           // 12 Color Proms
+	{ "ic40a-7611.bin",	0x0100, 0x7a1bcb1e, 4 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(cityatta)
+STD_ROM_FN(cityatta)
+
+struct BurnDriver BurnDrvCityatta = {
+	"cityatta", "pleiads", NULL, NULL, "1981",
+	"City Attack (Petaco S.A., bootleg of Pleiads)\0", NULL, "bootleg (Petaco S.A.)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	NULL, cityattaRomInfo, cityattaRomName, NULL, NULL, NULL, NULL, PhoenixInputInfo, CityattaDIPInfo,
 	PleiadsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	208, 256, 3, 4
 };

@@ -792,6 +792,7 @@ static UINT8 __fastcall sparkman_read(UINT16 address)
 			return DrvDips[address & 1];
 
 		case 0xc080:
+		case 0xc081:
 			return (DrvInputs[2] & 0x3) | (vblank ? 0x40 : 0);
 
 		case 0xc0a3:
@@ -2626,6 +2627,8 @@ static struct BurnRomInfo starfighRomDesc[] = {
 	{ "starfgtr.a6",	0x10000, 0x4a33f6f3, 3 }, // 13
 
 	{ "starfgtr.q10",	0x08000, 0xfa510e94, 4 }, // 14 samples
+	
+	{ "82s129.5q",		0x00100, 0x10bfcebb, 0 }, // 15 proms
 };
 
 STD_ROM_PICK(starfigh)

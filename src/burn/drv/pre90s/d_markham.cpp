@@ -746,8 +746,17 @@ static INT32 CommonInit(INT32 game)
 	ZetSetWriteHandler(strnskil_sound_write);
 	ZetClose();
 	
-	SN76489Init(0, 15468000 / 6, 0);
-	SN76489Init(1, 15468000 / 6, 1);
+	if (game == 0) // strnskil / guiness
+	{
+		SN76489Init(0, 15468000 / 6, 0);
+		SN76489Init(1, 15468000 / 6, 1);
+	}
+	else if (game == 1) // pettanp / banbam
+	{
+		SN76496Init(0, 8000000 / 4, 0);
+		SN76496Init(1, 8000000 / 2, 1);
+	}
+
 	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
 	SN76496SetBuffered(ZetTotalCycles, 4000000);
@@ -825,8 +834,8 @@ static INT32 IkkiInit()
 	
 	SN76496Init(0, 8000000 / 4, 0);
 	SN76496Init(1, 8000000 / 2, 1);
-	SN76496SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
-	SN76496SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
+	SN76496SetRoute(0, 0.75, BURN_SND_ROUTE_BOTH);
+	SN76496SetRoute(1, 0.75, BURN_SND_ROUTE_BOTH);
 	SN76496SetBuffered(ZetTotalCycles, 4000000);
 
 	GenericTilesInit();
@@ -1134,6 +1143,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		SN76496Update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 	}
 
 	if (pBurnDraw) {

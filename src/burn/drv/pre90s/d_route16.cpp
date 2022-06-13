@@ -44,93 +44,95 @@ static UINT8 DrvDips[1];
 static UINT8 DrvInputs[8];
 static UINT8 DrvReset;
 
+static INT32 spaceecho = 0;
+
 static struct BurnInputInfo Route16InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 6,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Route16)
 
 static struct BurnInputInfo StratvoxInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 start"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 6,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 6,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Stratvox)
 
 static struct BurnInputInfo TtmahjngInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy8 + 7,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
-	{"A",			BIT_DIGITAL,	DrvJoy1 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy2 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy4 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy1 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy2 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy4 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy1 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy2 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy1 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy4 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy1 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy2 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy4 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy1 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy2 + 4,	"mah reach"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 start"	},
+	{"P1 A",		BIT_DIGITAL,	DrvJoy1 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvJoy2 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvJoy3 + 0,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvJoy4 + 0,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvJoy1 + 1,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvJoy2 + 1,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvJoy3 + 1,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvJoy4 + 1,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvJoy1 + 2,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvJoy2 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvJoy1 + 4,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvJoy4 + 2,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvJoy1 + 3,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvJoy2 + 3,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvJoy4 + 3,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvJoy3 + 3,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvJoy1 + 4,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvJoy3 + 4,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvJoy2 + 4,	"mah reach"	},
 
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"	},
-	{"A",			BIT_DIGITAL,	DrvJoy5 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvJoy6 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvJoy7 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvJoy8 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvJoy5 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvJoy6 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvJoy7 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvJoy8 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvJoy5 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvJoy6 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvJoy8 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvJoy5 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvJoy6 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvJoy8 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvJoy7 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvJoy5 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvJoy7 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvJoy6 + 4,	"mah reach"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 start"	},
+	{"P2 A",		BIT_DIGITAL,	DrvJoy5 + 0,	"mah a"		},
+	{"P2 B",		BIT_DIGITAL,	DrvJoy6 + 0,	"mah b"		},
+	{"P2 C",		BIT_DIGITAL,	DrvJoy7 + 0,	"mah c"		},
+	{"P2 D",		BIT_DIGITAL,	DrvJoy8 + 0,	"mah d"		},
+	{"P2 E",		BIT_DIGITAL,	DrvJoy5 + 1,	"mah e"		},
+	{"P2 F",		BIT_DIGITAL,	DrvJoy6 + 1,	"mah f"		},
+	{"P2 G",		BIT_DIGITAL,	DrvJoy7 + 1,	"mah g"		},
+	{"P2 H",		BIT_DIGITAL,	DrvJoy8 + 1,	"mah h"		},
+	{"P2 I",		BIT_DIGITAL,	DrvJoy5 + 2,	"mah i"		},
+	{"P2 J",		BIT_DIGITAL,	DrvJoy6 + 2,	"mah j"		},
+	{"P2 K",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah k"		},
+	{"P2 L",		BIT_DIGITAL,	DrvJoy8 + 2,	"mah l"		},
+	{"P2 M",		BIT_DIGITAL,	DrvJoy5 + 3,	"mah m"		},
+	{"P2 N",		BIT_DIGITAL,	DrvJoy6 + 3,	"mah n"		},
+	{"P2 Pon",		BIT_DIGITAL,	DrvJoy8 + 3,	"mah pon"	},
+	{"P2 Chi",		BIT_DIGITAL,	DrvJoy7 + 3,	"mah chi"	},
+	{"P2 Kan",		BIT_DIGITAL,	DrvJoy5 + 4,	"mah kan"	},
+	{"P2 Ron",		BIT_DIGITAL,	DrvJoy7 + 4,	"mah ron"	},
+	{"P2 Reach",	BIT_DIGITAL,	DrvJoy6 + 4,	"mah reach"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
@@ -468,7 +470,7 @@ static INT32 DrvDoReset()
 	ZetOpen(1);
 	ZetReset();
 	DACReset();
-	SN76477_reset(0);
+	SN76477_reset();
 	ZetClose();
 
 	AY8910Reset(0);
@@ -612,7 +614,7 @@ static INT32 DrvInit()
 static INT32 DrvExit()
 {
 	AY8910Exit(0);
-	SN76477_exit(0);
+	SN76477_exit();
 	DACExit();
 
 	ZetExit();
@@ -620,6 +622,8 @@ static INT32 DrvExit()
 	GenericTilesExit();
 
 	BurnFree(AllMem);
+
+	spaceecho = 0;
 
 	return 0;
 }
@@ -762,12 +766,14 @@ static INT32 DrvFrame()
 
 		ZetOpen(1);
 		CPU_RUN(1, Zet);
+		if (spaceecho && (i % 5) == 0) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+
 		ZetClose();
 	}
 
 	if (pBurnSoundOut) {
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
-		SN76477_sound_update(0, pBurnSoundOut, nBurnSoundLen);
+		SN76477_sound_update(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -796,6 +802,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		ZetScan(nAction);
 		AY8910Scan(nAction, pnMin);
+		SN76477_scan(nAction, pnMin);
 
 		SCAN_VAR(flipscreen);
 		SCAN_VAR(palette_1);
@@ -809,29 +816,66 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Route 16 (set 1)
+// Route 16 (Sun Electronics, set 1)
 
 static struct BurnRomInfo route16RomDesc[] = {
-	{ "tvg54.a0",     	0x0800, 0xaef9ffc1, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 #0 Code
-	{ "tvg55.a1",     	0x0800, 0x389bc077, 1 | BRF_ESS | BRF_PRG }, //  1
-	{ "tvg56.a2",     	0x0800, 0x1065a468, 1 | BRF_ESS | BRF_PRG }, //  2
-	{ "tvg57.a3",     	0x0800, 0x0b1987f3, 1 | BRF_ESS | BRF_PRG }, //  3
-	{ "tvg58.a4",     	0x0800, 0xf67d853a, 1 | BRF_ESS | BRF_PRG }, //  4
-	{ "tvg59.a5",     	0x0800, 0xd85cf758, 1 | BRF_ESS | BRF_PRG }, //  5
+	{ "stvg54.a0",     	0x0800, 0xb8471cdc, 1 | BRF_ESS | BRF_PRG }, 	//  0 Z80 #0 Code
+	{ "stvg55.a1",     	0x0800, 0x3ec52fe5, 1 | BRF_ESS | BRF_PRG }, 	//  1
+	{ "stvg56.a2",     	0x0800, 0xa8e92871, 1 | BRF_ESS | BRF_PRG }, 	//  2
+	{ "stvg57.a3",     	0x0800, 0xa0fc9fc5, 1 | BRF_ESS | BRF_PRG },    //  3
+	{ "stvg58.a4",     	0x0800, 0xcc95c02c, 1 | BRF_ESS | BRF_PRG },    //  4
+	{ "tvg59.a5",     	0x0800, 0xa39ef648, 1 | BRF_ESS | BRF_PRG },    //  5
 
-	{ "tvg60.b0",     	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, //  6 Z80 #1 Code
-	{ "tvg61.b1",     	0x0800, 0x2b326cf9, 2 | BRF_ESS | BRF_PRG }, //  7
-	{ "tvg62.b2",     	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, //  8
-	{ "tvg63.b3",     	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, //  9
+	{ "stvg60.b0",     	0x0800, 0xfef605f3, 2 | BRF_ESS | BRF_PRG },    //  6 Z80 #1 Code
+	{ "stvg61.b1",     	0x0800, 0xd0d6c189, 2 | BRF_ESS | BRF_PRG },    //  7
+	{ "tsvg62.b2",     	0x0800, 0xdefc5797, 2 | BRF_ESS | BRF_PRG },    //  8
+	{ "stvg63.b3",     	0x0800, 0x88d94a66, 2 | BRF_ESS | BRF_PRG },    //  9
 
-	{ "mb7052.59",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 10 Graphics
-	{ "mb7052.61",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 11
+	{ "mb7052.59",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	    // 10 Graphics
+	{ "mb7052.61",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	    // 11
+	
+	{ "mb8841",			0x0800, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 12 mcu
 };
 
 STD_ROM_PICK(route16)
 STD_ROM_FN(route16)
 
-static INT32 route16Init()
+struct BurnDriver BurnDrvroute16 = {
+	"route16", NULL, NULL, NULL, "1981",
+	"Route 16 (Sun Electronics, set 1)\0", NULL, "Sun Electronics", "Route 16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, route16RomInfo, route16RomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
+	DrvInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
+	256, 256, 3, 4
+};
+
+
+// Route 16 (Centuri license, set 1)
+
+static struct BurnRomInfo route16aRomDesc[] = {
+	{ "tvg54.a0",     	0x0800, 0xaef9ffc1, 1 | BRF_ESS | BRF_PRG }, 	//  0 Z80 #0 Code
+	{ "tvg55.a1",     	0x0800, 0x389bc077, 1 | BRF_ESS | BRF_PRG }, 	//  1
+	{ "tvg56.a2",     	0x0800, 0x1065a468, 1 | BRF_ESS | BRF_PRG }, 	//  2
+	{ "tvg57.a3",     	0x0800, 0x0b1987f3, 1 | BRF_ESS | BRF_PRG }, 	//  3
+	{ "tvg58.a4",     	0x0800, 0xf67d853a, 1 | BRF_ESS | BRF_PRG }, 	//  4
+	{ "tvg59.a5",     	0x0800, 0xd85cf758, 1 | BRF_ESS | BRF_PRG }, 	//  5
+
+	{ "tvg60.b0",     	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, 	//  6 Z80 #1 Code
+	{ "tvg61.b1",     	0x0800, 0x2b326cf9, 2 | BRF_ESS | BRF_PRG }, 	//  7
+	{ "tvg62.b2",     	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, 	//  8
+	{ "tvg63.b3",     	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, 	//  9
+
+	{ "mb7052.59",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 10 Graphics
+	{ "mb7052.61",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 11
+	
+	{ "mb8841",			0x0800, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 12 mcu
+};
+
+STD_ROM_PICK(route16a)
+STD_ROM_FN(route16a)
+
+static INT32 route16aInit()
 {
 	INT32 nRet = DrvInit();
 
@@ -856,40 +900,42 @@ static INT32 route16Init()
 	return nRet;
 }
 
-struct BurnDriver BurnDrvroute16 = {
-	"route16", NULL, NULL, NULL, "1981",
-	"Route 16 (set 1)\0", NULL, "Tehkan/Sun (Centuri license)", "Route 16",
+struct BurnDriver BurnDrvroute16a = {
+	"route16a", "route16", NULL, NULL, "1981",
+	"Route 16 (Centuri license, set 1)\0", NULL, "Tehkan / Sun Electronics (Centuri license)", "Route 16",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, route16RomInfo, route16RomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
-	route16Init, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, route16aRomInfo, route16aRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
+	route16aInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
 
 
-// Route 16 (set 2)
+// Route 16 (Centuri license, set 2)
 
-static struct BurnRomInfo route16aRomDesc[] = {
-	{ "vg-54",        	0x0800, 0x0c966319, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 #0 Code
-	{ "vg-55",        	0x0800, 0xa6a8c212, 1 | BRF_ESS | BRF_PRG }, //  1
-	{ "vg-56",        	0x0800, 0x5c74406a, 1 | BRF_ESS | BRF_PRG }, //  2
-	{ "vg-57",        	0x0800, 0x313e68ab, 1 | BRF_ESS | BRF_PRG }, //  3
-	{ "vg-58",       	0x0800, 0x40824e3c, 1 | BRF_ESS | BRF_PRG }, //  4
-	{ "vg-59",       	0x0800, 0x9313d2c2, 1 | BRF_ESS | BRF_PRG }, //  5
+static struct BurnRomInfo route16bRomDesc[] = {
+	{ "vg-54",        	0x0800, 0x0c966319, 1 | BRF_ESS | BRF_PRG }, 	//  0 Z80 #0 Code
+	{ "vg-55",        	0x0800, 0xa6a8c212, 1 | BRF_ESS | BRF_PRG }, 	//  1
+	{ "vg-56",        	0x0800, 0x5c74406a, 1 | BRF_ESS | BRF_PRG }, 	//  2
+	{ "vg-57",        	0x0800, 0x313e68ab, 1 | BRF_ESS | BRF_PRG }, 	//  3
+	{ "vg-58",       	0x0800, 0x40824e3c, 1 | BRF_ESS | BRF_PRG }, 	//  4
+	{ "vg-59",       	0x0800, 0x9313d2c2, 1 | BRF_ESS | BRF_PRG }, 	//  5
 
-	{ "route16.b0",   	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, //  6 Z80 #1 Code
-	{ "vg-61",        	0x0800, 0xb216c88c, 2 | BRF_ESS | BRF_PRG }, //  7
-	{ "route16.b2",   	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, //  8
-	{ "route16.b3",   	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, //  9
+	{ "route16.b0",   	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, 	//  6 Z80 #1 Code
+	{ "vg-61",        	0x0800, 0xb216c88c, 2 | BRF_ESS | BRF_PRG }, 	//  7
+	{ "route16.b2",   	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, 	//  8
+	{ "route16.b3",   	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, 	//  9
 
-	{ "im5623.f10",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 10 Graphics
-	{ "im5623.f12",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 11
+	{ "im5623.f10",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 10 Graphics
+	{ "im5623.f12",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 11
+	
+	{ "mb8841",			0x0800, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 12 mcu
 };
 
-STD_ROM_PICK(route16a)
-STD_ROM_FN(route16a)
+STD_ROM_PICK(route16b)
+STD_ROM_FN(route16b)
 
-static INT32 route16aInit()
+static INT32 route16bInit()
 {
 	INT32 nRet = DrvInit();
 
@@ -914,34 +960,36 @@ static INT32 route16aInit()
 	return nRet;
 }
 
-struct BurnDriver BurnDrvroute16a = {
-	"route16a", "route16", NULL, NULL, "1981",
-	"Route 16 (set 2)\0", NULL, "Tehkan/Sun (Centuri license)", "Route 16",
+struct BurnDriver BurnDrvroute16b = {
+	"route16b", "route16", NULL, NULL, "1981",
+	"Route 16 (Centuri license, set 2)\0", NULL, "Tehkan / Sun Electronics (Centuri license)", "Route 16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
-	NULL, route16aRomInfo, route16aRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
-	route16aInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
+	NULL, route16bRomInfo, route16bRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
+	route16bInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
 
 
-// Route 16 (set 3, bootleg?)
+// Route 16 (Centuri license, set 3, bootleg?)
 
 static struct BurnRomInfo route16cRomDesc[] = {
-	{ "route16.a0",  	0x0800, 0x8f9101bd, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 #0 Code
-	{ "route16.a1",   	0x0800, 0x389bc077, 1 | BRF_ESS | BRF_PRG }, //  1
-	{ "route16.a2",   	0x0800, 0x1065a468, 1 | BRF_ESS | BRF_PRG }, //  2
-	{ "route16.a3",   	0x0800, 0x0b1987f3, 1 | BRF_ESS | BRF_PRG }, //  3
-	{ "route16.a4",   	0x0800, 0xf67d853a, 1 | BRF_ESS | BRF_PRG }, //  4
-	{ "route16.a5",   	0x0800, 0xd85cf758, 1 | BRF_ESS | BRF_PRG }, //  5
+	{ "route16.a0",  	0x0800, 0x8f9101bd, 1 | BRF_ESS | BRF_PRG }, 	//  0 Z80 #0 Code
+	{ "route16.a1",   	0x0800, 0x389bc077, 1 | BRF_ESS | BRF_PRG }, 	//  1
+	{ "route16.a2",   	0x0800, 0x1065a468, 1 | BRF_ESS | BRF_PRG }, 	//  2
+	{ "route16.a3",   	0x0800, 0x0b1987f3, 1 | BRF_ESS | BRF_PRG }, 	//  3
+	{ "route16.a4",   	0x0800, 0xf67d853a, 1 | BRF_ESS | BRF_PRG }, 	//  4
+	{ "route16.a5",   	0x0800, 0xd85cf758, 1 | BRF_ESS | BRF_PRG }, 	//  5
 
-	{ "route16.b0",   	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, //  6 Z80 #1 Code
-	{ "route16.b1",   	0x0800, 0x2b326cf9, 2 | BRF_ESS | BRF_PRG }, //  7
-	{ "route16.b2",   	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, //  8
-	{ "route16.b3",   	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, //  9
+	{ "route16.b0",   	0x0800, 0x0f9588a7, 2 | BRF_ESS | BRF_PRG }, 	//  6 Z80 #1 Code
+	{ "route16.b1",   	0x0800, 0x2b326cf9, 2 | BRF_ESS | BRF_PRG }, 	//  7
+	{ "route16.b2",   	0x0800, 0x529cad13, 2 | BRF_ESS | BRF_PRG }, 	//  8
+	{ "route16.b3",   	0x0800, 0x3bd8b899, 2 | BRF_ESS | BRF_PRG }, 	//  9
 
-	{ "im5623.f10",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 10 Graphics
-	{ "im5623.f12",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 11
+	{ "im5623.f10",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 10 Graphics
+	{ "im5623.f12",   	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 11
+	
+	{ "mb8841",			0x0800, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 12 mcu
 };
 
 STD_ROM_PICK(route16c)
@@ -966,11 +1014,76 @@ static INT32 route16cInit()
 
 struct BurnDriver BurnDrvroute16c = {
 	"route16c", "route16", NULL, NULL, "1981",
-	"Route 16 (set 3, bootleg?)\0", NULL, "Tehkan/Sun (Centuri license)", "Route 16",
+	"Route 16 (Centuri license, set 3, bootleg?)\0", NULL, "Tehkan / Sun Electronics (Centuri license)", "Route 16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, route16cRomInfo, route16cRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
 	route16cInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
+	256, 256, 3, 4
+};
+
+
+// Route 16 (Sun Electronics, set 2)
+
+// 2 sets found, one on TVX1 and one on TVX2 PCB. TVX1 has lots of wire hacks. Both PCBs have an identical TVX-S1 sub board with Fujitsu MB8841 + logic.
+// There were two different bytes between the two versions, both in ROM a2:
+// 0x1dd is 0x46 in the TVX1 dump and 0x47 in the TVX2 one. 0x764 is 0x04 in the TVX1 dump and 0x06 in the TVX2 one.
+// Those cause the game to malfunction and it doesn't seem to be additional protection. The a2 ROM below is the one dumped from the TVX2 PCB.
+
+static struct BurnRomInfo route16dRomDesc[] = {
+	{ "a0.7.bin",       0x0800, 0x025a4f63, 1 | BRF_ESS | BRF_PRG }, 	//  0 Z80 #0 Code
+	{ "a1.bin",         0x0800, 0xab6117fa, 1 | BRF_ESS | BRF_PRG }, 	//  1
+	{ "a2.8.bin",       0x0800, 0x5174f9ac, 1 | BRF_ESS | BRF_PRG }, 	//  2
+	{ "a3.bin",        	0x0800, 0x3ba19f10, 1 | BRF_ESS | BRF_PRG }, 	//  3
+	{ "a4.bin",       	0x0800, 0x1da34bde, 1 | BRF_ESS | BRF_PRG }, 	//  4
+	{ "a5.bin",       	0x0800, 0x74438cf5, 1 | BRF_ESS | BRF_PRG }, 	//  5
+
+	{ "b0.bin",     	0x0800, 0xfef605f3, 2 | BRF_ESS | BRF_PRG }, 	//  6 Z80 #1 Code
+	{ "b1.bin",     	0x0800, 0x49f265fc, 2 | BRF_ESS | BRF_PRG }, 	//  7
+	{ "b2.bin",     	0x0800, 0xdefc5797, 2 | BRF_ESS | BRF_PRG }, 	//  8
+	{ "b3.bin",     	0x0800, 0x88d94a66, 2 | BRF_ESS | BRF_PRG }, 	//  9
+
+	{ "mb7052.59",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 10 Graphics
+	{ "mb7052.61",    	0x0100, 0x08793ef7, 3 | BRF_GRA },	     	 	// 11
+	
+	{ "mb8841",			0x0800, 0x00000000, 0 | BRF_OPT | BRF_NODUMP },	// 12 mcu
+};
+
+STD_ROM_PICK(route16d)
+STD_ROM_FN(route16d)
+
+static INT32 route16dInit()
+{
+	INT32 nRet = DrvInit();
+
+	if (nRet == 0)
+	{
+		// Patch protection
+		DrvZ80ROM0[0x00e9] = 0x3a;
+
+		DrvZ80ROM0[0x0105] = 0x00; // jp nz,$4109 (nirvana) - NOP's in route16c
+		DrvZ80ROM0[0x0106] = 0x00;
+		DrvZ80ROM0[0x0107] = 0x00;
+
+		DrvZ80ROM0[0x0735] = 0x00; // jp nz,$4238 (nirvana)
+		DrvZ80ROM0[0x0736] = 0x00;
+		DrvZ80ROM0[0x0737] = 0x00;
+
+		DrvZ80ROM0[0x074b] = 0xc3;
+		DrvZ80ROM0[0x074c] = 0x5a;
+		DrvZ80ROM0[0x074d] = 0x07;
+	}
+
+	return nRet;
+}
+
+struct BurnDriver BurnDrvroute16d = {
+	"route16d", "route16", NULL, NULL, "1981",
+	"Route 16 (Sun Electronics, set 2)\0", NULL, "Sun Electronics", "Route 16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, route16dRomInfo, route16dRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
+	route16dInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
 
@@ -1008,7 +1121,7 @@ struct BurnDriver BurnDrvroute16bl = {
 };
 
 
-// Route X (bootleg)
+// Route X (bootleg, set 1)
 
 static struct BurnRomInfo routexRomDesc[] = {
 	{ "routex01.a0",  	0x0800, 0x99b500e7, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 #0 Code
@@ -1033,10 +1146,44 @@ STD_ROM_FN(routex)
 
 struct BurnDriver BurnDrvroutex = {
 	"routex", "route16", NULL, NULL, "1981",
-	"Route X (bootleg)\0", NULL, "bootleg", "Route 16",
+	"Route X (bootleg, set 1)\0", NULL, "bootleg", "Route 16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, routexRomInfo, routexRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
+	DrvInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
+	256, 256, 3, 4
+};
+
+
+// Route X (bootleg, set 2)
+
+static struct BurnRomInfo routexaRomDesc[] = {
+	{ "r1.bin",  		0x0800, 0x78c819c8, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 #0 Code
+	{ "r2.bin",       	0x0800, 0x3ec52fe5, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "r3.bin",       	0x0800, 0xa8e92871, 1 | BRF_ESS | BRF_PRG }, //  2
+	{ "r4.bin",       	0x0800, 0xa0fc9fc5, 1 | BRF_ESS | BRF_PRG }, //  3
+	{ "r5.bin",  		0x0800, 0x2fef7653, 1 | BRF_ESS | BRF_PRG }, //  4
+	{ "r6.bin", 	    0x0800, 0xa39ef648, 1 | BRF_ESS | BRF_PRG }, //  5
+	{ "r7.bin",  		0x0800, 0x2aeb3102, 1 | BRF_ESS | BRF_PRG }, //  6
+
+	{ "r8.bin",  		0x0800, 0xfef605f3, 2 | BRF_ESS | BRF_PRG }, //  7 Z80 #1 Code
+	{ "r9.bin",       	0x0800, 0xd0d6c189, 2 | BRF_ESS | BRF_PRG }, //  8
+	{ "r10.bin",      	0x0800, 0xdefc5797, 2 | BRF_ESS | BRF_PRG }, //  9
+	{ "r11.bin",       	0x0800, 0x88d94a66, 2 | BRF_ESS | BRF_PRG }, // 10
+
+	{ "im5623.f10",		0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 11 Graphics
+	{ "im5623.f12",		0x0100, 0x08793ef7, 3 | BRF_GRA },	     // 12
+};
+
+STD_ROM_PICK(routexa)
+STD_ROM_FN(routexa)
+
+struct BurnDriver BurnDrvroutexa = {
+	"routexa", "route16", NULL, NULL, "1981",
+	"Route X (bootleg, set 2)\0", NULL, "bootleg", "Route 16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	NULL, routexaRomInfo, routexaRomName, NULL, NULL, NULL, NULL, Route16InputInfo, Route16DIPInfo,
 	DrvInit, DrvExit, DrvFrame, Route16Draw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
@@ -1187,13 +1334,20 @@ static struct BurnRomInfo spacechoRomDesc[] = {
 STD_ROM_PICK(spacecho)
 STD_ROM_FN(spacecho)
 
+static INT32 SpaceechoInit()
+{
+	spaceecho = 1;
+
+	return DrvInit();
+}
+
 struct BurnDriver BurnDrvspacecho = {
 	"spacecho", "speakres", NULL, NULL, "1980",
 	"Space Echo (set 1)\0", NULL, "bootleg (Gayton Games)", "Route 16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, spacechoRomInfo, spacechoRomName, NULL, NULL, NULL, NULL, StratvoxInputInfo, SpacechoDIPInfo,
-	DrvInit, DrvExit, DrvFrame, TtmahjngDraw, DrvScan, &DrvRecalc, 0x8,
+	SpaceechoInit, DrvExit, DrvFrame, TtmahjngDraw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
 
@@ -1225,7 +1379,7 @@ struct BurnDriver BurnDrvspacecho2 = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, spacecho2RomInfo, spacecho2RomName, NULL, NULL, NULL, NULL, StratvoxInputInfo, SpacechoDIPInfo,
-	DrvInit, DrvExit, DrvFrame, TtmahjngDraw, DrvScan, &DrvRecalc, 0x8,
+	SpaceechoInit, DrvExit, DrvFrame, TtmahjngDraw, DrvScan, &DrvRecalc, 0x8,
 	256, 256, 3, 4
 };
 

@@ -1,3 +1,9 @@
+// FB Neo Sega System 1/2 driver module
+// Based on MAME driver by Jarek Parchanski, Nicola Salmoria, Mirko Buffoni
+
+// Notes: runahead needs BDF_RUNAHEAD_DRAWSYNC flag because sprite collisions
+//        happen while drawing. -dink aug 2021
+
 #include "tiles_generic.h"
 #include "z80_intf.h"
 #include "sn76496.h"
@@ -95,15 +101,14 @@ Input Definitions
 ===============================================================================================*/
 
 static struct BurnInputInfo BlockgalInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 0, "p1 left"   },
 	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 1, "p1 right"  },
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort2 + 6, "p1 fire 1" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort0 + 2, "p2 left"   },
 	{"P2 Right"          , BIT_DIGITAL  , System1InputPort0 + 3, "p2 right"  },
 	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort2 + 7, "p2 fire 1" },
@@ -117,15 +122,14 @@ static struct BurnInputInfo BlockgalInputList[] = {
 STDINPUTINFO(Blockgal)
 
 static struct BurnInputInfo FlickyInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
 	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 6, "p1 right"  },
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 1" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
 	{"P2 Right"          , BIT_DIGITAL  , System1InputPort1 + 6, "p2 right"  },
 	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort1 + 2, "p2 fire 1" },
@@ -140,11 +144,8 @@ static struct BurnInputInfo FlickyInputList[] = {
 STDINPUTINFO(Flicky)
 
 static struct BurnInputInfo MyheroInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
@@ -152,6 +153,8 @@ static struct BurnInputInfo MyheroInputList[] = {
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 1" },
 	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 2" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
@@ -168,12 +171,37 @@ static struct BurnInputInfo MyheroInputList[] = {
 
 STDINPUTINFO(Myhero)
 
-static struct BurnInputInfo SeganinjInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
+static struct BurnInputInfo RegulusInputList[] = {
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
+	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
+	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
+	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
+	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 6, "p1 right"  },
+	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 1" },
+	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 2" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
+	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
+	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
+	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
+	{"P2 Right"          , BIT_DIGITAL  , System1InputPort1 + 6, "p2 right"  },
+	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort1 + 2, "p2 fire 1" },
+	{"P2 Fire 2"         , BIT_DIGITAL  , System1InputPort1 + 1, "p2 fire 2" },
+
+	{"Reset"             , BIT_DIGITAL  , &System1Reset        , "reset"     },
+	{"Service"           , BIT_DIGITAL  , System1InputPort2 + 3, "service"   },
+	{"Test"              , BIT_DIGITAL  , System1InputPort2 + 2, "diag"      },
+	{"Dip 1"             , BIT_DIPSWITCH, System1Dip + 0       , "dip"       },
+	{"Dip 2"             , BIT_DIPSWITCH, System1Dip + 1       , "dip"       },
+};
+
+STDINPUTINFO(Regulus)
+
+static struct BurnInputInfo SeganinjInputList[] = {
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
@@ -182,6 +210,8 @@ static struct BurnInputInfo SeganinjInputList[] = {
 	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 2" },
 	{"P1 Fire 3"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 3" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
@@ -200,17 +230,16 @@ static struct BurnInputInfo SeganinjInputList[] = {
 STDINPUTINFO(Seganinj)
 
 static struct BurnInputInfo UpndownInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
 	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 6, "p1 right"  },
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 1" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
@@ -227,16 +256,15 @@ static struct BurnInputInfo UpndownInputList[] = {
 STDINPUTINFO(Upndown)
 
 static struct BurnInputInfo WboyInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
 	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 6, "p1 right"  },
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 1" },
 	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 2" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
 	{"P2 Right"          , BIT_DIGITAL  , System1InputPort1 + 6, "p2 right"  },
 	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort1 + 1, "p2 fire 1" },
@@ -252,11 +280,8 @@ static struct BurnInputInfo WboyInputList[] = {
 STDINPUTINFO(Wboy)
 
 static struct BurnInputInfo WmatchInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Left Up"        , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Left Down"      , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left Left"      , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
@@ -267,6 +292,8 @@ static struct BurnInputInfo WmatchInputList[] = {
 	{"P1 Right Right"    , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 4" },
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort2 + 6, "p1 fire 5" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Left Up"        , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Left Down"      , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left Left"      , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
@@ -287,11 +314,8 @@ static struct BurnInputInfo WmatchInputList[] = {
 STDINPUTINFO(Wmatch)
 
 static struct BurnInputInfo ChplftbInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
@@ -299,6 +323,8 @@ static struct BurnInputInfo ChplftbInputList[] = {
 	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 1" },
 	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 2" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
@@ -317,25 +343,24 @@ static struct BurnInputInfo ChplftbInputList[] = {
 STDINPUTINFO(Chplftb)
 
 static struct BurnInputInfo UfosensiInputList[] = {
-	{"Coin 1"            , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
-	{"Start 1"           , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
-	{"Coin 2"            , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
-	{"Start 2"           , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
-
+	{"P1 Coin"           , BIT_DIGITAL  , System1InputPort2 + 0, "p1 coin"   },
+	{"P1 Start"          , BIT_DIGITAL  , System1InputPort2 + 4, "p1 start"  },
 	{"P1 Up"             , BIT_DIGITAL  , System1InputPort0 + 5, "p1 up"     },
 	{"P1 Down"           , BIT_DIGITAL  , System1InputPort0 + 4, "p1 down"   },
 	{"P1 Left"           , BIT_DIGITAL  , System1InputPort0 + 7, "p1 left"   },
 	{"P1 Right"          , BIT_DIGITAL  , System1InputPort0 + 6, "p1 right"  },
-	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 1" },
-	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 2" },
+	{"P1 Fire 1"         , BIT_DIGITAL  , System1InputPort0 + 2, "p1 fire 1" },
+	{"P1 Fire 2"         , BIT_DIGITAL  , System1InputPort0 + 1, "p1 fire 2" },
 	{"P1 Fire 3"         , BIT_DIGITAL  , System1InputPort0 + 0, "p1 fire 3" },
 
+	{"P2 Coin"           , BIT_DIGITAL  , System1InputPort2 + 1, "p2 coin"   },
+	{"P2 Start"          , BIT_DIGITAL  , System1InputPort2 + 5, "p2 start"  },
 	{"P2 Up"             , BIT_DIGITAL  , System1InputPort1 + 5, "p2 up"     },
 	{"P2 Down"           , BIT_DIGITAL  , System1InputPort1 + 4, "p2 down"   },
 	{"P2 Left"           , BIT_DIGITAL  , System1InputPort1 + 7, "p2 left"   },
 	{"P2 Right"          , BIT_DIGITAL  , System1InputPort1 + 6, "p2 right"  },
-	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort1 + 1, "p2 fire 1" },
-	{"P2 Fire 2"         , BIT_DIGITAL  , System1InputPort1 + 2, "p2 fire 2" },
+	{"P2 Fire 1"         , BIT_DIGITAL  , System1InputPort1 + 2, "p2 fire 1" },
+	{"P2 Fire 2"         , BIT_DIGITAL  , System1InputPort1 + 1, "p2 fire 2" },
 	{"P2 Fire 3"         , BIT_DIGITAL  , System1InputPort1 + 0, "p2 fire 3" },
 
 	{"Reset"             , BIT_DIGITAL  , &System1Reset        , "reset"     },
@@ -391,14 +416,13 @@ static inline void BlockgalMakeInputs()
 }
 
 #define SYSTEM1_COINAGE(dipval)								\
-	{0   , 0xfe, 0   , 16   , "Coin A"                },				\
+	{0   , 0xfe, 0   , 15   , "Coin A"                },				\
 	{dipval, 0x01, 0x0f, 0x07, "4 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0x0f, 0x08, "3 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0x0f, 0x09, "2 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0x0f, 0x05, "2 Coins 1 Credit 4/2 5/3 6/4"},			\
 	{dipval, 0x01, 0x0f, 0x04, "2 Coins 1 Credit 4/3"   },				\
 	{dipval, 0x01, 0x0f, 0x0f, "1 Coin  1 Credit"       },				\
-	{dipval, 0x01, 0x0f, 0x00, "1 Coin  1 Credit"       },				\
 	{dipval, 0x01, 0x0f, 0x03, "1 Coin  1 Credit 5/6"   },				\
 	{dipval, 0x01, 0x0f, 0x02, "1 Coin  1 Credit 4/5"   },				\
 	{dipval, 0x01, 0x0f, 0x01, "1 Coin  1 Credit 2/3"   },				\
@@ -409,14 +433,13 @@ static inline void BlockgalMakeInputs()
 	{dipval, 0x01, 0x0f, 0x0b, "1 Coin  5 Credits"      },				\
 	{dipval, 0x01, 0x0f, 0x0a, "1 Coin  6 Credits"      },				\
 											\
-	{0   , 0xfe, 0   , 16   , "Coin B"                },				\
+	{0   , 0xfe, 0   , 15   , "Coin B"                },				\
 	{dipval, 0x01, 0xf0, 0x70, "4 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0xf0, 0x80, "3 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0xf0, 0x90, "2 Coins 1 Credit"       },				\
 	{dipval, 0x01, 0xf0, 0x50, "2 Coins 1 Credit 4/2 5/3 6/4"},			\
 	{dipval, 0x01, 0xf0, 0x40, "2 Coins 1 Credit 4/3"   },				\
 	{dipval, 0x01, 0xf0, 0xf0, "1 Coin  1 Credit"       },				\
-	{dipval, 0x01, 0xf0, 0x00, "1 Coin  1 Credit"       },				\
 	{dipval, 0x01, 0xf0, 0x30, "1 Coin  1 Credit 5/6"   },				\
 	{dipval, 0x01, 0xf0, 0x20, "1 Coin  1 Credit 4/5"   },				\
 	{dipval, 0x01, 0xf0, 0x10, "1 Coin  1 Credit 2/3"   },				\
@@ -2452,23 +2475,51 @@ static struct BurnRomInfo RaflesiaRomDesc[] = {
 
 	{ "epr-7420.120",      0x002000, 0x14387666, BRF_ESS | BRF_PRG }, //  3	Z80 #2 Program Code
 
-	{ "epr-7419.62",       0x002000, 0xbfd5f34c, BRF_GRA },		  //  4 Tiles
-	{ "epr-7418.61",       0x002000, 0xf8cbc9b6, BRF_GRA },		  //  5 Tiles
-	{ "epr-7417.64",       0x002000, 0xe63501bc, BRF_GRA },		  //  6 Tiles
-	{ "epr-7416.63",       0x002000, 0x093e5693, BRF_GRA },		  //  7 Tiles
-	{ "epr-7415.66",       0x002000, 0x1a8d6bd6, BRF_GRA },		  //  8 Tiles
-	{ "epr-7414.65",       0x002000, 0x5d20f218, BRF_GRA },		  //  9 Tiles
+	{ "epr-7419.62",       0x002000, 0xbfd5f34c, BRF_GRA },		  	  //  4 Tiles
+	{ "epr-7418.61",       0x002000, 0xf8cbc9b6, BRF_GRA },		  	  //  5 Tiles
+	{ "epr-7417.64",       0x002000, 0xe63501bc, BRF_GRA },		  	  //  6 Tiles
+	{ "epr-7416.63",       0x002000, 0x093e5693, BRF_GRA },		  	  //  7 Tiles
+	{ "epr-7415.66",       0x002000, 0x1a8d6bd6, BRF_GRA },		  	  //  8 Tiles
+	{ "epr-7414.65",       0x002000, 0x5d20f218, BRF_GRA },		  	  //  9 Tiles
 
-	{ "epr-7407.117",      0x004000, 0xf09fc057, BRF_GRA },		  //  10 Sprites
-	{ "epr-7409.04",       0x004000, 0x819fedb8, BRF_GRA },		  //  11 Sprites
-	{ "epr-7408.110",      0x004000, 0x3189f33c, BRF_GRA },		  //  12 Sprites
-	{ "epr-7410.05",       0x004000, 0xced74789, BRF_GRA },		  //  13 Sprites
+	{ "epr-7407.117",      0x004000, 0xf09fc057, BRF_GRA },		  	  // 10 Sprites
+	{ "epr-7409.04",       0x004000, 0x819fedb8, BRF_GRA },		  	  // 11 Sprites
+	{ "epr-7408.110",      0x004000, 0x3189f33c, BRF_GRA },		  	  // 12 Sprites
+	{ "epr-7410.05",       0x004000, 0xced74789, BRF_GRA },		  	  // 13 Sprites
 
-	{ "pr-5317.76",        0x000100, 0x648350b8, BRF_OPT },		  //  14 Timing PROM
+	{ "pr-5317.76",        0x000100, 0x648350b8, BRF_OPT },		  	  // 14 Timing PROM
 };
 
 STD_ROM_PICK(Raflesia)
 STD_ROM_FN(Raflesia)
+
+static struct BurnRomInfo RaflesiauRomDesc[] = {
+	{ "ic129",      	   0x002000, 0x6f4931b0, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
+	{ "ic130",      	   0x002000, 0xec46e21b, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
+	{ "ic131",       	   0x002000, 0xe035ff6b, BRF_ESS | BRF_PRG }, //  2	Z80 #1 Program Code
+	{ "ic132",       	   0x002000, 0x6527aae7, BRF_ESS | BRF_PRG }, //  3	Z80 #1 Program Code
+	{ "ic133",       	   0x002000, 0xe13dd5e4, BRF_ESS | BRF_PRG }, //  4	Z80 #1 Program Code
+	{ "ic134",       	   0x002000, 0xa0aa4729, BRF_ESS | BRF_PRG }, //  5	Z80 #1 Program Code
+
+	{ "ic3",      		   0x002000, 0x7353cc2e, BRF_ESS | BRF_PRG }, //  6	Z80 #2 Program Code
+
+	{ "epr-7419.82",       0x002000, 0xbfd5f34c, BRF_GRA },		  	  //  4 Tiles
+	{ "epr-7418.65",       0x002000, 0xf8cbc9b6, BRF_GRA },		  	  //  5 Tiles
+	{ "epr-7417.81",       0x002000, 0xe63501bc, BRF_GRA },		  	  //  6 Tiles
+	{ "epr-7416.64",       0x002000, 0x093e5693, BRF_GRA },		  	  //  7 Tiles
+	{ "epr-7415.80",       0x002000, 0x1a8d6bd6, BRF_GRA },		  	  //  8 Tiles
+	{ "epr-7414.63",       0x002000, 0x5d20f218, BRF_GRA },		  	  //  9 Tiles
+
+	{ "epr-7407.3",        0x004000, 0xf09fc057, BRF_GRA },		  	  // 10 Sprites
+	{ "epr-7409.1",        0x004000, 0x819fedb8, BRF_GRA },		  	  // 11 Sprites
+	{ "epr-7408.4",        0x004000, 0x3189f33c, BRF_GRA },		  	  // 12 Sprites
+	{ "epr-7410.2",        0x004000, 0xced74789, BRF_GRA },		  	  // 13 Sprites
+
+	{ "pr-5317.76",        0x000100, 0x648350b8, BRF_OPT },		  	  // 14 Timing PROM
+};
+
+STD_ROM_PICK(Raflesiau)
+STD_ROM_FN(Raflesiau)
 
 static struct BurnRomInfo RegulusRomDesc[] = {
 	{ "epr-5640a.129",     0x002000, 0xdafb1528, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
@@ -2624,18 +2675,18 @@ STD_ROM_PICK(Seganinja)
 STD_ROM_FN(Seganinja)
 
 static struct BurnRomInfo NinjaRomDesc[] = {
-	{ "epr-6594.bin",      0x004000, 0x3ef0e5fc, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "epr-6595.bin",      0x004000, 0xb16f13cd, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
+	{ "epr-6594.116",      0x004000, 0x3ef0e5fc, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
+	{ "epr-6595.109",      0x004000, 0xb16f13cd, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
 	{ "epr-6552.96",       0x004000, 0xf2eeb0d8, BRF_ESS | BRF_PRG }, //  2	Z80 #1 Program Code
 
 	{ "epr-6559.120",      0x002000, 0x5a1570ee, BRF_ESS | BRF_PRG }, //  3	Z80 #2 Program Code
 
 	{ "epr-6558.62",       0x002000, 0x2af9eaeb, BRF_GRA },		  //  4 Tiles
-	{ "epr6592.bin",       0x002000, 0x88d0c7a1, BRF_GRA },		  //  5 Tiles
+	{ "epr-6592.61",       0x002000, 0x88d0c7a1, BRF_GRA },		  //  5 Tiles
 	{ "epr-6556.64",       0x002000, 0x79fd26f7, BRF_GRA },		  //  6 Tiles
-	{ "epr-6590.bin",      0x002000, 0x956e3b61, BRF_GRA },		  //  7 Tiles
+	{ "epr-6590.63",       0x002000, 0x956e3b61, BRF_GRA },		  //  7 Tiles
 	{ "epr-6554.66",       0x002000, 0x5ac9d205, BRF_GRA },		  //  8 Tiles
-	{ "epr-6588.bin",      0x002000, 0x023a14a3, BRF_GRA },		  //  9 Tiles
+	{ "epr-6588.65",       0x002000, 0x023a14a3, BRF_GRA },		  //  9 Tiles
 
 	{ "epr-6546.117",      0x004000, 0xa4785692, BRF_GRA },		  //  10 Sprites
 	{ "epr-6548.04",       0x004000, 0xbdf278c1, BRF_GRA },		  //  11 Sprites
@@ -3234,8 +3285,8 @@ static struct BurnRomInfo Wboy4RomDesc[] = {
 	{ "epr-7609.ic64",     0x004000, 0x87ecba53, BRF_GRA },		  //  4 Tiles
 	{ "epr-7608.ic66",     0x004000, 0xe812b3ec, BRF_GRA },		  //  5 Tiles
 
-	{ "7578.87",           0x008000, 0x6ff1637f, BRF_GRA },		  //  6 Sprites
-	{ "7577.86",           0x008000, 0x58b3705e, BRF_GRA },		  //  7 Sprites
+	{ "epr-7578.87",       0x008000, 0x6ff1637f, BRF_GRA },		  //  6 Sprites
+	{ "epr-7577.86",       0x008000, 0x58b3705e, BRF_GRA },		  //  7 Sprites
 
 	{ "pr-5317.76",        0x000100, 0x648350b8, BRF_OPT },		  //  8 Timing PROM
 };
@@ -3348,111 +3399,118 @@ STD_ROM_PICK(Wmatch)
 STD_ROM_FN(Wmatch)
 
 static struct BurnRomInfo ChopliftRomDesc[] = {
-	{ "epr-7124.ic90",       0x008000, 0x678d5c41, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "epr-7125.ic91",       0x008000, 0xf5283498, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
-	{ "epr-7126.ic92",       0x008000, 0xdbd192ab, BRF_ESS | BRF_PRG }, //  2	Z80 #1 Program Code
+	{ "epr-7124.ic90",       0x008000, 0x678d5c41, BRF_ESS | BRF_PRG }, 	//  0	Z80 #1 Program Code
+	{ "epr-7125.ic91",       0x008000, 0xf5283498, BRF_ESS | BRF_PRG }, 	//  1	Z80 #1 Program Code
+	{ "epr-7126.ic92",       0x008000, 0xdbd192ab, BRF_ESS | BRF_PRG }, 	//  2	Z80 #1 Program Code
 
-	{ "epr-7130.ic126",      0x008000, 0x346af118, BRF_ESS | BRF_PRG }, //  3	Z80 #2 Program Code
+	{ "epr-7130.ic126",      0x008000, 0x346af118, BRF_ESS | BRF_PRG }, 	//  3	Z80 #2 Program Code
 
-	{ "epr-7127.ic4",        0x008000, 0x1e708f6d, BRF_GRA },		  //  4 Tiles
-	{ "epr-7128.ic5",        0x008000, 0xb922e787, BRF_GRA },		  //  5 Tiles
-	{ "epr-7129.ic6",        0x008000, 0xbd3b6e6e, BRF_GRA },		  //  6 Tiles
+	{ "epr-7127.ic4",        0x008000, 0x1e708f6d, BRF_GRA },		  		//  4 Tiles
+	{ "epr-7128.ic5",        0x008000, 0xb922e787, BRF_GRA },		  		//  5 Tiles
+	{ "epr-7129.ic6",        0x008000, 0xbd3b6e6e, BRF_GRA },		  		//  6 Tiles
 
-	{ "epr-7121.ic87",       0x008000, 0xf2b88f73, BRF_GRA },		  //  4 Sprites
-	{ "epr-7120.ic86",       0x008000, 0x517d7fd3, BRF_GRA },		  //  5 Sprites
-	{ "epr-7123.ic89",       0x008000, 0x8f16a303, BRF_GRA },		  //  6 Sprites
-	{ "epr-7122.ic88",       0x008000, 0x7c93f160, BRF_GRA },		  //  7 Sprites
+	{ "epr-7121.ic87",       0x008000, 0xf2b88f73, BRF_GRA },		 	 	//  7 Sprites
+	{ "epr-7120.ic86",       0x008000, 0x517d7fd3, BRF_GRA },		  		//  8 Sprites
+	{ "epr-7123.ic89",       0x008000, 0x8f16a303, BRF_GRA },		  		//  9 Sprites
+	{ "epr-7122.ic88",       0x008000, 0x7c93f160, BRF_GRA },		  		// 10 Sprites
 
-	{ "pr7119.ic20",         0x000100, 0xb2a8260f, BRF_GRA },		  //  8 Red PROM
-	{ "pr7118.ic14",         0x000100, 0x693e20c7, BRF_GRA },		  //  9 Green PROM
-	{ "pr7117.ic8",          0x000100, 0x4124307e, BRF_GRA },		  //  10 Blue PROM
+	{ "pr7119.ic20",         0x000100, 0xb2a8260f, BRF_GRA },		  		// 11 Red PROM
+	{ "pr7118.ic14",         0x000100, 0x693e20c7, BRF_GRA },		  		// 12 Green PROM
+	{ "pr7117.ic8",          0x000100, 0x4124307e, BRF_GRA },		  		// 13 Blue PROM
 
-	{ "315-5151.ic74",       0x001000, 0x7bd11a6c, BRF_OPT },
-	{ "pr5317.ic28",         0x000100, 0x648350b8, BRF_OPT },
-	{ "315-5152.bin",        0x000104, 0x2c9229b4, BRF_OPT },
-	{ "315-5138.bin",        0x000104, 0xdd223015, BRF_OPT },
-	{ "315-5139.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "315-5151.ic74",       0x001000, 0x1377a6ef, BRF_OPT },				// 14 mcu
+	
+	{ "pr5317.ic28",         0x000100, 0x648350b8, BRF_OPT },				// 15 lookup_proms
+	
+	{ "315-5152.ic10",       0x000104, 0x2c9229b4, BRF_OPT },				// 16 plds
+	{ "315-5138.ic11",       0x000104, 0xdd223015, BRF_OPT },				// 17
+	{ "315-5139.ic50",       0x0000e7, 0x943d91b0, BRF_OPT },				// 18
+	{ "315-5025.ic7",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 19
+	{ "315-5025.ic13",       0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 20
+	{ "315-5025.ic19",       0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 21
 };
 
 STD_ROM_PICK(Choplift)
 STD_ROM_FN(Choplift)
 
 static struct BurnRomInfo ChopliftuRomDesc[] = {
-	{ "epr-7152.ic90",       0x008000, 0xfe49d83e, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "epr-7153.ic91",       0x008000, 0x48697666, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
-	{ "epr-7154.ic92",       0x008000, 0x56d6222a, BRF_ESS | BRF_PRG }, //  2	Z80 #1 Program Code
+	{ "epr-7152.ic90",       0x008000, 0xfe49d83e, BRF_ESS | BRF_PRG }, 	//  0	Z80 #1 Program Code
+	{ "epr-7153.ic91",       0x008000, 0x48697666, BRF_ESS | BRF_PRG }, 	//  1	Z80 #1 Program Code
+	{ "epr-7154.ic92",       0x008000, 0x56d6222a, BRF_ESS | BRF_PRG }, 	//  2	Z80 #1 Program Code
 
-    { "epr-7130.ic126",      0x008000, 0x346af118, BRF_ESS | BRF_PRG }, //  3	Z80 #2 Program Code
+    { "epr-7130.ic126",      0x008000, 0x346af118, BRF_ESS | BRF_PRG }, 	//  3	Z80 #2 Program Code
 
-	{ "epr-7127.ic4",        0x008000, 0x1e708f6d, BRF_GRA },		  //  4 Tiles
-	{ "epr-7128.ic5",        0x008000, 0xb922e787, BRF_GRA },		  //  5 Tiles
-	{ "epr-7129.ic6",        0x008000, 0xbd3b6e6e, BRF_GRA },		  //  6 Tiles
+	{ "epr-7127.ic4",        0x008000, 0x1e708f6d, BRF_GRA },		  		//  4 Tiles
+	{ "epr-7128.ic5",        0x008000, 0xb922e787, BRF_GRA },		  		//  5 Tiles
+	{ "epr-7129.ic6",        0x008000, 0xbd3b6e6e, BRF_GRA },		  		//  6 Tiles
 
-	{ "epr-7121.ic87",       0x008000, 0xf2b88f73, BRF_GRA },		  //  4 Sprites
-	{ "epr-7120.ic86",       0x008000, 0x517d7fd3, BRF_GRA },		  //  5 Sprites
-	{ "epr-7123.ic89",       0x008000, 0x8f16a303, BRF_GRA },		  //  6 Sprites
-	{ "epr-7122.ic88",       0x008000, 0x7c93f160, BRF_GRA },		  //  7 Sprites
+	{ "epr-7121.ic87",       0x008000, 0xf2b88f73, BRF_GRA },		  		//  4 Sprites
+	{ "epr-7120.ic86",       0x008000, 0x517d7fd3, BRF_GRA },		  		//  5 Sprites
+	{ "epr-7123.ic89",       0x008000, 0x8f16a303, BRF_GRA },		  		//  6 Sprites
+	{ "epr-7122.ic88",       0x008000, 0x7c93f160, BRF_GRA },		  		//  7 Sprites
 
-	{ "pr7119.ic20",         0x000100, 0xb2a8260f, BRF_OPT },		  //  8 Red PROM
-	{ "pr7118.ic14",         0x000100, 0x693e20c7, BRF_OPT },		  //  9 Green PROM
-	{ "pr7117.ic8",          0x000100, 0x4124307e, BRF_OPT },		  //  10 Blue PROM
+	{ "pr7119.ic20",         0x000100, 0xb2a8260f, BRF_OPT },		  		//  8 Red PROM
+	{ "pr7118.ic14",         0x000100, 0x693e20c7, BRF_OPT },		  		//  9 Green PROM
+	{ "pr7117.ic8",          0x000100, 0x4124307e, BRF_OPT },		  		//  10 Blue PROM
 
-	{ "pr5317.ic28",         0x000100, 0x648350b8, BRF_OPT },
-	{ "315-5152.bin",        0x000104, 0x2c9229b4, BRF_OPT },
-	{ "315-5138.bin",        0x000104, 0xdd223015, BRF_OPT },
-	{ "315-5139.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "315-5025.bin",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },
+	{ "pr5317.ic28",         0x000100, 0x648350b8, BRF_OPT },				// 15 lookup_proms
+	
+	{ "315-5152.ic10",       0x000104, 0x2c9229b4, BRF_OPT },				// 16 plds
+	{ "315-5138.ic11",       0x000104, 0xdd223015, BRF_OPT },				// 17
+	{ "315-5139.ic50",       0x0000e7, 0x943d91b0, BRF_OPT },				// 18
+	{ "315-5025.ic7",        0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 19
+	{ "315-5025.ic13",       0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 20
+	{ "315-5025.ic19",       0x000104, 0x00000000, BRF_OPT | BRF_NODUMP },	// 21
 };
 
 STD_ROM_PICK(Chopliftu)
 STD_ROM_FN(Chopliftu)
 
 static struct BurnRomInfo ChopliftblRomDesc[] = {
-	{ "ep7124bl.90",         0x008000, 0x71a37932, BRF_ESS | BRF_PRG }, //  0	Z80 #1 Program Code
-	{ "epr-7125.91",         0x008000, 0xf5283498, BRF_ESS | BRF_PRG }, //  1	Z80 #1 Program Code
-	{ "epr-7126.92",         0x008000, 0xdbd192ab, BRF_ESS | BRF_PRG }, //  2	Z80 #1 Program Code
+	{ "ep7124bl.90",         0x008000, 0x71a37932, BRF_ESS | BRF_PRG }, 	//  0	Z80 #1 Program Code
+	{ "epr-7125.91",         0x008000, 0xf5283498, BRF_ESS | BRF_PRG }, 	//  1	Z80 #1 Program Code
+	{ "epr-7126.92",         0x008000, 0xdbd192ab, BRF_ESS | BRF_PRG }, 	//  2	Z80 #1 Program Code
 
-	{ "epr-7130.126",        0x008000, 0x346af118, BRF_ESS | BRF_PRG }, //  3	Z80 #2 Program Code
+	{ "epr-7130.126",        0x008000, 0x346af118, BRF_ESS | BRF_PRG }, 	//  3	Z80 #2 Program Code
 
-	{ "epr-7127.4",          0x008000, 0x1e708f6d, BRF_GRA },		  //  4 Tiles
-	{ "epr-7128.5",          0x008000, 0xb922e787, BRF_GRA },		  //  5 Tiles
-	{ "epr-7129.6",          0x008000, 0xbd3b6e6e, BRF_GRA },		  //  6 Tiles
+	{ "epr-7127.4",          0x008000, 0x1e708f6d, BRF_GRA },		  		//  4 Tiles
+	{ "epr-7128.5",          0x008000, 0xb922e787, BRF_GRA },		  		//  5 Tiles
+	{ "epr-7129.6",          0x008000, 0xbd3b6e6e, BRF_GRA },		  		//  6 Tiles
 
-	{ "epr-7121.87",         0x008000, 0xf2b88f73, BRF_GRA },		  //  4 Sprites
-	{ "epr-7120.86",         0x008000, 0x517d7fd3, BRF_GRA },		  //  5 Sprites
-	{ "epr-7123.89",         0x008000, 0x8f16a303, BRF_GRA },		  //  6 Sprites
-	{ "epr-7122.88",         0x008000, 0x7c93f160, BRF_GRA },		  //  7 Sprites
+	{ "epr-7121.87",         0x008000, 0xf2b88f73, BRF_GRA },		  		//  4 Sprites
+	{ "epr-7120.86",         0x008000, 0x517d7fd3, BRF_GRA },		  		//  5 Sprites
+	{ "epr-7123.89",         0x008000, 0x8f16a303, BRF_GRA },		  		//  6 Sprites
+	{ "epr-7122.88",         0x008000, 0x7c93f160, BRF_GRA },		  		//  7 Sprites
 
-	{ "pr7119.20",           0x000100, 0xb2a8260f, BRF_OPT },		  //  8 Red PROM
-	{ "pr7118.14",           0x000100, 0x693e20c7, BRF_OPT },		  //  9 Green PROM
-	{ "pr7117.8",            0x000100, 0x4124307e, BRF_OPT },		  //  10 Blue PROM
+	{ "pr7119.20",           0x000100, 0xb2a8260f, BRF_OPT },		  		//  8 Red PROM
+	{ "pr7118.14",           0x000100, 0x693e20c7, BRF_OPT },		  		//  9 Green PROM
+	{ "pr7117.8",            0x000100, 0x4124307e, BRF_OPT },		  		//  10 Blue PROM
 
-	{ "pr5317.28",           0x000100, 0x648350b8, BRF_OPT },
-	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },
-	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal20r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP  },
-	{ "pal16r4a.ic9",        0x000104, 0xdd223015, BRF_OPT },
-	{ "pal16r4a.ic10",       0x000104, 0x2c9229b4, BRF_OPT },
-	{ "pal16r4a-chopbl1.bin",0x000104, 0xe1628a8e, BRF_OPT },
-	{ "pal16l8a-chopbl2.bin",0x000104, 0xafa7425d, BRF_OPT },
+	{ "pr5317.28",           0x000100, 0x648350b8, BRF_OPT },				// 11 lookup_proms
+	
+	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP }, 	// 12 plds_main
+	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 13
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 14
+	
+	{ "pal16r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 15 plds_600a
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 16
+	
+	{ "pal20r4.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 17 plds_600b
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 18
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 19
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 20
+	{ "pal16l8.bin",         0x000001, 0x00000000, BRF_OPT | BRF_NODUMP },	// 21
+	
+	{ "pal16r4a.ic9",        0x000104, 0xdd223015, BRF_OPT },				// 22 plds_unk
+	{ "pal16r4a.ic10",       0x000104, 0x2c9229b4, BRF_OPT },				// 23
+	{ "pal16r4a-chopbl1.bin",0x000104, 0xe1628a8e, BRF_OPT },				// 24
+	{ "pal16l8a-chopbl2.bin",0x000104, 0xafa7425d, BRF_OPT },				// 25
 };
 
 STD_ROM_PICK(Chopliftbl)
 STD_ROM_FN(Chopliftbl)
 
-// Wonder Boy in Monster Land (Japan New Ver., MC-8123, 317-0043)
+// "Wonder Boy - Monster Land (Japan New Ver., MC-8123, 317-0043)
 
 static struct BurnRomInfo wbmlRomDesc[] = {
 	{ "epr-11031a.90",	0x8000, 0xbd3349e5, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
@@ -3461,27 +3519,27 @@ static struct BurnRomInfo wbmlRomDesc[] = {
 
 	{ "epr-11037.126",	0x8000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
 
-	{ "epr-11034.4",	0x8000, 0x37a2077d, BRF_GRA }, //  4 Tiles
-	{ "epr-11035.5",	0x8000, 0xcdf2a21b, BRF_GRA }, //  5
-	{ "epr-11036.6",	0x8000, 0x644687fa, BRF_GRA }, //  6
+	{ "epr-11034.4",	0x8000, 0x37a2077d, BRF_GRA },           //  4 Tiles
+	{ "epr-11035.5",	0x8000, 0xcdf2a21b, BRF_GRA },           //  5
+	{ "epr-11036.6",	0x8000, 0x644687fa, BRF_GRA },           //  6
 
-	{ "epr-11028.87",	0x8000, 0xaf0b3972, BRF_GRA }, //  7 Sprites
-	{ "epr-11027.86",	0x8000, 0x277d8f1d, BRF_GRA }, //  8
-	{ "epr-11030.89",	0x8000, 0xf05ffc76, BRF_GRA }, //  9
-	{ "epr-11029.88",	0x8000, 0xcedc9c61, BRF_GRA }, // 10
+	{ "epr-11028.87",	0x8000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x8000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x8000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x8000, 0xcedc9c61, BRF_GRA },           // 10
 
-	{ "pr11026.20",		0x0100, 0x27057298, BRF_GRA }, // 11 Red PROM
-	{ "pr11025.14",		0x0100, 0x41e4d86b, BRF_GRA }, // 12 Blue
-	{ "pr11024.8",		0x0100, 0x08d71954, BRF_GRA }, // 13 Green
-	{ "pr5317.37",		0x0100, 0x648350b8, BRF_GRA }, // 14 Timing PROM
+	{ "pr11026.20",		0x0100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x0100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x0100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x0100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
 
-	{ "317-0043.key",	0x2000, 0xe354abfc, BRF_ESS }, // 15 Encryption Key
+	{ "317-0043.key",	0x2000, 0xe354abfc, BRF_ESS },           // 15 Encryption Key
 };
 
 STD_ROM_PICK(wbml)
 STD_ROM_FN(wbml)
 
-// Wonder Boy in Monster Land (Japan not encrypted)
+// Wonder Boy - Monster Land (Japan bootleg)
 
 static struct BurnRomInfo wbmljbRomDesc[] = {
 	{ "wbml.01",		0x10000, 0x66482638, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
@@ -3490,25 +3548,25 @@ static struct BurnRomInfo wbmljbRomDesc[] = {
 
 	{ "epr-11037.126",	0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
 
-	{ "epr-11034.4",	0x08000, 0x37a2077d, BRF_GRA }, //  4 Tiles
-	{ "epr-11035.5",	0x08000, 0xcdf2a21b, BRF_GRA }, //  5
-	{ "epr-11036.6",	0x08000, 0x644687fa, BRF_GRA }, //  6
+	{ "epr-11034.4",	0x08000, 0x37a2077d, BRF_GRA },           //  4 Tiles
+	{ "epr-11035.5",	0x08000, 0xcdf2a21b, BRF_GRA },           //  5
+	{ "epr-11036.6",	0x08000, 0x644687fa, BRF_GRA },           //  6
 
-	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA }, //  7 Sprites
-	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA }, //  8
-	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA }, //  9
-	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA }, // 10
+	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA },           // 10
 
-	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA }, // 11 Red PROM
-	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA }, // 12 Blue
-	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA }, // 13 Green
-	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA }, // 14 Timing PROM
+	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
 };
 
 STD_ROM_PICK(wbmljb)
 STD_ROM_FN(wbmljb)
 
-// Wonder Boy in Monster Land (Japan Old Ver., MC-8123, 317-0043)
+// Wonder Boy - Monster Land (Japan Old Ver., MC-8123, 317-0043)
 
 static struct BurnRomInfo wbmljoRomDesc[] = {
 	{ "epr-11031.90",	0x8000, 0x497ebfb4, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
@@ -3517,27 +3575,27 @@ static struct BurnRomInfo wbmljoRomDesc[] = {
 
 	{ "epr-11037.126",	0x8000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
 
-	{ "epr-11034.4",	0x8000, 0x37a2077d, BRF_GRA }, //  4 Tiles
-	{ "epr-11035.5",	0x8000, 0xcdf2a21b, BRF_GRA }, //  5
-	{ "epr-11036.6",	0x8000, 0x644687fa, BRF_GRA }, //  6
+	{ "epr-11034.4",	0x8000, 0x37a2077d, BRF_GRA },           //  4 Tiles
+	{ "epr-11035.5",	0x8000, 0xcdf2a21b, BRF_GRA },           //  5
+	{ "epr-11036.6",	0x8000, 0x644687fa, BRF_GRA },           //  6
 
-	{ "epr-11028.87",	0x8000, 0xaf0b3972, BRF_GRA }, //  7 Sprites
-	{ "epr-11027.86",	0x8000, 0x277d8f1d, BRF_GRA }, //  8
-	{ "epr-11030.89",	0x8000, 0xf05ffc76, BRF_GRA }, //  9
-	{ "epr-11029.88",	0x8000, 0xcedc9c61, BRF_GRA }, // 10
+	{ "epr-11028.87",	0x8000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x8000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x8000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x8000, 0xcedc9c61, BRF_GRA },           // 10
 
-	{ "pr11026.20",		0x0100, 0x27057298, BRF_GRA }, // 11 Red PROM
-	{ "pr11025.14",		0x0100, 0x41e4d86b, BRF_GRA }, // 12 Blue
-	{ "pr11024.8",		0x0100, 0x08d71954, BRF_GRA }, // 13 Green
-	{ "pr5317.37",		0x0100, 0x648350b8, BRF_GRA }, // 14 Timing PROM
+	{ "pr11026.20",		0x0100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x0100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x0100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x0100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
 
-	{ "317-0043.key",	0x2000, 0xe354abfc, BRF_ESS }, // 15 Encryption Key
+	{ "317-0043.key",	0x2000, 0xe354abfc, BRF_ESS },           // 15 Encryption Key
 };
 
 STD_ROM_PICK(wbmljo)
 STD_ROM_FN(wbmljo)
 
-// Wonder Boy in Monster Land (English bootleg set 1)
+// Wonder Boy - Monster Land (English bootleg set 1)
 
 static struct BurnRomInfo wbmlbRomDesc[] = {
 	{ "wbml.01",		0x10000, 0x66482638, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
@@ -3546,25 +3604,79 @@ static struct BurnRomInfo wbmlbRomDesc[] = {
 
 	{ "epr-11037.126",	0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
 
-	{ "wbml.08",		0x08000, 0xbbea6afe, BRF_GRA }, //  4 Tiles
-	{ "wbml.09",		0x08000, 0x77567d41, BRF_GRA }, //  5
-	{ "wbml.10",		0x08000, 0xa52ffbdd, BRF_GRA }, //  6
+	{ "wbml.08",		0x08000, 0xbbea6afe, BRF_GRA },           //  4 Tiles
+	{ "wbml.09",		0x08000, 0x77567d41, BRF_GRA },           //  5
+	{ "wbml.10",		0x08000, 0xa52ffbdd, BRF_GRA },           //  6
 
-	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA }, //  7 Sprites
-	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA }, //  8
-	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA }, //  9
-	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA }, // 10
+	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA },           // 10
 
-	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA }, // 11 Red PROM
-	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA }, // 12 Blue
-	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA }, // 13 Green
-	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA }, // 14 Timing PROM
+	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
 };
 
 STD_ROM_PICK(wbmlb)
 STD_ROM_FN(wbmlb)
 
-// Wonder Boy in Monster Land (English, Virtual Console)
+// Wonder Boy - Monster Land (English bootleg set 2)
+
+static struct BurnRomInfo wbmlbgRomDesc[] = {
+	{ "galaxy.ic90",	0x10000, 0x66482638, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "galaxy.ic91",	0x10000, 0x89a8ab93, BRF_ESS | BRF_PRG }, //  1
+	{ "galaxy.ic92",	0x08000, 0x39e07286, BRF_ESS | BRF_PRG }, //  2
+
+	{ "epr-11037.126",	0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
+
+	{ "galaxy.ic4",		0x08000, 0xab75d056, BRF_GRA },           //  4 Tiles
+	{ "galaxy.ic6",		0x08000, 0x6bb5e601, BRF_GRA },           //  5
+	{ "galaxy.ic5",		0x08000, 0x3c11d151, BRF_GRA },           //  6
+
+	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA },           // 10
+
+	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
+};
+
+STD_ROM_PICK(wbmlbg)
+STD_ROM_FN(wbmlbg)
+
+// Wonder Boy - Monster Land (English bootleg set 3)
+
+static struct BurnRomInfo wbmlbgeRomDesc[] = {
+	{ "3.k3",		0x10000, 0xb4f90adc, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "2.k4",		0x10000, 0x1896c19b, BRF_ESS | BRF_PRG }, //  1
+	{ "1.k4",		0x10000, 0x0e827f13, BRF_ESS | BRF_PRG }, //  2
+
+	{ "11.d9",		0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
+
+	{ "8.y6",		0x08000, 0xab75d056, BRF_GRA },           //  4 Tiles
+	{ "9.y5",		0x08000, 0x6bb5e601, BRF_GRA },           //  5
+	{ "10.y5",		0x08000, 0x3c11d151, BRF_GRA },           //  6
+
+	{ "5.k2",		0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "4.k2",		0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "7.k1",		0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "6.k1",		0x08000, 0xcedc9c61, BRF_GRA },           // 10
+
+	{ "3.z8",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "2.y8",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "1.x8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",	0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
+};
+
+STD_ROM_PICK(wbmlbge)
+STD_ROM_FN(wbmlbge)
+
+// Wonder Boy - Monster Land (English, Virtual Console)
 
 static struct BurnRomInfo wbmlvcRomDesc[] = {
 	{ "vc.ic90",		0x10000, 0x093c4852, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
@@ -3573,23 +3685,107 @@ static struct BurnRomInfo wbmlvcRomDesc[] = {
 
 	{ "epr-11037.126",	0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
 
-	{ "vc.ic4",		    0x08000, 0x820bee59, BRF_GRA }, //  4 Tiles
-	{ "vc.ic5",		    0x08000, 0xa9a1447e, BRF_GRA }, //  5
-	{ "vc.ic6",		    0x08000, 0x359026a0, BRF_GRA }, //  6
+	{ "vc.ic4",		    0x08000, 0x820bee59, BRF_GRA },           //  4 Tiles
+	{ "vc.ic5",		    0x08000, 0xa9a1447e, BRF_GRA },           //  5
+	{ "vc.ic6",		    0x08000, 0x359026a0, BRF_GRA },           //  6
 
-	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA }, //  7 Sprites
-	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA }, //  8
-	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA }, //  9
-	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA }, // 10
+	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA },           // 10
 
-	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA }, // 11 Red PROM
-	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA }, // 12 Blue
-	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA }, // 13 Green
-	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA }, // 14 Timing PROM
+	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
 };
 
 STD_ROM_PICK(wbmlvc)
 STD_ROM_FN(wbmlvc)
+
+// Wonder Boy - Monster Land (decrypted bootleg of English, Virtual Console release)
+// Fully decrypted version
+
+static struct BurnRomInfo wbmlvcdRomDesc[] = {
+	{ "wbmlvcd.ic90",	0x08000, 0xf9c04c07, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "wbmlvcd.ic91",	0x08000, 0x87167a57, BRF_ESS | BRF_PRG }, //  1
+	{ "wbmlvcd.ic92",	0x08000, 0xffb69e82, BRF_ESS | BRF_PRG }, //  2
+
+	{ "epr-11037.126",	0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
+
+	{ "vc.ic4",			0x08000, 0x820bee59, BRF_GRA },           //  4 Tiles
+	{ "vc.ic5",			0x08000, 0xa9a1447e, BRF_GRA },           //  5
+	{ "vc.ic6",			0x08000, 0x359026a0, BRF_GRA },           //  6
+
+	{ "epr-11028.87",	0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",	0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",	0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",	0x08000, 0xcedc9c61, BRF_GRA },           // 10
+
+	{ "pr11026.20",		0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",		0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",		0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",		0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
+};
+
+STD_ROM_PICK(wbmlvcd)
+STD_ROM_FN(wbmlvcd)
+
+// Wonder Boy - Monster Land (decrypted bootleg of Japan New Ver., MC-8123, 317-0043)
+// Fully decrypted version
+
+static struct BurnRomInfo wbmldRomDesc[] = {
+	{ "decrypted_epr-11031a.90",	0x08000, 0xaba42eb7, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "decrypted_epr-11032.91",		0x08000, 0x1b158845, BRF_ESS | BRF_PRG }, //  1
+	{ "decrypted_epr-11033.92",		0x08000, 0x39e07286, BRF_ESS | BRF_PRG }, //  2
+
+	{ "epr-11037.126",				0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
+
+	{ "epr-11034.4",				0x08000, 0x37a2077d, BRF_GRA },           //  4 Tiles
+	{ "epr-11035.5",				0x08000, 0xcdf2a21b, BRF_GRA },           //  5
+	{ "epr-11036.6",				0x08000, 0x644687fa, BRF_GRA },           //  6
+
+	{ "epr-11028.87",				0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",				0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",				0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",				0x08000, 0xcedc9c61, BRF_GRA },           // 10
+
+	{ "pr11026.20",					0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",					0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",					0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",					0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
+};
+
+STD_ROM_PICK(wbmld)
+STD_ROM_FN(wbmld)
+
+// Wonder Boy - Monster Land (decrypted bootleg of Japan Old Ver., MC-8123, 317-0043)
+// Fully decrypted version
+
+static struct BurnRomInfo wbmljodRomDesc[] = {
+	{ "decrypted_epr-11031.90",	0x08000, 0x940b35bf, BRF_ESS | BRF_PRG }, //  0 Z80 #1 Program Code
+	{ "decrypted_epr-11032.91",	0x08000, 0x1b158845, BRF_ESS | BRF_PRG }, //  1
+	{ "decrypted_epr-11033.92",	0x08000, 0x39e07286, BRF_ESS | BRF_PRG }, //  2
+
+	{ "epr-11037.126",			0x08000, 0x7a4ee585, BRF_ESS | BRF_PRG }, //  3 Z80 #2 Program Code
+
+	{ "epr-11034.4",			0x08000, 0x37a2077d, BRF_GRA },           //  4 Tiles
+	{ "epr-11035.5",			0x08000, 0xcdf2a21b, BRF_GRA },           //  5
+	{ "epr-11036.6",			0x08000, 0x644687fa, BRF_GRA },           //  6
+
+	{ "epr-11028.87",			0x08000, 0xaf0b3972, BRF_GRA },           //  7 Sprites
+	{ "epr-11027.86",			0x08000, 0x277d8f1d, BRF_GRA },           //  8
+	{ "epr-11030.89",			0x08000, 0xf05ffc76, BRF_GRA },           //  9
+	{ "epr-11029.88",			0x08000, 0xcedc9c61, BRF_GRA },           // 10
+
+	{ "pr11026.20",				0x00100, 0x27057298, BRF_GRA },           // 11 Red PROM
+	{ "pr11025.14",				0x00100, 0x41e4d86b, BRF_GRA },           // 12 Blue
+	{ "pr11024.8",				0x00100, 0x08d71954, BRF_GRA },           // 13 Green
+	{ "pr5317.37",				0x00100, 0x648350b8, BRF_GRA },           // 14 Timing PROM
+};
+
+STD_ROM_PICK(wbmljod)
+STD_ROM_FN(wbmljod)
 
 /*==============================================================================================
 Decode Functions
@@ -4441,6 +4637,8 @@ static INT32 System1DoReset()
 	BlockgalDial1 = 0;
 	BlockgalDial2 = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -4829,7 +5027,7 @@ static UINT8 __fastcall System1Z802ProgRead(UINT16 a)
 		}
 	}
 
-	bprintf(PRINT_NORMAL, _T("Z80 2 Prog Read %x\n"), a);
+	//bprintf(PRINT_NORMAL, _T("Z80 2 Prog Read %x\n"), a);
 	return 0;
 }
 
@@ -5152,31 +5350,28 @@ static INT32 System2Init(INT32 nZ80Rom1Num, INT32 nZ80Rom1Size, INT32 nZ80Rom2Nu
 		BurnDrvGetRomInfo(&ri, i);
 	}
 
-	if (System1BankedRom)
-	{
+	if (System1BankedRom) {
 		memcpy(System1TempRom, System1Rom1, 0x40000);
 		memset(System1Rom1, 0, 0x40000);
 
-		if (System1BankedRom == 1)
-		{ // Encrypted, banked
+		if (System1BankedRom == 1) {
+			// Encrypted, banked
 			memcpy(System1Rom1 + 0x00000, System1TempRom + 0x00000, 0x8000);
 			memcpy(System1Rom1 + 0x10000, System1TempRom + 0x08000, 0x8000);
 			memcpy(System1Rom1 + 0x18000, System1TempRom + 0x10000, 0x8000);
 		}
 
-		if (System1BankedRom == 2)
-		{ // Unencrypted, banked
+		if (System1BankedRom == 2) {
+			// last rom half the size, reload it into the last slot
+			UINT32 nOffset = ((UINT32)nZ80Rom1Size == (ri.nLen * 2)) ? 0x20000 : 0x28000;
+
+			// Unencrypted, banked
 			memcpy(System1Rom1 + 0x20000, System1TempRom + 0x00000, 0x8000);
 			memcpy(System1Rom1 + 0x00000, System1TempRom + 0x08000, 0x8000);
 			memcpy(System1Rom1 + 0x30000, System1TempRom + 0x10000, 0x8000);//fetch
 			memcpy(System1Rom1 + 0x10000, System1TempRom + 0x18000, 0x8000);
 			memcpy(System1Rom1 + 0x38000, System1TempRom + 0x20000, 0x8000);//fetch
-			memcpy(System1Rom1 + 0x18000, System1TempRom + 0x28000, 0x8000);
-
-			if ((UINT32)nZ80Rom1Size == (ri.nLen * 2))
-			{ // last rom half the size, reload it into the last slot
-				memcpy (System1Rom1 + 0x18000, System1TempRom + 0x20000, 0x8000);
-			}
+			memcpy(System1Rom1 + 0x18000, System1TempRom + nOffset, 0x8000);
 		}
 	}
 
@@ -5620,6 +5815,11 @@ static INT32 RaflesiaInit()
 	return System1Init(3, 0x4000, 1, 0x2000, 6, 0x2000, 4, 0x4000, 1);
 }
 
+static INT32 RaflesiauInit()
+{
+	return System1Init(6, 0x2000, 1, 0x2000, 6, 0x2000, 4, 0x4000, 1);
+}
+
 static INT32 RegulusInit()
 {
 	DecodeFunction = regulus_decode;
@@ -5781,10 +5981,6 @@ static INT32 ChplftbInit()
 	if (nRet == 0) {
 		System1RowScroll = 1;
 		ZetOpen(0);
-
-		ZetMapArea(0xe7c0, 0xe7ff, 0, System1ScrollXRam);
-		ZetMapArea(0xe7c0, 0xe7ff, 1, System1ScrollXRam);
-		ZetMapArea(0xe7c0, 0xe7ff, 2, System1ScrollXRam);
 
 		ZetMapArea(0xe000, 0xe7ff, 0, System1VideoRam); //read
 		ZetMapArea(0xe000, 0xe7ff, 1, System1VideoRam);	//write
@@ -6282,6 +6478,7 @@ static void System2DrawBgLayer(INT32 trasp)
 {
 	INT32 scrollx = (System1VideoRam[0x7c0] >> 1) + ((System1VideoRam[0x7c1] & 1) << 7) - 256 + 5;
 	INT32 scrolly = -System1VideoRam[0x7ba];
+	if (System1RowScroll) scrollx = 0;
 
 	for (INT32 page = 0; page < 4; page++)
 	{
@@ -6297,13 +6494,11 @@ static void System2DrawBgLayer(INT32 trasp)
 		{
 			for (INT32 col = 0; col < 32 * 8; col += 8)
 			{
-				INT32 x = (startx + col) & 0x1ff;
-				INT32 y = (starty + row) & 0x1ff;
-
 				if (System1RowScroll) {
-					System1BgScrollX = (System1ScrollXRam[((row/8) * 2) & ~1] >> 1) + ((System1ScrollXRam[((row/8) * 2) | 1] & 1) << 7);
-					x += System1BgScrollX;
+					System1BgScrollX = (((System1ScrollXRam[(row/4)] + (System1ScrollXRam[(row/4) + 1] << 8)) & 0x1ff) >> 1) - 256 + 5;
 				}
+				INT32 x = (startx + System1BgScrollX + col) & 0x1ff;
+				INT32 y = (starty + row) & 0x1ff;
 
 				if (x > 256) x -= 512;
 				if (y > 224) y -= 512;
@@ -6413,6 +6608,10 @@ static INT32 System1Scan(INT32 nAction, INT32 *pnMin)
 		ZetScan(nAction);
 		SN76496Scan(nAction, pnMin);
 
+		if (IsSystem2 || Sys1UsePPI) {
+			ppi8255_scan();
+		}
+
 		SCAN_VAR(System1ScrollX);
 		SCAN_VAR(System1ScrollY);
 		SCAN_VAR(System1BgScrollX);
@@ -6451,7 +6650,7 @@ struct BurnDriver BurnDrvFourdwarrio = {
 	"4dwarrio", NULL, NULL, NULL, "1985",
 	"4-D Warriors (315-5162)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_HORSHOOT, 0,
 	NULL, FourdwarrioRomInfo, FourdwarrioRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, FourdwarrioDIPInfo,
 	FourdwarrioInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6461,7 +6660,7 @@ struct BurnDriver BurnDrvBlockgal = {
 	"blockgal", NULL, NULL, NULL, "1987",
 	"Block Gal (MC-8123B, 317-0029)\0", NULL, "Sega / Vic Tokai", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_SEGA_SYSTEM1, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_BREAKOUT, 0,
 	NULL, BlockgalRomInfo, BlockgalRomName, NULL, NULL, NULL, NULL, BlockgalInputInfo, BlockgalDIPInfo,
 	BlockgalInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6471,7 +6670,7 @@ struct BurnDriver BurnDrvBrain = {
 	"brain", NULL, NULL, NULL, "1986",
 	"Brain\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_HORSHOOT, 0,
 	NULL, BrainRomInfo, BrainRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, BrainDIPInfo,
 	BrainInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6481,7 +6680,7 @@ struct BurnDriver BurnDrvBullfgt = {
 	"bullfgt", NULL, NULL, NULL, "1984",
 	"Bullfight (315-5065)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
 	NULL, BullfgtRomInfo, BullfgtRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, BullfgtDIPInfo,
 	BullfgtInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6491,7 +6690,7 @@ struct BurnDriver BurnDrvThetogyu = {
 	"thetogyu", "bullfgt", NULL, NULL, "1984",
 	"The Togyu (315-5065, Japan)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
 	NULL, ThetogyuRomInfo, ThetogyuRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, BullfgtDIPInfo,
 	ThetogyuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6501,7 +6700,7 @@ struct BurnDriver BurnDrvFlicky = {
 	"flicky", NULL, NULL, NULL, "1984",
 	"Flicky (128k Version, 315-5051)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, FlickyRomInfo, FlickyRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	FlickyInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6511,7 +6710,7 @@ struct BurnDriver BurnDrvFlickya = {
 	"flickya", "flicky", NULL, NULL, "1984",
 	"Flicky (128k Version, 315-5051, larger roms))\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, FlickyaRomInfo, FlickyaRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	FlickygInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6521,7 +6720,7 @@ struct BurnDriver BurnDrvFlickyg = {
 	"flickyg", "flicky", NULL, NULL, "1984",
 	"Flicky (128k Version, System 2, 315-5051, alt graphics)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, FlickygRomInfo, FlickygRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	FlickygInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6531,7 +6730,7 @@ struct BurnDriver BurnDrvFlickys1 = {
 	"flickys1", "flicky", NULL, NULL, "1984",
 	"Flicky (64k Version, 315-5051, set 2)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Flickys1RomInfo, Flickys1RomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	Flicks1Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6541,7 +6740,7 @@ struct BurnDriver BurnDrvFlickys2 = {
 	"flickys2", "flicky", NULL, NULL, "1984",
 	"Flicky (128k Version, not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Flickys2RomInfo, Flickys2RomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	Flicks2Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6551,7 +6750,7 @@ struct BurnDriver BurnDrvFlickys2g = {
 	"flickys2g", "flicky", NULL, NULL, "1984",
 	"Flicky (128k Version, System 2, not encrypted, alt graphics)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Flickys2gRomInfo, Flickys2gRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	Flicks2gInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6561,7 +6760,7 @@ struct BurnDriver BurnDrvFlickyo = {
 	"flickyo", "flicky", NULL, NULL, "1984",
 	"Flicky (64k Version, 315-5051, set 1)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, FlickyoRomInfo, FlickyoRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	Flicks1Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6571,7 +6770,7 @@ struct BurnDriver BurnDrvFlickyup = {
 	"flickyup", "flicky", NULL, NULL, "1984",
 	"Flicky (64k Version, on Up'n Down boardset)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, FlickyupRomInfo, FlickyupRomName, NULL, NULL, NULL, NULL, FlickyInputInfo, FlickyDIPInfo,
 	Flicks1Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6581,7 +6780,7 @@ struct BurnDriver BurnDrvGardia = {
 	"gardia", NULL, NULL, NULL, "1986",
 	"Gardia (317-0006)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, GardiaRomInfo, GardiaRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, GardiaDIPInfo,
 	GardiaInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6591,7 +6790,7 @@ struct BurnDriverD BurnDrvGardiab = {
 	"gardiab", "gardia", NULL, NULL, "1986",
 	"Gardia (317-0007?, bootleg)\0", NULL, "Sega / Coreland", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, GardiabRomInfo, GardiabRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, GardiaDIPInfo,
 	GardiabInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6601,7 +6800,7 @@ struct BurnDriverD BurnDrvGardiaj = {
 	"gardiaj", "gardia", NULL, NULL, "1986",
 	"Gardia (Japan, 317-0006)\0", NULL, "Sega / Coreland", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, GardiajRomInfo, GardiajRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, GardiaDIPInfo,
 	GardiajInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6611,7 +6810,7 @@ struct BurnDriver BurnDrvHvymetal = {
 	"hvymetal", NULL, NULL, NULL, "1985",
 	"Heavy Metal (315-5135)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, HvymetalRomInfo, HvymetalRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, HvymetalDIPInfo,
 	HvymetalInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6621,7 +6820,7 @@ struct BurnDriver BurnDrvImsorry = {
 	"imsorry", NULL, NULL, NULL, "1985",
 	"I'm Sorry (315-5110, US)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
 	NULL, ImsorryRomInfo, ImsorryRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, ImsorryDIPInfo,
 	ImsorryInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6631,7 +6830,7 @@ struct BurnDriver BurnDrvImsorryj = {
 	"imsorryj", "imsorry", NULL, NULL, "1985",
 	"Gonbee no I'm Sorry (315-5110, Japan)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
 	NULL, ImsorryjRomInfo, ImsorryjRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, ImsorryDIPInfo,
 	ImsorryInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6641,7 +6840,7 @@ struct BurnDriver BurnDrvMrviking = {
 	"mrviking", NULL, NULL, NULL, "1984",
 	"Mister Viking (315-5041)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, MrvikingRomInfo, MrvikingRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MrvikingDIPInfo,
 	MrvikingInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6651,7 +6850,7 @@ struct BurnDriver BurnDrvMrvikingj = {
 	"mrvikingj", "mrviking", NULL, NULL, "1984",
 	"Mister Viking (315-5041, Japan)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, MrvikingjRomInfo, MrvikingjRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MrvikngjDIPInfo,
 	MrvikingInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6661,7 +6860,7 @@ struct BurnDriver BurnDrvMyhero = {
 	"myhero", NULL, NULL, NULL, "1985",
 	"My Hero (US, not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, MyheroRomInfo, MyheroRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MyheroDIPInfo,
 	MyheroInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6671,7 +6870,7 @@ struct BurnDriver BurnDrvSscandal = {
 	"sscandal", "myhero", NULL, NULL, "1985",
 	"Seishun Scandal (315-5132, Japan)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, SscandalRomInfo, SscandalRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MyheroDIPInfo,
 	SscandalInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6681,7 +6880,7 @@ struct BurnDriver BurnDrvMyherobl = {
 	"myherobl", "myhero", NULL, NULL, "1985",
 	"My Hero (bootleg, 315-5132 encryption)\0", NULL, "bootleg", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, MyheroblRomInfo, MyheroblRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MyheroDIPInfo,
 	MyheroblInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6691,7 +6890,7 @@ struct BurnDriver BurnDrvMyherok = {
 	"myherok", "myhero", NULL, NULL, "1985",
 	"My Hero (Korea)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, MyherokRomInfo, MyherokRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, MyheroDIPInfo,
 	MyherokInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6701,7 +6900,7 @@ struct BurnDriver BurnDrvNob = {
 	"nob", NULL, NULL, NULL, "1986",
 	"Noboranka (Japan)\0", NULL, "Data East Corporation", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NobRomInfo, NobRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, NobbDIPInfo,
 	NobbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6711,7 +6910,7 @@ struct BurnDriver BurnDrvNobb = {
 	"nobb", "nob", NULL, NULL, "1986",
 	"Noboranka (Japan, bootleg)\0", NULL, "bootleg", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NobbRomInfo, NobbRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, NobbDIPInfo,
 	NobbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6721,7 +6920,7 @@ struct BurnDriver BurnDrvPitfall2 = {
 	"pitfall2", NULL, NULL, NULL, "1985",
 	"Pitfall II (315-5093)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Pitfall2RomInfo, Pitfall2RomName, NULL, NULL, NULL, NULL, MyheroInputInfo, Pitfall2DIPInfo,
 	Pitfall2Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6731,7 +6930,7 @@ struct BurnDriver BurnDrvPitfall2a = {
 	"pitfall2a", "pitfall2", NULL, NULL, "1985",
 	"Pitfall II (315-5093, Flicky Conversion)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Pitfall2aRomInfo, Pitfall2aRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, Pitfall2DIPInfo,
 	Pitfall2Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6741,7 +6940,7 @@ struct BurnDriver BurnDrvPitfall2u = {
 	"pitfall2u", "pitfall2", NULL, NULL, "1985",
 	"Pitfall II (not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Pitfall2uRomInfo, Pitfall2uRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, PitfalluDIPInfo,
 	PitfalluInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6751,9 +6950,19 @@ struct BurnDriver BurnDrvRaflesia = {
 	"raflesia", NULL, NULL, NULL, "1986",
 	"Rafflesia (315-5162)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, RaflesiaRomInfo, RaflesiaRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, RaflesiaDIPInfo,
 	RaflesiaInit, System1Exit, System1Frame, System1Render, System1Scan,
+	NULL, 0x800, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvRaflesiau = {
+	"raflesiau", "raflesia", NULL, NULL, "1986",
+	"Rafflesia (not encrypted)\0", NULL, "Coreland / Sega", "System 1",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	NULL, RaflesiauRomInfo, RaflesiauRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, RaflesiaDIPInfo,
+	RaflesiauInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
 };
 
@@ -6761,8 +6970,8 @@ struct BurnDriver BurnDrvRegulus = {
 	"regulus", NULL, NULL, NULL, "1983",
 	"Regulus (315-5033, rev. A)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
-	NULL, RegulusRomInfo, RegulusRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, RegulusDIPInfo,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	NULL, RegulusRomInfo, RegulusRomName, NULL, NULL, NULL, NULL, RegulusInputInfo, RegulusDIPInfo,
 	RegulusInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
 };
@@ -6771,8 +6980,8 @@ struct BurnDriver BurnDrvReguluso = {
 	"reguluso", "regulus", NULL, NULL, "1983",
 	"Regulus (315-5033)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
-	NULL, RegulusoRomInfo, RegulusoRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, RegulusoDIPInfo,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	NULL, RegulusoRomInfo, RegulusoRomName, NULL, NULL, NULL, NULL, RegulusInputInfo, RegulusoDIPInfo,
 	RegulusInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
 };
@@ -6781,8 +6990,8 @@ struct BurnDriver BurnDrvRegulusu = {
 	"regulusu", "regulus", NULL, NULL, "1983",
 	"Regulus (not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
-	NULL, RegulusuRomInfo, RegulusuRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, RegulusDIPInfo,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	NULL, RegulusuRomInfo, RegulusuRomName, NULL, NULL, NULL, NULL, RegulusInputInfo, RegulusDIPInfo,
 	RegulusuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
 };
@@ -6791,7 +7000,7 @@ struct BurnDriver BurnDrvSeganinj = {
 	"seganinj", NULL, NULL, NULL, "1985",
 	"Sega Ninja (315-5102)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, SeganinjRomInfo, SeganinjRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	SeganinjInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6801,7 +7010,7 @@ struct BurnDriver BurnDrvSeganinju = {
 	"seganinju", "seganinj", NULL, NULL, "1985",
 	"Sega Ninja (not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, SeganinjuRomInfo, SeganinjuRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	SeganinuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6811,7 +7020,7 @@ struct BurnDriver BurnDrvSeganinja = {
 	"seganinja", "seganinj", NULL, NULL, "1985",
 	"Sega Ninja (315-5113)\0", "needs decrypting", "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, SeganinjaRomInfo, SeganinjaRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	SeganinjInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6821,7 +7030,7 @@ struct BurnDriver BurnDrvNinja = {
 	"ninja", "seganinj", NULL, NULL, "1985",
 	"Ninja (315-5102)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NinjaRomInfo, NinjaRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	SeganinjInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6831,7 +7040,7 @@ struct BurnDriver BurnDrvNprinces = {
 	"nprinces", "seganinj", NULL, NULL, "1985",
 	"Ninja Princess (315-5051, 64k Ver. bootleg?)\0", NULL, "bootleg?", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NprincesRomInfo, NprincesRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	NprincesInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6841,7 +7050,7 @@ struct BurnDriver BurnDrvNprinceso = {
 	"nprinceso", "seganinj", NULL, NULL, "1985",
 	"Ninja Princess (315-5098, 128k Ver.)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NprincesoRomInfo, NprincesoRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	NprincsoInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6851,7 +7060,7 @@ struct BurnDriver BurnDrvNprincesu = {
 	"nprincesu", "seganinj", NULL, NULL, "1985",
 	"Ninja Princess (64k Ver. not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NprincesuRomInfo, NprincesuRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	NprincsuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6861,7 +7070,7 @@ struct BurnDriver BurnDrvNprincesb = {
 	"nprincesb", "seganinj", NULL, NULL, "1985",
 	"Ninja Princess (315-5051?, 128k Ver. bootleg?)\0", NULL, "bootleg?", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, NprincesbRomInfo, NprincesbRomName, NULL, NULL, NULL, NULL, SeganinjInputInfo, SeganinjDIPInfo,
 	NprincsbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6871,7 +7080,7 @@ struct BurnDriver BurnDrvSpatter = {
 	"spatter", NULL, NULL, NULL, "1984",
 	"Spatter (315-5xxx)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
 	NULL, SpatterRomInfo, SpatterRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, SpatterDIPInfo,
 	SpatterInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 240, 224, 4, 3
@@ -6881,7 +7090,7 @@ struct BurnDriver BurnDrvSsanchan = {
 	"ssanchan", "spatter", NULL, NULL, "1984",
 	"Sanrin San Chan (Japan)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_MAZE, 0,
 	NULL, SsanchanRomInfo, SsanchanRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, SpatterDIPInfo,
 	SpatterInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 240, 224, 4, 3
@@ -6891,7 +7100,7 @@ struct BurnDriver BurnDrvStarjack = {
 	"starjack", NULL, NULL, NULL, "1983",
 	"Star Jacker (Sega)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, StarjackRomInfo, StarjackRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, StarjackDIPInfo,
 	StarjackInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6901,7 +7110,7 @@ struct BurnDriver BurnDrvStarjacks = {
 	"starjacks", "starjack", NULL, NULL, "1983",
 	"Star Jacker (Stern)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_VERSHOOT, 0,
 	NULL, StarjacksRomInfo, StarjacksRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, StarjacsDIPInfo,
 	StarjackInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -6911,7 +7120,7 @@ struct BurnDriver BurnDrvSwat = {
 	"swat", NULL, NULL, NULL, "1984",
 	"SWAT (315-5048)\0", NULL, "Coreland / Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_SHOOT, 0,
 	NULL, SwatRomInfo, SwatRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, SwatDIPInfo,
 	SwatInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6921,7 +7130,7 @@ struct BurnDriver BurnDrvTeddybb = {
 	"teddybb", NULL, NULL, NULL, "1985",
 	"TeddyBoy Blues (315-5115, New Ver.)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, TeddybbRomInfo, TeddybbRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, TeddybbDIPInfo,
 	TeddybbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6931,7 +7140,7 @@ struct BurnDriver BurnDrvTeddybbo = {
 	"teddybbo", "teddybb", NULL, NULL, "1985",
 	"TeddyBoy Blues (315-5115, Old Ver.)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, TeddybboRomInfo, TeddybboRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, TeddybbDIPInfo,
 	TeddybbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6941,7 +7150,7 @@ struct BurnDriver BurnDrvTeddybbobl = {
 	"teddybbobl", "teddybb", NULL, NULL, "1985",
 	"TeddyBoy Blues (bootleg)\0", NULL, "bootleg", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, TeddybboblRomInfo, TeddybboblRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, TeddybbDIPInfo,
 	TeddybboblInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -6951,7 +7160,7 @@ struct BurnDriver BurnDrvTokisens = {
 	"tokisens", NULL, NULL, NULL, "1987",
 	"Toki no Senshi - Chrono Soldier (MC-8123, 317-0040)\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, tokisensRomInfo, tokisensRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, TokisensDIPInfo,
 	TokisensInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6961,7 +7170,7 @@ struct BurnDriver BurnDrvTokisensa = {
 	"tokisensa", "tokisens", NULL, NULL, "1987",
 	"Toki no Senshi - Chrono Soldier (prototype)\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, tokisensaRomInfo, tokisensaRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, TokisensaDIPInfo,
 	TokisensaInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6971,7 +7180,7 @@ struct BurnDriver BurnDrvUpndown = {
 	"upndown", NULL, NULL, NULL, "1983",
 	"Up'n Down (315-5030)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_RACING, 0,
 	NULL, UpndownRomInfo, UpndownRomName, NULL, NULL, NULL, NULL, UpndownInputInfo, UpndownDIPInfo,
 	UpndownInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6981,7 +7190,7 @@ struct BurnDriver BurnDrvUpndownu = {
 	"upndownu", "upndown", NULL, NULL, "1983",
 	"Up'n Down (not encrypted)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_RACING, 0,
 	NULL, UpndownuRomInfo, UpndownuRomName, NULL, NULL, NULL, NULL, UpndownInputInfo, UpndownDIPInfo,
 	UpndownuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 256, 3, 4
@@ -6991,7 +7200,7 @@ struct BurnDriver BurnDrvWboy = {
 	"wboy", NULL, NULL, NULL, "1986",
 	"Wonder Boy (set 1, 315-5177)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, WboyRomInfo, WboyRomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyDIPInfo,
 	WboyInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7001,7 +7210,7 @@ struct BurnDriver BurnDrvWboyo = {
 	"wboyo", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 1, 315-5135)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, WboyoRomInfo, WboyoRomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyDIPInfo,
 	WboyoInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7011,7 +7220,7 @@ struct BurnDriver BurnDrvWboy2 = {
 	"wboy2", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 2, 315-5178)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Wboy2RomInfo, Wboy2RomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyDIPInfo,
 	Wboy2Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7021,7 +7230,7 @@ struct BurnDriver BurnDrvWboy2u = {
 	"wboy2u", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 2, not encrypted)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Wboy2uRomInfo, Wboy2uRomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyDIPInfo,
 	Wboy2uInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7031,7 +7240,7 @@ struct BurnDriver BurnDrvWboy3 = {
 	"wboy3", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 3, 315-5135)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Wboy3RomInfo, Wboy3RomName, NULL, NULL, NULL, NULL, WboyInputInfo, Wboy3DIPInfo,
 	WboyoInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7041,7 +7250,7 @@ struct BurnDriver BurnDrvWboy4 = {
 	"wboy4", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 4, 315-5162)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Wboy4RomInfo, Wboy4RomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyDIPInfo,
 	Wboy4Init, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7051,7 +7260,7 @@ struct BurnDriver BurnDrvWboy5 = {
 	"wboy5", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (set 5, bootleg)\0", NULL, "bootleg", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, Wboy5RomInfo, Wboy5RomName, NULL, NULL, NULL, NULL, WboyInputInfo, Wboy3DIPInfo,
 	WboyoInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7061,7 +7270,7 @@ struct BurnDriver BurnDrvWboyu = {
 	"wboyu", "wboy", NULL, NULL, "1986",
 	"Wonder Boy (not encrypted)\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, WboyuRomInfo, WboyuRomName, NULL, NULL, NULL, NULL, WboyInputInfo, WboyuDIPInfo,
 	WboyuInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7071,7 +7280,7 @@ struct BurnDriver BurnDrvWbdeluxe = {
 	"wbdeluxe", "wboy", NULL, NULL, "1986",
 	"Wonder Boy Deluxe\0", NULL, "Sega (Escape License)", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, WbdeluxeRomInfo, WbdeluxeRomName, NULL, NULL, NULL, NULL, WboyInputInfo, WbdeluxeDIPInfo,
 	Wboy2uInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 512, 224, 4, 3
@@ -7081,7 +7290,7 @@ struct BurnDriver BurnDrvWmatch = {
 	"wmatch", NULL, NULL, NULL, "1984",
 	"Water Match (315-5064)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_SPORTSMISC, 0,
 	NULL, WmatchRomInfo, WmatchRomName, NULL, NULL, NULL, NULL, WmatchInputInfo, WmatchDIPInfo,
 	WmatchInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 224, 240, 3, 4
@@ -7091,7 +7300,7 @@ struct BurnDriver BurnDrvChoplift = {
 	"choplift", NULL, NULL,  NULL, "1985",
 	"Choplifter (8751 315-5151)\0", "The (unprotected) or (bootleg) versions work fine.", "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	0, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_NOT_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, ChopliftRomInfo, ChopliftRomName, NULL, NULL, NULL, NULL, ChplftbInputInfo, ChplftbDIPInfo,
 	ChplftbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7101,7 +7310,7 @@ struct BurnDriver BurnDrvChopliftu = {
 	"chopliftu", "choplift", NULL,  NULL, "1985",
 	"Choplifter (unprotected)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, ChopliftuRomInfo, ChopliftuRomName, NULL, NULL, NULL, NULL, ChplftbInputInfo, ChplftbDIPInfo,
 	ChplftbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7111,7 +7320,7 @@ struct BurnDriver BurnDrvChopliftbl = {
 	"chopliftbl", "choplift", NULL,  NULL, "1985",
 	"Choplifter (bootleg)\0", NULL, "Sega", "System 1",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, ChopliftblRomInfo, ChopliftblRomName, NULL, NULL, NULL, NULL, ChplftbInputInfo, ChplftbDIPInfo,
 	ChplftbInit, System1Exit, System1Frame, System1Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7121,7 +7330,7 @@ struct BurnDriver BurnDrvUfosensi = {
 	"ufosensi", NULL, NULL, NULL, "1988",
 	"Ufo Senshi Yohko Chan (MC-8123, 317-0064)\0", NULL, "Sega", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, ufosensiRomInfo, ufosensiRomName, NULL, NULL, NULL, NULL, UfosensiInputInfo, UfosensiDIPInfo,
 	UfosensiInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7129,9 +7338,9 @@ struct BurnDriver BurnDrvUfosensi = {
 
 struct BurnDriver BurnDrvWbml = {
 	"wbml", NULL, NULL, NULL, "1987",
-	"Wonder Boy in Monster Land (Japan New Ver., MC-8123, 317-0043)\0", NULL, "Sega / Westone", "System 2",
+	"Wonder Boy - Monster Land (Japan New Ver., MC-8123, 317-0043)\0", NULL, "Sega / Westone", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, wbmlRomInfo, wbmlRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
 	WbmlInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7139,9 +7348,9 @@ struct BurnDriver BurnDrvWbml = {
 
 struct BurnDriver BurnDrvWbmljb = {
 	"wbmljb", "wbml", NULL, NULL, "1987",
-	"Wonder Boy in Monster Land (Japan not encrypted)\0", NULL, "bootleg", "System 2",
+	"Wonder Boy - Monster Land (Japan bootleg)\0", NULL, "bootleg", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, wbmljbRomInfo, wbmljbRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
 	WbmljbInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7149,9 +7358,9 @@ struct BurnDriver BurnDrvWbmljb = {
 
 struct BurnDriver BurnDrvWbmljo = {
 	"wbmljo", "wbml", NULL, NULL, "1987",
-	"Wonder Boy in Monster Land (Japan Old Ver., MC-8123, 317-0043)\0", NULL, "Sega / Westone", "System 2",
+	"Wonder Boy - Monster Land (Japan Old Ver., MC-8123, 317-0043)\0", NULL, "Sega / Westone", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, wbmljoRomInfo, wbmljoRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
 	WbmlInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
@@ -7159,22 +7368,72 @@ struct BurnDriver BurnDrvWbmljo = {
 
 struct BurnDriver BurnDrvWbmlb = {
 	"wbmlb", "wbml", NULL, NULL, "1987",
-	"Wonder Boy in Monster Land (English bootleg set 1)\0", NULL, "bootleg", "System 2",
+	"Wonder Boy - Monster Land (English bootleg set 1)\0", NULL, "bootleg", "System 2",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, wbmlbRomInfo, wbmlbRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
+	WbmljbInit, System1Exit, System1Frame, System2Render, System1Scan,
+	NULL, 0x800, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvWbmlbg = {
+	"wbmlbg", "wbml", NULL, NULL, "1987",
+	"Wonder Boy - Monster Land (English bootleg set 2)\0", NULL, "bootleg (Galaxy Electronics)", "System 2",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	NULL, wbmlbgRomInfo, wbmlbgRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
+	WbmljbInit, System1Exit, System1Frame, System2Render, System1Scan,
+	NULL, 0x800, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvWbmlbge = {
+	"wbmlbge", "wbml", NULL, NULL, "1987",
+	"Wonder Boy - Monster Land (English bootleg set 3)\0", NULL, "bootleg (Gecas)", "System 2",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	NULL, wbmlbgeRomInfo, wbmlbgeRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
 	WbmljbInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x800, 256, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvWbmlvc = {
 	"wbmlvc", "wbml", NULL, NULL, "2009",
-	"Wonder Boy in Monster Land (English, Virtual Console)\0", NULL, "Sega", "Miscellaneous",
+	"Wonder Boy - Monster Land (English, Virtual Console)\0", NULL, "Sega", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
 	NULL, wbmlvcRomInfo, wbmlvcRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
 	WbmljbInit, System1Exit, System1Frame, System2Render, System1Scan,
 	NULL, 0x600, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvWbmlvcd = {
+	"wbmlvcd", "wbml", NULL, NULL, "2009",
+	"Wonder Boy - Monster Land (decrypted bootleg of English, Virtual Console release)\0", NULL, "bootleg (mpatou)", "System 2",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	NULL, wbmlvcdRomInfo, wbmlvcdRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
+	TokisensaInit, System1Exit, System1Frame, System2Render, System1Scan,
+	NULL, 0x800, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvWbmld = {
+	"wbmld", "wbml", NULL, NULL, "1987",
+	"Wonder Boy - Monster Land (decrypted bootleg of Japan New Ver., MC-8123, 317-0043)\0", NULL, "bootleg (mpatou)", "System 2",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	NULL, wbmldRomInfo, wbmldRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
+	TokisensaInit, System1Exit, System1Frame, System2Render, System1Scan,
+	NULL, 0x800, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvWbmljod = {
+	"wbmljod", "wbml", NULL, NULL, "1987",
+	"Wonder Boy - Monster Land (decrypted bootleg of Japan Old Ver., MC-8123, 317-0043)\0", NULL, "bootleg (mpatou)", "System 2",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_SEGA_SYSTEM1, GBF_PLATFORM, 0,
+	NULL, wbmljodRomInfo, wbmljodRomName, NULL, NULL, NULL, NULL, MyheroInputInfo, WbmlDIPInfo,
+	TokisensaInit, System1Exit, System1Frame, System2Render, System1Scan,
+	NULL, 0x800, 256, 224, 4, 3
 };
 
 // shtngmst and clones

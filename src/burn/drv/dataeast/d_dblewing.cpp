@@ -41,30 +41,30 @@ static UINT8 DrvReset;
 static UINT16 DrvInputs[2];
 
 static struct BurnInputInfo DblewingInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Dblewing)
@@ -204,7 +204,7 @@ static UINT8 __fastcall dblewing_sound_read(UINT16 address)
 			return soundlatch;
 
 		case 0xd000:
-			return sound_irq ? 0 : 1;
+			return sound_irq ^ 1;
 	}
 
 	return 0;
@@ -334,7 +334,7 @@ static INT32 DrvInit()
 		deco16_tile_decode(DrvGfxROM1, DrvGfxROM0, 0x100000, 1);
 		deco16_tile_decode(DrvGfxROM1, DrvGfxROM1, 0x100000, 0);
 		deco16_sprite_decode(DrvGfxROM2, 0x200000);
-	}	
+	}
 
 	deco16Init(1, 0, 1);
 	deco16_set_graphics(DrvGfxROM0, 0x100000 * 2, DrvGfxROM1, 0x100000 * 2, NULL, 0);
@@ -387,9 +387,10 @@ static INT32 DrvInit()
 	deco_146_104_set_port_c_cb(dips_read); // dips
 	deco_146_104_set_soundlatch_cb(sound_callback);
 
-	BurnYM2151Init(3580000);
+	BurnYM2151Init(3580000, 1);
 	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 	BurnYM2151SetAllRoutes(0.75, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttachZet(3580000);
 
 	MSM6295Init(0, 1000000 / 132, 1);
 	MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
@@ -475,37 +476,13 @@ static void draw_sprites()
 		{
 			INT32 code = (sprite - multi * inc) & 0x3fff;
 
-			if (fy) {
-				if (fx) {
-					Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, x, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, x, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-				}
-			} else {
-				if (fx) {
-					Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, x, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-				} else {
-					Render16x16Tile_Mask_Clip(pTransDraw, code, x, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-				}
-			}
+			Draw16x16MaskTile(pTransDraw, code, x, (y + mult * multi) - 8, fx, fy, colour, 4, 0, 0x200, DrvGfxROM2);
 
 			if (w)
 			{
 				code = ((sprite - multi * inc)-mult2) & 0x3fff;
 
-				if (fy) {
-					if (fx) {
-						Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, x-16, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-					} else {
-						Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, x-16, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-					}
-				} else {
-					if (fx) {
-						Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, x-16, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-					} else {
-						Render16x16Tile_Mask_Clip(pTransDraw, code, x-16, (y + mult * multi) - 8, colour, 4, 0, 0x200, DrvGfxROM2);
-					}
-				}
+				Draw16x16MaskTile(pTransDraw, code, x-16, (y + mult * multi) - 8, fx, fy, colour, 4, 0, 0x200, DrvGfxROM2);
 			}
 
 			multi--;
@@ -519,9 +496,9 @@ static void DrvPaletteUpdate()
 
 	for (INT32 i = 0; i < 0x800 / 2; i++)
 	{
-		UINT8 b = (p[i] >> 8) & 0xf;
-		UINT8 g = (p[i] >> 4) & 0xf;
-		UINT8 r = (p[i] >> 0) & 0xf;
+		UINT8 b = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 8) & 0xf;
+		UINT8 g = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 4) & 0xf;
+		UINT8 r = (BURN_ENDIAN_SWAP_INT16(p[i]) >> 0) & 0xf;
 
 		DrvPalette[i] = BurnHighCol(r+r*16, g+g*16, b+b*16, 0);
 	}
@@ -583,13 +560,17 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		if (i == 16) deco16_vblank = 0;
-		if (i == 255) { // palette issues w/sprites on fadeout @ 248
+		if (i == 248) {
 			deco16_vblank = 0x08;
 			SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
+
+			if (pBurnDraw) {
+				DrvDraw();
+			}
 		}
 
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Sek);
+		CPU_RUN_TIMER(1);
 
 		if (pBurnSoundOut && i%4==3) {
 			INT32 nSegmentLength = nBurnSoundLen / (nInterleave/4);
@@ -613,10 +594,6 @@ static INT32 DrvFrame()
 	ZetClose();
 	SekClose();
 
-	if (pBurnDraw) {
-		DrvDraw();
-	}
-
 	return 0;
 }
 
@@ -638,6 +615,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 	if (nAction & ACB_DRIVER_DATA) {
 		SekScan(nAction);
+		ZetScan(nAction);
 
 		deco16Scan();
 
@@ -647,38 +625,111 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(flipscreen);
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(sound_irq);
-
 	}
 
 	return 0;
 }
 
 
-// Double Wings
+// Double Wings (set 1)
 
 static struct BurnRomInfo dblewingRomDesc[] = {
-	{ "kp_00-.3d",	0x040000, 0x547dc83e, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
-	{ "kp_01-.5d",	0x040000, 0x7a210c33, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "kp_00-.3d",			0x040000, 0x547dc83e, 1 | BRF_PRG | BRF_ESS },   //  0 68k Code
+	{ "kp_01-.5d",			0x040000, 0x7a210c33, 1 | BRF_PRG | BRF_ESS },   //  1
 
-	{ "kp_02-.10h",	0x010000, 0xdef035fa, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
+	{ "kp_02-.10h",			0x010000, 0xdef035fa, 2 | BRF_PRG | BRF_ESS },   //  2 Z80 Code
+ 
+	{ "mbe-02.8h",			0x100000, 0x5a6d3ac5, 3 | BRF_GRA },             //  3 Character and Background Tiles
 
-	{ "mbe-02.8h",	0x100000, 0x5a6d3ac5, 3 | BRF_GRA },           //  3 Character and Background Tiles
+	{ "mbe-00.14a",			0x100000, 0xe33f5c93, 4 | BRF_GRA },             //  4 Sprites
+	{ "mbe-01.16a",			0x100000, 0xef452ad7, 4 | BRF_GRA },             //  5
 
-	{ "mbe-00.14a",	0x100000, 0xe33f5c93, 4 | BRF_GRA },           //  4 Sprites
-	{ "mbe-01.16a",	0x100000, 0xef452ad7, 4 | BRF_GRA },           //  5
-
-	{ "kp_03-.16h",	0x020000, 0x5d7f930d, 5 | BRF_SND },           //  6 OKI M6295 Samples
+	{ "kp_03-.16h",			0x020000, 0x5d7f930d, 5 | BRF_SND },             //  6 OKI M6295 Samples
+	
+	{ "pal1618-vg-00.1f",  	0x00117, 0x8c2849e5, 0 | BRF_OPT }, 			 //  7 Plds
+	{ "pal1618-vg-01.1h",  	0x00117, 0x04b0bab6, 0 | BRF_OPT }, 			 //  8
+	{ "pal16r8-vg-02.11b", 	0x00117, 0x00000000, 0 | BRF_OPT | BRF_NODUMP }, //  9
 };
 
 STD_ROM_PICK(dblewing)
 STD_ROM_FN(dblewing)
 
+// Double Wings (set 2)
+
+static struct BurnRomInfo dblewingaRomDesc[] = {
+	{ "2.3d",				0x040000, 0x1e6b0653, 1 | BRF_PRG | BRF_ESS },   //  0 68k Code
+	{ "1.5d",				0x040000, 0x4d537dc9, 1 | BRF_PRG | BRF_ESS },   //  1
+
+	{ "kp_02-.10h",			0x010000, 0xdef035fa, 2 | BRF_PRG | BRF_ESS },   //  2 Z80 Code
+
+	{ "mbe-02.8h",			0x100000, 0x5a6d3ac5, 3 | BRF_GRA },             //  3 Character and Background Tiles
+
+	{ "mbe-00.14a",			0x100000, 0xe33f5c93, 4 | BRF_GRA },             //  4 Sprites
+	{ "mbe-01.16a",			0x100000, 0xef452ad7, 4 | BRF_GRA },             //  5
+
+	{ "kp_03-.16h",			0x020000, 0x5d7f930d, 5 | BRF_SND },           	 //  6 OKI M6295 Samples
+	
+	{ "pal16l8-vg-00.1f",  	0x00117, 0x8c2849e5, 0 | BRF_OPT }, 			 //  7 Plds
+	{ "pal16l8-vg-01.1h",  	0x00117, 0x04b0bab6, 0 | BRF_OPT }, 			 //  8
+	{ "pal16r8-vg-02.11b", 	0x00117, 0x00000000, 0 | BRF_OPT | BRF_NODUMP }, //  9
+};
+
+STD_ROM_PICK(dblewinga)
+STD_ROM_FN(dblewinga)
+	
+// Double Wings (Asia)
+
+/*
+The most noticeable difference with the set below is that it doesn't use checkpoints, but respawns you when you die.
+Checkpoints were more common in Japan, so this is likely to be an export version.
+*/
+static struct BurnRomInfo dblewingbRomDesc[] = {
+	{ "17.3d",	    		0x040000, 0x3a7ba822, 1 | BRF_PRG | BRF_ESS },   //  0 68k Code
+	{ "18.5d",	    		0x040000, 0xe5f5f004, 1 | BRF_PRG | BRF_ESS },   //  1
+
+	{ "kp_02-.10h",			0x010000, 0xdef035fa, 2 | BRF_PRG | BRF_ESS },   //  2 Z80 Code
+
+	{ "mbe-02.8h",			0x100000, 0x5a6d3ac5, 3 | BRF_GRA },             //  3 Character and Background Tiles
+
+	{ "mbe-00.14a",			0x100000, 0xe33f5c93, 4 | BRF_GRA },             //  4 Sprites
+	{ "mbe-01.16a",			0x100000, 0xef452ad7, 4 | BRF_GRA },             //  5
+
+	{ "kp_03-.16h",			0x020000, 0x5d7f930d, 5 | BRF_SND },             //  6 OKI M6295 Samples
+	
+	{ "pal16l8-vg-00.1f",  	0x00117, 0x8c2849e5, 0 | BRF_OPT }, 			 //  7 Plds
+	{ "pal16l8-vg-01.1h",  	0x00117, 0x04b0bab6, 0 | BRF_OPT }, 			 //  8
+	{ "pal16r8-vg-02.11b", 	0x00117, 0x00000000, 0 | BRF_OPT | BRF_NODUMP }, //  9
+};
+
+STD_ROM_PICK(dblewingb)
+STD_ROM_FN(dblewingb)
+
 struct BurnDriver BurnDrvDblewing = {
 	"dblewing", NULL, NULL, NULL, "1993",
-	"Double Wings\0", NULL, "Mitchell", "DECO IC16",
+	"Double Wings (set 1)\0", NULL, "Mitchell", "DECO IC16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, dblewingRomInfo, dblewingRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvDblewinga = {
+	"dblewinga", "dblewing", NULL, NULL, "1993",
+	"Double Wings (set 2)\0", NULL, "Mitchell", "DECO IC16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	NULL, dblewingaRomInfo, dblewingaRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvDblewingb = {
+	"dblewingb", "dblewing", NULL, NULL, "1994",
+	"Double Wings (Asia)\0", NULL, "Mitchell", "DECO IC16",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	NULL, dblewingbRomInfo, dblewingbRomName, NULL, NULL, NULL, NULL, DblewingInputInfo, DblewingDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4
 };

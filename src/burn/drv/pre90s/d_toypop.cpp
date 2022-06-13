@@ -258,11 +258,7 @@ static void toypop_main_write(UINT16 address, UINT8 data)
 	if ((address & 0xf000) == 0x9000) {
 		sound_in_reset = address & 0x800;
 		if (sound_in_reset) {
-			M6809Close();
-			M6809Open(1);
-			M6809Reset();
-			M6809Close();
-			M6809Open(0);
+			M6809Reset(1);
 		}
 		return;
 	}
@@ -809,14 +805,14 @@ static INT32 DrvFrame()
 			if (i == 223 && slave_irq_enable) SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 		}
 
+		M6809Open(1);
 		if (sound_in_reset) {
 			CPU_IDLE(2, M6809);
 		} else {
-			M6809Open(1);
 			CPU_RUN(2, M6809);
 			if (i == 223) M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
-			M6809Close();
 		}
+		M6809Close();
 	}
 
 	SekClose();

@@ -58,106 +58,108 @@ static UINT8 DrvDips[4];
 static UINT8 DrvInputs[5];
 static UINT8 DrvReset;
 
+static INT32 nExtraCycles;
+
 static struct BurnInputInfo SidearmsInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Sidearms)
 
 static struct BurnInputInfo TurtshipInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Turtship)
 
 static struct BurnInputInfo DygerInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Dyger)
 
 static struct BurnInputInfo WhizzInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy4 + 1,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy5 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy5 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
-	{"Dip D",		BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
 };
 
 STDINPUTINFO(Whizz)
@@ -471,14 +473,12 @@ static void __fastcall sidearms_main_write(UINT16 address, UINT8 data)
 
 		case 0xc805:
 		{
-		//	INT32 last = starscrollx;
+			INT32 last = starscrollx;
 
 			starscrollx++;
 			starscrollx &= 0x1ff;
 
-			// According to MAME this is correct, but for some reason in
-			// FBA it is seizure-inducing. Just disable it for now.
-		//	if (starscrollx && (~last & 0x100)) hflop_74a ^= 1;
+			if (starscrollx & (~last & 0x100)) hflop_74a ^= 1;
 		}
 		return;
 
@@ -610,6 +610,11 @@ static void __fastcall whizz_main_write(UINT16 address, UINT8 data)
 		case 0xc803:
 		case 0xc805:
 		return;		// nop
+
+		case 0xc800:
+			ZetSetIRQLine(1, 0, CPU_IRQSTATUS_HOLD);
+			soundlatch = data;
+		return;
 	}
 
 	sidearms_main_write(address, data);
@@ -682,11 +687,8 @@ static void __fastcall whizz_sound_write_port(UINT16 port, UINT8 data)
 	switch (port & 0xff)
 	{
 		case 0x00:
-			BurnYM2151SelectRegister(data);
-		return;
-
 		case 0x01:
-			BurnYM2151WriteRegister(data);
+			BurnYM2151Write(port & 1, data);
 		return;
 
 		case 0x40:
@@ -710,11 +712,6 @@ static UINT8 __fastcall whizz_sound_read_port(UINT16 port)
 }
 
 inline static void DrvYM2203IRQHandler(INT32, INT32 nStatus)
-{
-	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-}
-
-static void DrvYM2151IrqHandler(INT32 nStatus)
 {
 	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
@@ -753,6 +750,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	starscrollx = 0;
 	starscrolly = 0;
 	hflop_74a = 1;
+
+	nExtraCycles = 0;
 
 	HiscoreReset();
 
@@ -825,12 +824,7 @@ static void DrvGfxDecode()
 
 static INT32 SidearmsInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -840,7 +834,7 @@ static INT32 SidearmsInit()
 		if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  3, 1)) return 1;
 
 		if (BurnLoadRom(DrvStarMap + 0x00000,  4, 1)) return 1;
-	
+
 		if (BurnLoadRom(DrvGfxROM0 + 0x00000,  5, 1)) return 1;
 
 		if (BurnLoadRom(DrvGfxROM1 + 0x00000,  6, 1)) return 1;
@@ -905,12 +899,7 @@ static INT32 SidearmsInit()
 
 static INT32 TurtshipInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -918,7 +907,7 @@ static INT32 TurtshipInit()
 		if (BurnLoadRom(DrvZ80ROM0 + 0x10000,  2, 1)) return 1;
 
 		if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  3, 1)) return 1;
-	
+
 		if (BurnLoadRom(DrvGfxROM0 + 0x00000,  4, 1)) return 1;
 		if (is_turtshipk == 0) memcpy (DrvGfxROM0, DrvGfxROM0 + 0x4000, 0x4000);
 
@@ -986,19 +975,14 @@ static INT32 TurtshipkInit()
 
 static INT32 WhizzInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
 		if (BurnLoadRom(DrvZ80ROM0 + 0x08000,  1, 1)) return 1;
 
 		if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  2, 1)) return 1;
-	
+
 		if (BurnLoadRom(DrvGfxROM0 + 0x00000,  3, 1)) return 1;
 		memcpy (DrvGfxROM0, DrvGfxROM0 + 0x4000, 0x4000);
 
@@ -1040,9 +1024,9 @@ static INT32 WhizzInit()
 	ZetSetInHandler(whizz_sound_read_port);
 	ZetClose();
 
-	BurnYM2151Init(4000000);
-	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
+	BurnYM2151InitBuffered(4000000, 1, NULL, 0);
 	BurnYM2151SetAllRoutes(1.00, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttachZet(4000000);
 
 	GenericTilesInit();
 
@@ -1140,35 +1124,10 @@ static void draw_bg_layer(INT32 type)
 			INT32 flipx = attr & 0x02;
 			INT32 flipy = attr & 0x04;
 
-			if (type)
-			{
-				if (flipy) {
-					if (flipx) {
-						Render32x32Tile_FlipXY_Clip(pTransDraw, code | ((attr & 0x80) << 2), sx, sy, color & 0x0f, 4, 0, DrvGfxROM1);
-					} else {
-						Render32x32Tile_FlipY_Clip(pTransDraw, code | ((attr & 0x80) << 2), sx, sy, color & 0x0f, 4, 0, DrvGfxROM1);
-					}
-				} else {
-					if (flipx) {
-						Render32x32Tile_FlipX_Clip(pTransDraw, code | ((attr & 0x80) << 2), sx, sy, color & 0x0f, 4, 0, DrvGfxROM1);
-					} else {
-						Render32x32Tile_Clip(pTransDraw, code | ((attr & 0x80) << 2), sx, sy, color & 0x0f, 4, 0, DrvGfxROM1);
-					}
-				}
+			if (type) {
+				Draw32x32Tile(pTransDraw, code | ((attr & 0x80) << 2), sx, sy, flipx, flipy, color & 0x0f, 4, 0, DrvGfxROM1);
 			} else {
-				if (flipy) {
-					if (flipx) {
-						Render32x32Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy, color, 4, 0x0f, 0, DrvGfxROM1);
-					} else {
-						Render32x32Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy, color, 4, 0x0f, 0, DrvGfxROM1);
-					}
-				} else {
-					if (flipx) {
-						Render32x32Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy, color, 4, 0x0f, 0, DrvGfxROM1);
-					} else {
-						Render32x32Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 4, 0x0f, 0, DrvGfxROM1);
-					}
-				}
+				Draw32x32MaskTile(pTransDraw, code, sx, sy, flipx, flipy, color, 4, 0x0f, 0, DrvGfxROM1);
 			}
 		}
 	}
@@ -1329,66 +1288,38 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nSoundBufferPos = 0;
-	INT32 nInterleave = 278;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] =  { 4000000 / 60, 4000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
 
-	vblank = 0;
+	vblank = 1;
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-
-		INT32 nSegment = nCyclesTotal[0] / nInterleave;
-
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nSegment);
-		if (i == 274) {ZetSetIRQLine(0, CPU_IRQSTATUS_ACK); vblank = 1; }
-		if (i == 276) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-		nSegment = ZetTotalCycles();
+		CPU_RUN(0, Zet);
+		if (i == 16 - 1) vblank = 0;
+		if (i == nInterleave - 1) { ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); vblank = 1; }
 		ZetClose();
 
 		ZetOpen(1);
-		if (is_whizz) {
-			nCyclesDone[1] += ZetRun(nSegment - ZetTotalCycles());
-			if (i == 274) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
-			if (i == 276) ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
-		} else {
-			BurnTimerUpdate(nSegment);
-		}
+		CPU_RUN_TIMER(1);
 		ZetClose();
-	}
-
-	ZetOpen(1);
-
-	if (is_whizz == 0) {
-		BurnTimerEndFrame(nCyclesTotal[1]);
 	}
 
 	if (pBurnSoundOut) {
 		if (is_whizz) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-	
-			if (nSegmentLength) {
-				BurnYM2151Render(pSoundBuf, nSegmentLength);
-			}
+			BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 		} else {
 			BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+			BurnSoundDCFilter(); // sidearms dc offset
 		}
 	}
 
-	ZetClose();
-	
 	if (pBurnDraw) {
 		BurnDrvRedraw();
 	}
+
+	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
 
 	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 
@@ -1427,13 +1358,14 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(sprite_enable);
 		SCAN_VAR(bglayer_enable);
 		SCAN_VAR(bank_data);
-		SCAN_VAR(bgscrollx[2]);
-		SCAN_VAR(bgscrolly[2]);
 
 		SCAN_VAR(starscrollx);
 		SCAN_VAR(starscrolly);
 		SCAN_VAR(hflop_74a);
 		SCAN_VAR(enable_watchdog);
+		SCAN_VAR(watchdog);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -1661,9 +1593,9 @@ struct BurnDriver BurnDrvSidearmsj = {
 // Turtle Ship (North America)
 
 static struct BurnRomInfo turtshipRomDesc[] = {
-	{ "t-3.bin",		0x08000, 0xb73ed7f2, 1 | BRF_PRG | BRF_ESS }, //  0 Main CPU
+	{ "t-3.5g",			0x08000, 0xb73ed7f2, 1 | BRF_PRG | BRF_ESS }, //  0 Main CPU
 	{ "t-2.3g",			0x08000, 0x2327b35a, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "t-1.bin",		0x08000, 0xa258ffec, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "t-1.3e",			0x08000, 0xa258ffec, 1 | BRF_PRG | BRF_ESS }, //  2
 
 	{ "t-4.8a",			0x08000, 0x1cbe48e8, 2 | BRF_PRG | BRF_ESS }, //  3 Sound CPU
 
@@ -1677,11 +1609,15 @@ static struct BurnRomInfo turtshipRomDesc[] = {
 	{ "t-9.3a",			0x10000, 0x44762916, 4 | BRF_GRA },           // 10
 
 	{ "t-13.1i",		0x10000, 0x599f5246, 5 | BRF_GRA },           // 11 Sprites
-	{ "t-15.bin",		0x10000, 0x6489b7b4, 5 | BRF_GRA },           // 12
+	{ "t-15.3i",		0x10000, 0x6489b7b4, 5 | BRF_GRA },           // 12
 	{ "t-12.1g",		0x10000, 0xfb54cd33, 5 | BRF_GRA },           // 13
-	{ "t-14.bin",		0x10000, 0x1b67b674, 5 | BRF_GRA },           // 14
+	{ "t-14.3g",		0x10000, 0x1b67b674, 5 | BRF_GRA },           // 14
 
 	{ "t-16.9f",		0x08000, 0x1a5a45d7, 6 | BRF_GRA },           // 15 Tilemap
+
+	{ "82s129.11p",		0x00100, 0x75af3553, 7 | BRF_OPT },           // 16 Vertical timing
+	{ "82s129.11r",		0x00100, 0xc47c182a, 7 | BRF_OPT },           // 17 Horizontal timing
+	{ "82s123.9e",		0x00020, 0xc5817816, 7 | BRF_OPT },           // 18 Tied to the sound Z80 and without it there's no sound on the real PCB
 };
 
 STD_ROM_PICK(turtship)
@@ -1722,6 +1658,10 @@ static struct BurnRomInfo turtshipjRomDesc[] = {
 	{ "t-14.3g",		0x10000, 0xd636873c, 5 | BRF_GRA },           // 14
 
 	{ "t-16.9f",		0x08000, 0x1a5a45d7, 6 | BRF_GRA },           // 15 Tilemap
+
+	{ "82s129.11p",		0x00100, 0x75af3553, 7 | BRF_OPT },           // 16 Vertical timing
+	{ "82s129.11r",		0x00100, 0xc47c182a, 7 | BRF_OPT },           // 17 Horizontal timing
+	{ "82s123.9e",		0x00020, 0xc5817816, 7 | BRF_OPT },           // 18 Tied to the sound Z80 and without it there's no sound on the real PCB
 };
 
 STD_ROM_PICK(turtshipj)
@@ -1762,6 +1702,10 @@ static struct BurnRomInfo turtshipkRomDesc[] = {
 	{ "turtship.014",	0x10000, 0xb3ea74a3, 5 | BRF_GRA },           // 14
 
 	{ "turtship.016",	0x08000, 0xaffd51dd, 6 | BRF_GRA },           // 15 Tilemap
+
+	{ "82s129.11p",		0x00100, 0x75af3553, 7 | BRF_OPT },           // 16 Vertical timing
+	{ "82s129.11r",		0x00100, 0xc47c182a, 7 | BRF_OPT },           // 17 Horizontal timing
+	{ "82s123.9e",		0x00020, 0xc5817816, 7 | BRF_OPT },           // 18 Tied to the sound Z80 and without it there's no sound on the real PCB
 };
 
 STD_ROM_PICK(turtshipk)
@@ -1802,6 +1746,10 @@ static struct BurnRomInfo turtshipkoRomDesc[] = {
 	{ "t-14.g3",		0x10000, 0xa30e3346, 5 | BRF_GRA },           // 14
 
 	{ "t-16.f9",		0x08000, 0x9b377277, 6 | BRF_GRA },           // 15 Tilemap
+
+	{ "82s129.11p",		0x00100, 0x75af3553, 7 | BRF_OPT },           // 16 Vertical timing
+	{ "82s129.11r",		0x00100, 0xc47c182a, 7 | BRF_OPT },           // 17 Horizontal timing
+	{ "82s123.9e",		0x00020, 0xc5817816, 7 | BRF_OPT },           // 18 Tied to the sound Z80 and without it there's no sound on the real PCB
 };
 
 STD_ROM_PICK(turtshipko)
@@ -1842,6 +1790,10 @@ static struct BurnRomInfo turtshipknRomDesc[] = {
 	{ "t-14.g3",		0x10000, 0xee162dc0, 5 | BRF_GRA },           // 14
 
 	{ "t-16.f9",		0x08000, 0x9b377277, 6 | BRF_GRA },           // 15 Tilemap
+
+	{ "82s129.11p",		0x00100, 0x75af3553, 7 | BRF_OPT },           // 16 Vertical timing
+	{ "82s129.11r",		0x00100, 0xc47c182a, 7 | BRF_OPT },           // 17 Horizontal timing
+	{ "82s123.9e",		0x00020, 0xc5817816, 7 | BRF_OPT },           // 18 Tied to the sound Z80 and without it there's no sound on the real PCB
 };
 
 STD_ROM_PICK(turtshipkn)

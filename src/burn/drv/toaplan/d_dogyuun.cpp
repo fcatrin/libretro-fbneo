@@ -11,10 +11,9 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static INT32 v25_reset = 0;
+static INT32 i7hk = 0;
 
 // Rom information
 static struct BurnRomInfo dogyuunRomDesc[] = {
@@ -65,34 +64,53 @@ static struct BurnRomInfo dogyuuntRomDesc[] = {
 STD_ROM_PICK(dogyuunt)
 STD_ROM_FN(dogyuunt)
 
+// found on a standard TP-022-1 PCB, main CPU ROM had a MR sticker.
+// It's a little closer to the location test than to the released versions (i.e region configuration).
+// maybe a newer location test version, instead.
+
+static struct BurnRomInfo dogyuunbRomDesc[] = {
+	{ "mr.u64",       0x080000, 0x4dc258dc, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+
+	{ "tp022_3.w92",  0x100000, 0x191b595f, BRF_GRA },           //  1 GP9001 #1 Tile data
+	{ "tp022_4.w93",  0x100000, 0xd58d29ca, BRF_GRA },           //  2
+
+	{ "tp022_5.w16",  0x200000, 0xd4c1db45, BRF_GRA },           //  3 GP9001 #2 Tile data
+	{ "tp022_6.w17",  0x200000, 0xd48dc74f, BRF_GRA },           //  4
+
+	{ "tp022_2.w30",  0x040000, 0x043271b3, BRF_SND },           //  5 ADPCM data
+};
+
+STD_ROM_PICK(dogyuunb)
+STD_ROM_FN(dogyuunb)
+
 static struct BurnInputInfo dogyuunInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",		BIT_DIGITAL,	DrvButton + 0,	"diag"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Diagnostics",		BIT_DIGITAL,	DrvButton + 0,	"diag"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(dogyuun)
@@ -144,7 +162,7 @@ static struct BurnDIPInfo dogyuunDIPList[] = {
 	{0x16,	0x00, 0x0F, 0x03, NULL},
 	{0x14,	0x02, 0x30,	0x20, "3 coins 1 play"},
 	{0x16,	0x00, 0x0F, 0x03, NULL},
-	{0x14,	0x02, 0x30,	0x30, "3 coins 1 play"},
+	{0x14,	0x02, 0x30,	0x30, "4 coins 1 play"},
 	{0x16,	0x00, 0x0F, 0x03, NULL},
 	{0,		0xFE, 0,	4,	  "Coin B"},
 	{0x14,	0x02, 0xC0,	0x00, "1 coin 2 plays"},
@@ -286,19 +304,24 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	if (pnMin) {						// Return minimum compatible version
 		*pnMin = 0x020997;
 	}
+
 	if (nAction & ACB_VOLATILE) {		// Scan volatile ram
 		memset(&ba, 0, sizeof(ba));
-    		ba.Data		= RamStart;
+		ba.Data		= RamStart;
 		ba.nLen		= RamEnd - RamStart;
 		ba.szName	= "All Ram";
 		BurnAcb(&ba);
 
 		SekScan(nAction);				// scan 68000 states
 		VezScan(nAction);
+
 		BurnYM2151Scan(nAction, pnMin);
 		MSM6295Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
+
+		SCAN_VAR(v25_reset);
+		SCAN_VAR(i7hk);
 	}
 
 	return 0;
@@ -318,7 +341,7 @@ static INT32 LoadRoms()
 	return 0;
 }
 
-UINT8 __fastcall dogyuunReadByte(UINT32 sekAddress)
+static UINT8 __fastcall dogyuunReadByte(UINT32 sekAddress)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		return ShareRAM[(sekAddress / 2) & 0x7fff];
@@ -343,7 +366,7 @@ UINT8 __fastcall dogyuunReadByte(UINT32 sekAddress)
 
 }
 
-UINT16 __fastcall dogyuunReadWord(UINT32 sekAddress)
+static UINT16 __fastcall dogyuunReadWord(UINT32 sekAddress)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		return ShareRAM[(sekAddress / 2) & 0x7fff];
@@ -372,12 +395,11 @@ UINT16 __fastcall dogyuunReadWord(UINT32 sekAddress)
 			return ToaGP9001ReadRAM_Lo(1);
 
 		case 0x700000: {
-			static INT32 i;
 			UINT16 nStatus;
 
-			i++;
-			nStatus = 0xFFFF - (i & 0xFF);
-			if (i & 1) {
+			i7hk++;
+			nStatus = 0xFFFF - (i7hk & 0xFF);
+			if (i7hk & 1) {
 				nStatus &= 0x00FF;
 			}
 			return nStatus;
@@ -391,7 +413,7 @@ UINT16 __fastcall dogyuunReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall dogyuunWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall dogyuunWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		ShareRAM[(sekAddress / 2) & 0x7fff] = byteValue;
@@ -411,7 +433,7 @@ void __fastcall dogyuunWriteByte(UINT32 sekAddress, UINT8 byteValue)
 	}
 }
 
-void __fastcall dogyuunWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall dogyuunWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		ShareRAM[(sekAddress / 2) & 0x7fff] = wordValue;
@@ -463,7 +485,7 @@ void __fastcall dogyuunWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-void __fastcall dogyuun_v25_write(UINT32 address, UINT8 data)
+static void __fastcall dogyuun_v25_write(UINT32 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -481,7 +503,7 @@ void __fastcall dogyuun_v25_write(UINT32 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall dogyuun_v25_read(UINT32 address)
+static UINT8 __fastcall dogyuun_v25_read(UINT32 address)
 {
 	switch (address)
 	{
@@ -495,7 +517,7 @@ UINT8 __fastcall dogyuun_v25_read(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall dogyuun_v25_read_port(UINT32 port)
+static UINT8 __fastcall dogyuun_v25_read_port(UINT32 port)
 {
 	switch (port)
 	{
@@ -526,6 +548,7 @@ static INT32 DrvDoReset()
 	MSM6295Reset(0);
 
 	v25_reset = 1;
+	i7hk = 0;
 
 	HiscoreReset();
 
@@ -604,9 +627,9 @@ static INT32 DrvInit()
 	}
 
 	BurnYM2151Init(3375000);
-	BurnYM2151SetAllRoutes(0.50, BURN_SND_ROUTE_BOTH);
+	BurnYM2151SetAllRoutes(0.30, BURN_SND_ROUTE_BOTH);
 	MSM6295Init(0, 1041667 / 132, 1);
-	MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(0, 0.30, BURN_SND_ROUTE_BOTH);
 
 	nSpriteXOffset = 0x0024;
 	nSpriteYOffset = 0x0001;
@@ -620,8 +643,6 @@ static INT32 DrvInit()
 	nToaPalLen = nColCount;
 	ToaPalSrc = RamPal;
 	ToaPalInit();
-
-	bDrawScreen = true;
 
 	DrvDoReset(); 			// Reset machine
 	return 0;
@@ -649,18 +670,11 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0x120);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -698,7 +712,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	VezOpen(0);
 
@@ -707,7 +721,6 @@ static INT32 DrvFrame()
 		INT32 nNext;
 
 		// Run 68000
-
 		nCurrentCPU = 0;
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 
@@ -725,13 +738,9 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
-		// sound! (increase interleave?)
+		// sound!
 		if (v25_reset) {
 			nCyclesDone[1] += nCyclesTotal[1] / nInterleave;
 		} else {
@@ -792,6 +801,16 @@ struct BurnDriver BurnDrvDogyuunt = {
 	L"Dogyuun (test location version)\0Dogyuun \u30C9\u30AD\u30E5\u30FC\u30F3\uFF01\uFF01\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, dogyuuntRomInfo, dogyuuntRomName, NULL, NULL, NULL, NULL, dogyuunInputInfo, dogyuuntDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvDogyuunb = {
+	"dogyuunb", "dogyuun", NULL, NULL, "1992",
+	"Dogyuun (oldest set)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	L"Dogyuun (oldest set)\0Dogyuun \u30C9\u30AD\u30E5\u30FC\u30F3\uFF01\uFF01\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	NULL, dogyuunbRomInfo, dogyuunbRomName, NULL, NULL, NULL, NULL, dogyuunInputInfo, dogyuuntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

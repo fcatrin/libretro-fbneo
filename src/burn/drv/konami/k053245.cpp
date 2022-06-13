@@ -31,7 +31,7 @@ INT32 K053245Reset()
 		memset (K053245Ram[i], 0, 0x800);
 		memset (K053245Buf[i], 0, 0x800);
 		memset (K053244Regs[i], 0, 0x10);
-	
+
 		K053244Bank[i] = 0;
 	}
 
@@ -119,36 +119,26 @@ void K053244BankSelect(INT32 chip, INT32 bank)
 
 UINT8 K053245Read(INT32 chip, INT32 offset)
 {
-	return K053245Ram[chip][offset ^ 1]; //
+	return K053245Ram[chip][offset ^ 1];
 }
 
 void K053245Write(INT32 chip, INT32 offset, INT32 data)
 {
-	K053245Ram[chip][offset ^ 1] = data; //
+	K053245Ram[chip][offset ^ 1] = data;
 }
 
 UINT16 K053245ReadWord(INT32 chip, INT32 offset)
 {
 	UINT16 *ret = (UINT16*)K053245Ram[chip];
 
-#if 0
-	INT32 r = ret[offset];
-
-	return (r << 8) | (r >> 8);
-#else
 	return BURN_ENDIAN_SWAP_INT16(ret[offset]);
-#endif
 }
 
 void K053245WriteWord(INT32 chip, INT32 offset, INT32 data)
 {
 	UINT16 *ret = (UINT16*)K053245Ram[chip];
 
-#if 0
-	ret[offset] = (data << 8) | (data >> 8);
-#else
 	ret[offset] = BURN_ENDIAN_SWAP_INT16(data);
-#endif
 }
 
 UINT8 K053244Read(INT32 chip, INT32 offset)
@@ -253,13 +243,8 @@ void K053245SpritesRender(INT32 chip)
           >0x40 reduce (0x80 = half size)
         */
 		zoomy = BURN_ENDIAN_SWAP_INT16(sprbuf[offs+4]);
+
 		if (zoomy > 0x2000) continue;
-		if (zoomy == 2) {
-			// konami logo mask in asterix uses zoomy==2, but with these
-			// calculations, the size is so big it will never work.  Substituting
-			// 8 here brings the logo mask uncover in-time with the PCB recording. -dink
-			zoomy = 0x08;
-		}
 		if (zoomy) zoomy = (0x400000+zoomy/2) / zoomy;
 		else zoomy = 2 * 0x400000;
 		if ((BURN_ENDIAN_SWAP_INT16(sprbuf[offs]) & 0x4000) == 0)
@@ -301,23 +286,30 @@ void K053245SpritesRender(INT32 chip)
 		oy = (-(oy + spriteoffsY + 0x07)) & 0x3ff;
 		if (oy >= 640) oy -= 1024;
 
+		// move ox, oy from int to the 20.12 frac realm
+		ox <<= 12;
+		oy <<= 12;
+
 		/* the coordinates given are for the *center* of the sprite */
-		ox -= (zoomx * w) >> 13;
-		oy -= (zoomy * h) >> 13;
+		ox -= (zoomx * w) >> 1;
+		oy -= (zoomy * h) >> 1;
 
 		for (y = 0;y < h;y++)
 		{
 			INT32 sx,sy,zw,zh;
 
-			sy = oy + ((zoomy * y + (1<<11)) >> 12);
-			zh = (oy + ((zoomy * (y+1) + (1<<11)) >> 12)) - sy;
+			sy = oy + (zoomy * y + (1<<11));
+			zh = (oy + (zoomy * (y+1) + (1<<11))) - sy;
+			if (zh & 0xfff) zh += (1 << 12);
 
 			for (x = 0;x < w;x++)
 			{
 				INT32 c,fx,fy;
 
-				sx = ox + ((zoomx * x + (1<<11)) >> 12);
-				zw = (ox + ((zoomx * (x+1) + (1<<11)) >> 12)) - sx;
+				sx = ox + (zoomx * x + (1<<11));
+				zw = (ox + (zoomx * (x+1) + (1<<11))) - sx;
+				if (zw & 0xfff) zw += (1 << 12);
+
 				c = code;
 				if (mirrorx)
 				{
@@ -363,17 +355,17 @@ void K053245SpritesRender(INT32 chip)
 				c = ((c & 0x3f) | (code & ~0x3f)) & K053245MaskExp[chip];
 
 				if (shadow) {
-					konami_render_zoom_shadow_tile(gfxdata, c, nBpp[chip], color, sx, sy, fx, fy, 16, 16, zw << 12, zh << 12, pri, 0);
+					konami_render_zoom_shadow_sprite(gfxdata, c, nBpp[chip], color, sx >> 12, sy >> 12, fx, fy, 16, 16, zw, zh, pri, 0);
 					continue;
 				}
 
 				if (zoomx == 0x10000 && zoomy == 0x10000)
 				{
-					konami_draw_16x16_prio_tile(gfxdata, c, nBpp[chip], color, sx, sy, fx, fy, pri);
+					konami_draw_16x16_prio_sprite(gfxdata, c, nBpp[chip], color, sx >> 12, sy >> 12, fx, fy, pri);
 				}
 				else
 				{
-					konami_draw_16x16_priozoom_tile(gfxdata, c, nBpp[chip], color, 0, sx, sy, fx, fy, 16, 16, zw << 12, zh << 12, pri);
+					konami_draw_16x16_priozoom_sprite(gfxdata, c, nBpp[chip], color, 0, sx >> 12, sy >> 12, fx, fy, 16, 16, zw, zh, pri);
 				}
 			}
 		}
@@ -383,32 +375,24 @@ void K053245SpritesRender(INT32 chip)
 void K053245Scan(INT32 nAction)
 {
 	struct BurnArea ba;
-	
+
 	if (nAction & ACB_MEMORY_RAM) {
-		for (INT32 i = 0; i < 2; i++) {
-			if (K053245Ram[i]) {
-				memset(&ba, 0, sizeof(ba));
-				ba.Data	  = K053245Ram[i];
-				ba.nLen	  = 0x800;
-				ba.szName = "K053245 Ram";
-				BurnAcb(&ba);
-
-				ba.Data	  = K053245Buf[i];
-				ba.nLen	  = 0x800;
-				ba.szName = "K053245 Buffer";
-				BurnAcb(&ba);
-			}
-
+		for (INT32 i = 0; i < K053245Active; i++) {
 			memset(&ba, 0, sizeof(ba));
-			ba.Data	  = K053244Regs[i];
-			ba.nLen	  = 0x010;
-			ba.szName = "K053244 Registers";
-			BurnAcb(&ba);	
+			ba.Data	  = K053245Ram[i];
+			ba.nLen	  = 0x800;
+			ba.szName = "K053245 Ram";
+			BurnAcb(&ba);
+
+			ba.Data	  = K053245Buf[i];
+			ba.nLen	  = 0x800;
+			ba.szName = "K053245 Buffer";
+			BurnAcb(&ba);
 		}
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		SCAN_VAR(K053244Bank[0]);
-		SCAN_VAR(K053244Bank[1]);
+		SCAN_VAR(K053244Bank);
+		SCAN_VAR(K053244Regs);
 	}
 }

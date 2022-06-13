@@ -3,12 +3,32 @@
 ################################################################################
 
 /.vs
+.vscode
 /projectfiles/visualstudio-2019/enc_temp_folder
+.DS_Store
+obj/
+._*
+gamelist.txt
+src/dep/generated/
+fbneo
+roms
+joyconfig
+fbneo.ini
+xcuserdata
+project.xcworkspace
+projectfiles/xcode/build
+nvram
+*.nvr
+config/*
+fbneo.dat
 /.idea
 
 # libretro
+/.github
 *.so
 *.o
 src/burner/libretro/ctvmake
 src/burner/libretro/m68kmake
 src/burner/libretro/pgmspritecreate
+!gamelist.txt
+!src/dep/generated/

@@ -48,188 +48,190 @@ static INT32 vblank;
 static INT32 code_mask[2];
 static INT32 video_offsets[2] = { 0, 0 };
 
+static INT32 is_bbmanw = 0;
+
 enum { VECTOR_INIT, YM2151_ASSERT, YM2151_CLEAR, Z80_ASSERT, Z80_CLEAR };
 
 static struct BurnInputInfo p4commonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvJoy4 + 5,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy4 + 5,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	DrvJoy4 + 4,	"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	DrvJoy4 + 3,	"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	DrvJoy4 + 2,	"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	DrvJoy4 + 1,	"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	DrvJoy4 + 3,	"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	DrvJoy4 + 2,	"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	DrvJoy4 + 1,	"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	DrvJoy4 + 0,	"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy4 + 7,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy4 + 6,	"p3 fire 2"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	DrvJoy5 + 5,	"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	DrvJoy5 + 5,	"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	DrvJoy5 + 4,	"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	DrvJoy5 + 3,	"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	DrvJoy5 + 2,	"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	DrvJoy5 + 1,	"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	DrvJoy5 + 3,	"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	DrvJoy5 + 2,	"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	DrvJoy5 + 1,	"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	DrvJoy5 + 0,	"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy5 + 7,	"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy5 + 6,	"p4 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(p4common)
 
 static struct BurnInputInfo p2commonInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(p2common)
 
 static struct BurnInputInfo Quizf1InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 3"	},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 4"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 3"	},
 	{"P2 Button 4",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 4"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Quizf1)
 
 static struct BurnInputInfo Matchit2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy3 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Matchit2)
 
 static struct BurnDIPInfo DynablstDIPList[]=
 {
-	{0x22, 0xff, 0xff, 0xbf, NULL					},
-	{0x23, 0xff, 0xff, 0xff, NULL					},
+	{0x22, 0xff, 0xff, 0xbf, NULL							},
+	{0x23, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x22, 0x01, 0x03, 0x02, "2"					},
-	{0x22, 0x01, 0x03, 0x03, "3"					},
-	{0x22, 0x01, 0x03, 0x01, "4"					},
-	{0x22, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x22, 0x01, 0x03, 0x02, "2"							},
+	{0x22, 0x01, 0x03, 0x03, "3"							},
+	{0x22, 0x01, 0x03, 0x01, "4"							},
+	{0x22, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x22, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x22, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x22, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x22, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x22, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x22, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x22, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x22, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Game Title"				},
-	{0x22, 0x01, 0x10, 0x10, "Dynablaster"				},
-	{0x22, 0x01, 0x10, 0x00, "Bomber Man"				},
+	{0   , 0xfe, 0   ,    2, "Game Title"					},
+	{0x22, 0x01, 0x10, 0x10, "Dynablaster"					},
+	{0x22, 0x01, 0x10, 0x00, "Bomber Man"					},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x22, 0x01, 0x20, 0x00, "No"					},
-	{0x22, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x22, 0x01, 0x20, 0x00, "No"							},
+	{0x22, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x22, 0x01, 0x40, 0x40, "Off"					},
-	{0x22, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x22, 0x01, 0x40, 0x40, "Off"							},
+	{0x22, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x22, 0x01, 0x80, 0x80, "Off"					},
-	{0x22, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x22, 0x01, 0x80, 0x80, "Off"							},
+	{0x22, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x23, 0x01, 0x01, 0x01, "Off"					},
-	{0x23, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x23, 0x01, 0x01, 0x01, "Off"							},
+	{0x23, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    4, "Cabinet"				},
-	{0x23, 0x01, 0x06, 0x04, "2 Player Upright"			},
+	{0   , 0xfe, 0   ,    4, "Cabinet"						},
+	{0x23, 0x01, 0x06, 0x04, "2 Player Upright"				},
 	{0x23, 0x01, 0x06, 0x06, "4 Player Upright A"			},
 	{0x23, 0x01, 0x06, 0x02, "4 Player Upright B"			},
-	{0x23, 0x01, 0x06, 0x00, "Cocktail"				},
+	{0x23, 0x01, 0x06, 0x00, "Cocktail"						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x23, 0x01, 0x08, 0x08, "1"					},
-	{0x23, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x23, 0x01, 0x08, 0x08, "1"							},
+	{0x23, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x23, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -245,59 +247,59 @@ static struct BurnDIPInfo DynablstDIPList[]=
 	{0x23, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x23, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x23, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x23, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x23, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Dynablst)
 
 static struct BurnDIPInfo AtompunkDIPList[]=
 {
-	{0x22, 0xff, 0xff, 0xbf, NULL					},
-	{0x23, 0xff, 0xff, 0xff, NULL					},
+	{0x22, 0xff, 0xff, 0xbf, NULL							},
+	{0x23, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x22, 0x01, 0x03, 0x02, "2"					},
-	{0x22, 0x01, 0x03, 0x03, "3"					},
-	{0x22, 0x01, 0x03, 0x01, "4"					},
-	{0x22, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x22, 0x01, 0x03, 0x02, "2"							},
+	{0x22, 0x01, 0x03, 0x03, "3"							},
+	{0x22, 0x01, 0x03, 0x01, "4"							},
+	{0x22, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x22, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x22, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x22, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x22, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x22, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x22, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x22, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x22, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Unknown"				},
-	{0x22, 0x01, 0x10, 0x10, "Off"					},
-	{0x22, 0x01, 0x10, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Unknown"						},
+	{0x22, 0x01, 0x10, 0x10, "Off"							},
+	{0x22, 0x01, 0x10, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x22, 0x01, 0x20, 0x00, "No"					},
-	{0x22, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x22, 0x01, 0x20, 0x00, "No"							},
+	{0x22, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x22, 0x01, 0x40, 0x40, "Off"					},
-	{0x22, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x22, 0x01, 0x40, 0x40, "Off"							},
+	{0x22, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x22, 0x01, 0x80, 0x80, "Off"					},
-	{0x22, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x22, 0x01, 0x80, 0x80, "Off"							},
+	{0x22, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x23, 0x01, 0x01, 0x01, "Off"					},
-	{0x23, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x23, 0x01, 0x01, 0x01, "Off"							},
+	{0x23, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    4, "Cabinet"				},
-	{0x23, 0x01, 0x06, 0x04, "2 Player Upright"			},
+	{0   , 0xfe, 0   ,    4, "Cabinet"						},
+	{0x23, 0x01, 0x06, 0x04, "2 Player Upright"				},
 	{0x23, 0x01, 0x06, 0x06, "4 Player Upright A"			},
 	{0x23, 0x01, 0x06, 0x02, "4 Player Upright B"			},
-	{0x23, 0x01, 0x06, 0x00, "Cocktail"				},
+	{0x23, 0x01, 0x06, 0x00, "Cocktail"						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x23, 0x01, 0x08, 0x08, "1"					},
-	{0x23, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x23, 0x01, 0x08, 0x08, "1"							},
+	{0x23, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x23, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -313,49 +315,49 @@ static struct BurnDIPInfo AtompunkDIPList[]=
 	{0x23, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x23, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x23, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x23, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x23, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Atompunk)
 
 static struct BurnDIPInfo BombrmanDIPList[]=
 {
-	{0x12, 0xff, 0xff, 0xaf, NULL					},
-	{0x13, 0xff, 0xff, 0xf9, NULL					},
+	{0x12, 0xff, 0xff, 0xaf, NULL							},
+	{0x13, 0xff, 0xff, 0xf9, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x12, 0x01, 0x03, 0x02, "2"					},
-	{0x12, 0x01, 0x03, 0x03, "3"					},
-	{0x12, 0x01, 0x03, 0x01, "4"					},
-	{0x12, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x12, 0x01, 0x03, 0x02, "2"							},
+	{0x12, 0x01, 0x03, 0x03, "3"							},
+	{0x12, 0x01, 0x03, 0x01, "4"							},
+	{0x12, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x12, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x12, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x12, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x12, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x12, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x12, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x12, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x12, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x12, 0x01, 0x20, 0x00, "No"					},
-	{0x12, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x12, 0x01, 0x20, 0x00, "No"							},
+	{0x12, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x12, 0x01, 0x40, 0x40, "Off"					},
-	{0x12, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x12, 0x01, 0x40, 0x40, "Off"							},
+	{0x12, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x12, 0x01, 0x80, 0x80, "Off"					},
-	{0x12, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x12, 0x01, 0x80, 0x80, "Off"							},
+	{0x12, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x13, 0x01, 0x01, 0x01, "Off"					},
-	{0x13, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x13, 0x01, 0x01, 0x01, "Off"							},
+	{0x13, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x13, 0x01, 0x08, 0x08, "1"					},
-	{0x13, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x13, 0x01, 0x08, 0x08, "1"							},
+	{0x13, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x13, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -371,41 +373,41 @@ static struct BurnDIPInfo BombrmanDIPList[]=
 	{0x13, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x13, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x13, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x13, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x13, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Bombrman)
 
 static struct BurnDIPInfo HasamuDIPList[]=
 {
-	{0x12, 0xff, 0xff, 0xbf, NULL					},
-	{0x13, 0xff, 0xff, 0xff, NULL					},
+	{0x12, 0xff, 0xff, 0xbf, NULL							},
+	{0x13, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x12, 0x01, 0x20, 0x00, "No"					},
-	{0x12, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x12, 0x01, 0x20, 0x00, "No"							},
+	{0x12, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x12, 0x01, 0x40, 0x40, "Off"					},
-	{0x12, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x12, 0x01, 0x40, 0x40, "Off"							},
+	{0x12, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x12, 0x01, 0x80, 0x80, "Off"					},
-	{0x12, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x12, 0x01, 0x80, 0x80, "Off"							},
+	{0x12, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x13, 0x01, 0x01, 0x01, "Off"					},
-	{0x13, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x13, 0x01, 0x01, 0x01, "Off"							},
+	{0x13, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Unknown"				},
-	{0x13, 0x01, 0x02, 0x02, "Off"					},
-	{0x13, 0x01, 0x02, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Unknown"						},
+	{0x13, 0x01, 0x02, 0x02, "Off"							},
+	{0x13, 0x01, 0x02, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x13, 0x01, 0x08, 0x08, "1"					},
-	{0x13, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x13, 0x01, 0x08, 0x08, "1"							},
+	{0x13, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x13, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -421,49 +423,49 @@ static struct BurnDIPInfo HasamuDIPList[]=
 	{0x13, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x13, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x13, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x13, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x13, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Hasamu)
 
 static struct BurnDIPInfo RiskchalDIPList[]=
 {
-	{0x12, 0xff, 0xff, 0xbf, NULL					},
-	{0x13, 0xff, 0xff, 0xff, NULL					},
+	{0x12, 0xff, 0xff, 0xbf, NULL							},
+	{0x13, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x12, 0x01, 0x03, 0x02, "2"					},
-	{0x12, 0x01, 0x03, 0x03, "3"					},
-	{0x12, 0x01, 0x03, 0x01, "4"					},
-	{0x12, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x12, 0x01, 0x03, 0x02, "2"							},
+	{0x12, 0x01, 0x03, 0x03, "3"							},
+	{0x12, 0x01, 0x03, 0x01, "4"							},
+	{0x12, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x12, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x12, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x12, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x12, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x12, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x12, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x12, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x12, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x12, 0x01, 0x40, 0x40, "Off"					},
-	{0x12, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x12, 0x01, 0x40, 0x40, "Off"							},
+	{0x12, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x12, 0x01, 0x80, 0x80, "Off"					},
-	{0x12, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x12, 0x01, 0x80, 0x80, "Off"							},
+	{0x12, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x13, 0x01, 0x01, 0x01, "Off"					},
-	{0x13, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x13, 0x01, 0x01, 0x01, "Off"							},
+	{0x13, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Coin Slots"				},
-	{0x13, 0x01, 0x04, 0x04, "Common"				},
-	{0x13, 0x01, 0x04, 0x00, "Separate"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"					},
+	{0x13, 0x01, 0x04, 0x04, "Common"						},
+	{0x13, 0x01, 0x04, 0x00, "Separate"						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x13, 0x01, 0x08, 0x08, "1"					},
-	{0x13, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x13, 0x01, 0x08, 0x08, "1"							},
+	{0x13, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x13, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x13, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -479,59 +481,117 @@ static struct BurnDIPInfo RiskchalDIPList[]=
 	{0x13, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x13, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x13, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x13, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x13, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Riskchal)
 
+static struct BurnDIPInfo DicegameDIPList[]=
+{
+	{0x12, 0xff, 0xff, 0xbf, NULL							},
+	{0x13, 0xff, 0xff, 0xff, NULL							},
+
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x12, 0x01, 0x03, 0x02, "2"							},
+	{0x12, 0x01, 0x03, 0x03, "3"							},
+	{0x12, 0x01, 0x03, 0x01, "4"							},
+	{0x12, 0x01, 0x03, 0x00, "5"							},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x12, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x12, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x12, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x12, 0x01, 0x0c, 0x00, "Hardest"						},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x12, 0x01, 0x40, 0x40, "Off"							},
+	{0x12, 0x01, 0x40, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x12, 0x01, 0x80, 0x80, "Off"							},
+	{0x12, 0x01, 0x80, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x13, 0x01, 0x01, 0x01, "Off"							},
+	{0x13, 0x01, 0x01, 0x00, "On"							},
+
+	{0   , 0xfe, 0   ,    2, "Coin Slots"					},
+	{0x13, 0x01, 0x04, 0x04, "Common"						},
+	{0x13, 0x01, 0x04, 0x00, "Separate"						},
+
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x13, 0x01, 0x08, 0x08, "1"							},
+	{0x13, 0x01, 0x08, 0x00, "2"							},
+
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
+	{0x13, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xd0, "3 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0xe0, "2 Coins 1 Credits"			},
+	{0x13, 0x01, 0xf0, 0x10, "2 Coins to Start/1 to Continue"	},
+	{0x13, 0x01, 0xf0, 0x30, "3 Coins 2 Credits"			},
+	{0x13, 0x01, 0xf0, 0x20, "4 Coins 3 Credits"			},
+	{0x13, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits"			},
+	{0x13, 0x01, 0xf0, 0x40, "2 Coins 3 Credits"			},
+	{0x13, 0x01, 0xf0, 0x90, "1 Coin  2 Credits"			},
+	{0x13, 0x01, 0xf0, 0x80, "1 Coin  3 Credits"			},
+	{0x13, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
+	{0x13, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
+	{0x13, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
+	{0x13, 0x01, 0xf0, 0x00, "Free Play"					},
+};
+
+STDDIPINFO(Dicegame)
+
 static struct BurnDIPInfo BbmanwDIPList[]=
 {
-	{0x22, 0xff, 0xff, 0xbf, NULL					},
-	{0x23, 0xff, 0xff, 0xff, NULL					},
+	{0x22, 0xff, 0xff, 0xbf, NULL							},
+	{0x23, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x22, 0x01, 0x03, 0x02, "2"					},
-	{0x22, 0x01, 0x03, 0x03, "3"					},
-	{0x22, 0x01, 0x03, 0x01, "4"					},
-	{0x22, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x22, 0x01, 0x03, 0x02, "2"							},
+	{0x22, 0x01, 0x03, 0x03, "3"							},
+	{0x22, 0x01, 0x03, 0x01, "4"							},
+	{0x22, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x22, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x22, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x22, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x22, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x22, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x22, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x22, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x22, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Game Title"				},
-	{0x22, 0x01, 0x10, 0x10, "Bomber Man World"			},
+	{0   , 0xfe, 0   ,    2, "Game Title"					},
+	{0x22, 0x01, 0x10, 0x10, "Bomber Man World"				},
 	{0x22, 0x01, 0x10, 0x00, "New Dyna Blaster Global Quest"	},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x22, 0x01, 0x20, 0x00, "No"					},
-	{0x22, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x22, 0x01, 0x20, 0x00, "No"							},
+	{0x22, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x22, 0x01, 0x40, 0x40, "Off"					},
-	{0x22, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x22, 0x01, 0x40, 0x40, "Off"							},
+	{0x22, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x22, 0x01, 0x80, 0x80, "Off"					},
-	{0x22, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x22, 0x01, 0x80, 0x80, "Off"							},
+	{0x22, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x23, 0x01, 0x01, 0x01, "Off"					},
-	{0x23, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x23, 0x01, 0x01, 0x01, "Off"							},
+	{0x23, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    4, "Cabinet"				},
-	{0x23, 0x01, 0x06, 0x04, "2 Player"				},
+	{0   , 0xfe, 0   ,    4, "Cabinet"						},
+	{0x23, 0x01, 0x06, 0x04, "2 Player"						},
 	{0x23, 0x01, 0x06, 0x06, "4 Player Seprate Coins"		},
 	{0x23, 0x01, 0x06, 0x02, "4 Player Shared Coins"		},
 	{0x23, 0x01, 0x06, 0x00, "4 Player 1&2 3&4 Share Coins"		},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x23, 0x01, 0x08, 0x08, "1"					},
-	{0x23, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x23, 0x01, 0x08, 0x08, "1"							},
+	{0x23, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x23, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -547,55 +607,55 @@ static struct BurnDIPInfo BbmanwDIPList[]=
 	{0x23, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x23, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x23, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x23, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x23, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Bbmanw)
 
 static struct BurnDIPInfo BbmanwjDIPList[]=
 {
-	{0x22, 0xff, 0xff, 0xbf, NULL					},
-	{0x23, 0xff, 0xff, 0xff, NULL					},
+	{0x22, 0xff, 0xff, 0xbf, NULL							},
+	{0x23, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x22, 0x01, 0x03, 0x02, "2"					},
-	{0x22, 0x01, 0x03, 0x03, "3"					},
-	{0x22, 0x01, 0x03, 0x01, "4"					},
-	{0x22, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x22, 0x01, 0x03, 0x02, "2"							},
+	{0x22, 0x01, 0x03, 0x03, "3"							},
+	{0x22, 0x01, 0x03, 0x01, "4"							},
+	{0x22, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x22, 0x01, 0x0c, 0x08, "Easy"					},
-	{0x22, 0x01, 0x0c, 0x0c, "Medium"				},
-	{0x22, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x22, 0x01, 0x0c, 0x00, "Hardest"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x22, 0x01, 0x0c, 0x08, "Easy"							},
+	{0x22, 0x01, 0x0c, 0x0c, "Medium"						},
+	{0x22, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x22, 0x01, 0x0c, 0x00, "Hardest"						},
 
-	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x22, 0x01, 0x20, 0x00, "No"					},
-	{0x22, 0x01, 0x20, 0x20, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"				},
+	{0x22, 0x01, 0x20, 0x00, "No"							},
+	{0x22, 0x01, 0x20, 0x20, "Yes"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x22, 0x01, 0x40, 0x40, "Off"					},
-	{0x22, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x22, 0x01, 0x40, 0x40, "Off"							},
+	{0x22, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x22, 0x01, 0x80, 0x80, "Off"					},
-	{0x22, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x22, 0x01, 0x80, 0x80, "Off"							},
+	{0x22, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x23, 0x01, 0x01, 0x01, "Off"					},
-	{0x23, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x23, 0x01, 0x01, 0x01, "Off"							},
+	{0x23, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    4, "Cabinet"				},
-	{0x23, 0x01, 0x06, 0x04, "2 Player"				},
+	{0   , 0xfe, 0   ,    4, "Cabinet"						},
+	{0x23, 0x01, 0x06, 0x04, "2 Player"						},
 	{0x23, 0x01, 0x06, 0x06, "4 Player Seprate Coins"		},
 	{0x23, 0x01, 0x06, 0x02, "4 Player Shared Coins"		},
 	{0x23, 0x01, 0x06, 0x00, "4 Player 1&2 3&4 Share Coins"		},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x23, 0x01, 0x08, 0x08, "1"					},
-	{0x23, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x23, 0x01, 0x08, 0x08, "1"							},
+	{0x23, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x23, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x23, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -611,43 +671,43 @@ static struct BurnDIPInfo BbmanwjDIPList[]=
 	{0x23, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x23, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x23, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x23, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x23, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Bbmanwj)
 
 static struct BurnDIPInfo Quizf1DIPList[]=
 {
-	{0x16, 0xff, 0xff, 0x9f, NULL					},
-	{0x17, 0xff, 0xff, 0xff, NULL					},
+	{0x16, 0xff, 0xff, 0x9f, NULL							},
+	{0x17, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    4, "Lives"				},
-	{0x16, 0x01, 0x03, 0x02, "2"					},
-	{0x16, 0x01, 0x03, 0x03, "3"					},
-	{0x16, 0x01, 0x03, 0x01, "4"					},
-	{0x16, 0x01, 0x03, 0x00, "5"					},
+	{0   , 0xfe, 0   ,    4, "Lives"						},
+	{0x16, 0x01, 0x03, 0x02, "2"							},
+	{0x16, 0x01, 0x03, 0x03, "3"							},
+	{0x16, 0x01, 0x03, 0x01, "4"							},
+	{0x16, 0x01, 0x03, 0x00, "5"							},
 
-	{0   , 0xfe, 0   ,    2, "Input Device"				},
-	{0x16, 0x01, 0x20, 0x20, "Joystick"				},
-	{0x16, 0x01, 0x20, 0x00, "Buttons"				},
+	{0   , 0xfe, 0   ,    2, "Input Device"					},
+	{0x16, 0x01, 0x20, 0x20, "Joystick"						},
+	{0x16, 0x01, 0x20, 0x00, "Buttons"						},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x16, 0x01, 0x40, 0x40, "Off"					},
-	{0x16, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x16, 0x01, 0x40, 0x40, "Off"							},
+	{0x16, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x16, 0x01, 0x80, 0x80, "Off"					},
-	{0x16, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x16, 0x01, 0x80, 0x80, "Off"							},
+	{0x16, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x17, 0x01, 0x01, 0x01, "Off"					},
-	{0x17, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x17, 0x01, 0x01, 0x01, "Off"							},
+	{0x17, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x17, 0x01, 0x08, 0x08, "1"					},
-	{0x17, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x17, 0x01, 0x08, 0x08, "1"							},
+	{0x17, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x17, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x17, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x17, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -663,58 +723,58 @@ static struct BurnDIPInfo Quizf1DIPList[]=
 	{0x17, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x17, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x17, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x17, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x17, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Quizf1)
 
 static struct BurnDIPInfo Matchit2DIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xff, NULL					},
-	{0x15, 0xff, 0xff, 0xff, NULL					},
+	{0x14, 0xff, 0xff, 0xff, NULL							},
+	{0x15, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    2, "Girls Mode"				},
-	{0x14, 0x01, 0x01, 0x00, "Off"					},
-	{0x14, 0x01, 0x01, 0x01, "On"					},
+	{0   , 0xfe, 0   ,    2, "Girls Mode"					},
+	{0x14, 0x01, 0x01, 0x00, "Off"							},
+	{0x14, 0x01, 0x01, 0x01, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "China Tiles"				},
-	{0x14, 0x01, 0x02, 0x02, "Mahjong"				},
-	{0x14, 0x01, 0x02, 0x00, "Alpha-Numeric"			},
+	{0   , 0xfe, 0   ,    2, "China Tiles"					},
+	{0x14, 0x01, 0x02, 0x02, "Mahjong"						},
+	{0x14, 0x01, 0x02, 0x00, "Alpha-Numeric"				},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x14, 0x01, 0x0c, 0x00, "Very Hard"				},
-	{0x14, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x14, 0x01, 0x0c, 0x0c, "Normal"				},
-	{0x14, 0x01, 0x0c, 0x08, "Easy"					},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x14, 0x01, 0x0c, 0x00, "Very Hard"					},
+	{0x14, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x14, 0x01, 0x0c, 0x0c, "Normal"						},
+	{0x14, 0x01, 0x0c, 0x08, "Easy"							},
 
-	{0   , 0xfe, 0   ,    4, "Timer Speed"				},
-	{0x14, 0x01, 0x30, 0x00, "Very Hard"				},
-	{0x14, 0x01, 0x30, 0x10, "Hard"					},
-	{0x14, 0x01, 0x30, 0x30, "Normal"				},
-	{0x14, 0x01, 0x30, 0x20, "Easy"					},
+	{0   , 0xfe, 0   ,    4, "Timer Speed"					},
+	{0x14, 0x01, 0x30, 0x00, "Very Hard"					},
+	{0x14, 0x01, 0x30, 0x10, "Hard"							},
+	{0x14, 0x01, 0x30, 0x30, "Normal"						},
+	{0x14, 0x01, 0x30, 0x20, "Easy"							},
 
-	{0   , 0xfe, 0   ,    2, "Title Screen"				},
-	{0x14, 0x01, 0x40, 0x40, "Match It II"				},
-	{0x14, 0x01, 0x40, 0x00, "Shisensho II"				},
+	{0   , 0xfe, 0   ,    2, "Title Screen"					},
+	{0x14, 0x01, 0x40, 0x40, "Match It II"					},
+	{0x14, 0x01, 0x40, 0x00, "Shisensho II"					},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x14, 0x01, 0x80, 0x80, "Off"					},
-	{0x14, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x14, 0x01, 0x80, 0x80, "Off"							},
+	{0x14, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x15, 0x01, 0x01, 0x01, "Off"					},
-	{0x15, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x15, 0x01, 0x01, 0x01, "Off"							},
+	{0x15, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    3, "Language"				},
-	{0x15, 0x01, 0x06, 0x06, "English"				},
-	{0x15, 0x01, 0x06, 0x04, "German"				},
-	{0x15, 0x01, 0x06, 0x02, "Korean"				},
+	{0   , 0xfe, 0   ,    3, "Language"						},
+	{0x15, 0x01, 0x06, 0x06, "English"						},
+	{0x15, 0x01, 0x06, 0x04, "German"						},
+	{0x15, 0x01, 0x06, 0x02, "Korean"						},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x15, 0x01, 0x08, 0x08, "1"					},
-	{0x15, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x15, 0x01, 0x08, 0x08, "1"							},
+	{0x15, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x15, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x15, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x15, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -730,49 +790,49 @@ static struct BurnDIPInfo Matchit2DIPList[]=
 	{0x15, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x15, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x15, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x15, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x15, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Matchit2)
 
 static struct BurnDIPInfo Shisen2DIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xbf, NULL					},
-	{0x15, 0xff, 0xff, 0xff, NULL					},
+	{0x14, 0xff, 0xff, 0xbf, NULL							},
+	{0x15, 0xff, 0xff, 0xff, NULL							},
 
-	{0   , 0xfe, 0   ,    2, "Girls Mode"				},
-	{0x14, 0x01, 0x01, 0x00, "Off"					},
-	{0x14, 0x01, 0x01, 0x01, "On"					},
+	{0   , 0xfe, 0   ,    2, "Girls Mode"					},
+	{0x14, 0x01, 0x01, 0x00, "Off"							},
+	{0x14, 0x01, 0x01, 0x01, "On"							},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x14, 0x01, 0x0c, 0x00, "Very Hard"				},
-	{0x14, 0x01, 0x0c, 0x04, "Hard"					},
-	{0x14, 0x01, 0x0c, 0x0c, "Normal"				},
-	{0x14, 0x01, 0x0c, 0x08, "Easy"					},
+	{0   , 0xfe, 0   ,    4, "Difficulty"					},
+	{0x14, 0x01, 0x0c, 0x00, "Very Hard"					},
+	{0x14, 0x01, 0x0c, 0x04, "Hard"							},
+	{0x14, 0x01, 0x0c, 0x0c, "Normal"						},
+	{0x14, 0x01, 0x0c, 0x08, "Easy"							},
 
-	{0   , 0xfe, 0   ,    4, "Timer Speed"				},
-	{0x14, 0x01, 0x30, 0x00, "Very Hard"				},
-	{0x14, 0x01, 0x30, 0x10, "Hard"					},
-	{0x14, 0x01, 0x30, 0x30, "Normal"				},
-	{0x14, 0x01, 0x30, 0x20, "Easy"					},
+	{0   , 0xfe, 0   ,    4, "Timer Speed"					},
+	{0x14, 0x01, 0x30, 0x00, "Very Hard"					},
+	{0x14, 0x01, 0x30, 0x10, "Hard"							},
+	{0x14, 0x01, 0x30, 0x30, "Normal"						},
+	{0x14, 0x01, 0x30, 0x20, "Easy"							},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x14, 0x01, 0x40, 0x40, "Off"					},
-	{0x14, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"					},
+	{0x14, 0x01, 0x40, 0x40, "Off"							},
+	{0x14, 0x01, 0x40, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x14, 0x01, 0x80, 0x80, "Off"					},
-	{0x14, 0x01, 0x80, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Service Mode"					},
+	{0x14, 0x01, 0x80, 0x80, "Off"							},
+	{0x14, 0x01, 0x80, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x15, 0x01, 0x01, 0x01, "Off"					},
-	{0x15, 0x01, 0x01, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"					},
+	{0x15, 0x01, 0x01, 0x01, "Off"							},
+	{0x15, 0x01, 0x01, 0x00, "On"							},
 
-	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
-	{0x15, 0x01, 0x08, 0x08, "1"					},
-	{0x15, 0x01, 0x08, 0x00, "2"					},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"					},
+	{0x15, 0x01, 0x08, 0x08, "1"							},
+	{0x15, 0x01, 0x08, 0x00, "2"							},
 
-	{0   , 0xfe, 0   ,    16, "Coinage"				},
+	{0   , 0xfe, 0   ,    16, "Coinage"						},
 	{0x15, 0x01, 0xf0, 0xa0, "6 Coins 1 Credits"			},
 	{0x15, 0x01, 0xf0, 0xb0, "5 Coins 1 Credits"			},
 	{0x15, 0x01, 0xf0, 0xc0, "4 Coins 1 Credits"			},
@@ -788,7 +848,7 @@ static struct BurnDIPInfo Shisen2DIPList[]=
 	{0x15, 0x01, 0xf0, 0x70, "1 Coin  4 Credits"			},
 	{0x15, 0x01, 0xf0, 0x60, "1 Coin  5 Credits"			},
 	{0x15, 0x01, 0xf0, 0x50, "1 Coin  6 Credits"			},
-	{0x15, 0x01, 0xf0, 0x00, "Free Play"				},
+	{0x15, 0x01, 0xf0, 0x00, "Free Play"					},
 };
 
 STDDIPINFO(Shisen2)
@@ -903,6 +963,13 @@ static UINT8 __fastcall m90_main_read_port(UINT32 port)
 
 static void __fastcall m90_sound_write_port(UINT16 port, UINT8 data)
 {
+
+	if (is_bbmanw) {
+		switch (port & 0xff) {
+			case 0x00: port = 0x10; break;
+			case 0x01: port = 0x11; break;
+		}
+	}
 	switch (port & 0xff)
 	{
 		case 0x00:
@@ -913,6 +980,18 @@ static void __fastcall m90_sound_write_port(UINT16 port, UINT8 data)
 		case 0x01:
 		case 0x41: // bbmanw
 			BurnYM2151WriteRegister(data);
+		return;
+
+		case 0x10: // bbmanw
+			sample_address >>= 4;
+			sample_address = (sample_address & 0xff00) | (data << 0);
+			sample_address <<= 4;
+		return;
+
+		case 0x11: // bbmanw
+			sample_address >>= 4;
+			sample_address = (sample_address & 0x00ff) | (data << 8);
+			sample_address <<= 4;
 		return;
 
 		case 0x80:
@@ -984,6 +1063,8 @@ static INT32 DrvDoReset()
 	DACReset();
 
 	sample_address = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1140,7 +1221,7 @@ static INT32 DrvInit(INT32 codesize, INT32 gfxlen, INT32 samples, INT32 bank, IN
 	BurnYM2151SetAllRoutes(0.15, BURN_SND_ROUTE_BOTH);
 
 	DACInit(0, 0, 1, ZetTotalCycles, 3579545);
-	DACSetRoute(0, 0.10, BURN_SND_ROUTE_BOTH);
+	DACSetRoute(0, 0.20, BURN_SND_ROUTE_BOTH);
 
 	code_mask[0] = ((gfxlen * 2) - 1) / (8 * 8);
 	code_mask[1] = ((gfxlen * 2) - 1) / (16 * 16);
@@ -1163,6 +1244,8 @@ static INT32 DrvExit()
 	BurnFree(AllMem);
 
 	video_offsets[0] = video_offsets[1] = 0;
+
+	is_bbmanw = 0;
 
 	return 0;
 }
@@ -1365,7 +1448,7 @@ static INT32 DrvFrame()
 	}
 
 	compile_inputs();
-	
+
 	INT32 nInterleave = 128; // nmi pulses for sound cpu
 	INT32 nCyclesTotal[2];
 	INT32 nCyclesDone[2];
@@ -1375,7 +1458,7 @@ static INT32 DrvFrame()
 	nCyclesTotal[0] = (INT32)((INT64)(8000000 / 60) * nBurnCPUSpeedAdjust / 0x0100);
 	nCyclesTotal[1] = (INT32)((INT64)(3579545 / 60) * nBurnCPUSpeedAdjust / 0x0100);
 	nCyclesDone[0] = nCyclesDone[1] = 0;
-	
+
 	VezNewFrame();
 	ZetNewFrame();
 
@@ -1386,18 +1469,30 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += VezRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Vez);
 
 		if (i == 120)
 		{
+			if (pBurnDraw) {
+				DrvDraw();
+			}
+
 			vblank = 0x80;
 			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP0, 0xff, CPU_IRQSTATUS_ACK);
 			VezRun(0);
 			VezSetIRQLineAndVector(NEC_INPUT_LINE_INTP0, 0xff, CPU_IRQSTATUS_NONE);
 		}
 
-		nCyclesDone[1] += ZetRun(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
-		ZetNmi();
+		CPU_RUN(1, Zet);
+
+		if (is_bbmanw) {
+			if (DrvSndROM[sample_address & 0x3ffff]) {
+				DACSignedWrite(0, DrvSndROM[sample_address & 0x3ffff]);
+				sample_address = (sample_address + 1) & 0x3ffff;
+			}
+		} else {
+			ZetNmi();
+		}
 
 		if (pBurnSoundOut && i&1) {
 			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
@@ -1418,10 +1513,6 @@ static INT32 DrvFrame()
 
 	VezClose();
 	ZetClose();
-
-	if (pBurnDraw) {
-		DrvDraw();
-	}
 
 	return 0;
 }
@@ -1485,7 +1576,7 @@ struct BurnDriver BurnDrvHasamu = {
 	"hasamu", NULL, NULL, NULL, "1991",
 	"Hasamu (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAHJONG, 0,
 	NULL, hasamuRomInfo, hasamuRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, HasamuDIPInfo,
 	hasamuInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	384, 240, 4, 3
@@ -1522,7 +1613,7 @@ struct BurnDriver BurnDrvDynablst = {
 	"dynablst", NULL, NULL, NULL, "1991",
 	"Dynablaster / Bomber Man\0", NULL, "Irem (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, dynablstRomInfo, dynablstRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, DynablstDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1552,7 +1643,7 @@ struct BurnDriver BurnDrvBombrman = {
 	"bombrman", "dynablst", NULL, NULL, "1991",
 	"Bomber Man (Japan)\0", NULL, "Irem (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bombrmanRomInfo, bombrmanRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, BombrmanDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1572,7 +1663,7 @@ static struct BurnRomInfo atompunkRomDesc[] = {
 	{ "bbm-c2.ic68",	0x40000, 0x0700d406, 3 | BRF_GRA },           //  5
 	{ "bbm-c3.ic69",	0x40000, 0x3c3613af, 3 | BRF_GRA },           //  6
 
-	{ "bbm-v0.ic20",	0x20000, 0x0fa803fe, 4 | BRF_SND },           //  7 Samples
+	{ "bbm-v0.20",		0x20000, 0x0fa803fe, 4 | BRF_SND },           //  7 Samples
 };
 
 STD_ROM_PICK(atompunk)
@@ -1582,7 +1673,7 @@ struct BurnDriver BurnDrvAtompunk = {
 	"atompunk", "dynablst", NULL, NULL, "1991",
 	"Atomic Punk (US)\0", NULL, "Irem America (licensed from Hudson Soft)", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, atompunkRomInfo, atompunkRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, AtompunkDIPInfo,
 	dynablstInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1612,6 +1703,16 @@ static INT32 bbmanwInit()
 {
 	video_offsets[0] = 80;
 	video_offsets[1] = 136;
+	is_bbmanw = 1;
+
+	return DrvInit(0x80000, 0x100000, 0x20000, 0, 0, dynablaster_decryption_table);
+}
+
+static INT32 bbmanwjaInit()
+{
+	video_offsets[0] = 80;
+	video_offsets[1] = 136;
+
 	return DrvInit(0x80000, 0x100000, 0x20000, 0, 0, dynablaster_decryption_table);
 }
 
@@ -1619,7 +1720,7 @@ struct BurnDriver BurnDrvBbmanw = {
 	"bbmanw", NULL, NULL, NULL, "1992",
 	"Bomber Man World / New Dyna Blaster - Global Quest\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwRomInfo, bbmanwRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1649,7 +1750,7 @@ struct BurnDriver BurnDrvBbmanwj = {
 	"bbmanwj", "bbmanw", NULL, NULL, "1992",
 	"Bomber Man World (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwjRomInfo, bbmanwjRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1679,9 +1780,9 @@ struct BurnDriver BurnDrvBbmanwja = {
 	"bbmanwja", "bbmanw", NULL, NULL, "1992",
 	"Bomber Man World (Japan, revised sound hardware)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, bbmanwjaRomInfo, bbmanwjaRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
-	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	bbmanwjaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
 };
 
@@ -1709,7 +1810,7 @@ struct BurnDriver BurnDrvNewapunk = {
 	"newapunk", "bbmanw", NULL, NULL, "1992",
 	"New Atomic Punk - Global Quest (US)\0", NULL, "Irem America", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_MAZE, 0,
 	NULL, newapunkRomInfo, newapunkRomName, NULL, NULL, NULL, NULL, p4commonInputInfo, BbmanwjDIPInfo,
 	bbmanwInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1787,7 +1888,7 @@ struct BurnDriver BurnDrvRiskchal = {
 	"riskchal", NULL, NULL, NULL, "1993",
 	"Risky Challenge\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
 	NULL, riskchalRomInfo, riskchalRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, RiskchalDIPInfo,
 	riskchalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1817,7 +1918,7 @@ struct BurnDriver BurnDrvGussun = {
 	"gussun", "riskchal", NULL, NULL, "1993",
 	"Gussun Oyoyo (Japan)\0", NULL, "Irem", "Irem M90",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
 	NULL, gussunRomInfo, gussunRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, RiskchalDIPInfo,
 	riskchalInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	320, 240, 4, 3
@@ -1884,4 +1985,41 @@ struct BurnDriver BurnDrvShisen2 = {
 	NULL, shisen2RomInfo, shisen2RomName, NULL, NULL, NULL, NULL, Matchit2InputInfo, Shisen2DIPInfo,
 	matchit2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	384, 256, 4, 3
+};
+
+// Dice - The Dice Game!
+
+static struct BurnRomInfo dicegameRomDesc[] = {
+	{ "dice-p1.ic61",	0x20000, 0x8f2257d8, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "dice-p0.ic65",	0x20000, 0x9c191d18, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "dice-sp.ic23",	0x20000, 0x73e8796e, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
+
+	{ "dice-c0.ic66",	0x20000, 0xa1eda342, 3 | BRF_GRA },           //  3 Tiles and sprites
+	{ "dice-c1.ic67",	0x20000, 0x20850a15, 3 | BRF_GRA },           //  4
+	{ "dice-c2.ic68",	0x20000, 0x6c39915f, 3 | BRF_GRA },           //  5
+	{ "dice-c3.ic69",	0x20000, 0x81d58e68, 3 | BRF_GRA },           //  6
+
+	{ "dice-v0.ic20",	0x20000, 0x04dc9196, 4 | BRF_SND },           //  7 Samples
+};
+
+STD_ROM_PICK(dicegame)
+STD_ROM_FN(dicegame)
+
+static INT32 DicegameInit()
+{
+	video_offsets[0] = 80;
+	video_offsets[1] = 136;
+
+	return DrvInit(0x40000, 0x80000, 0x20000, 0, 0, NULL);
+}
+
+struct BurnDriver BurnDrvDicegame = {
+	"dicegame", NULL, NULL, NULL, "199?",
+	"Dice - The Dice Game!\0", NULL, "bootleg (Tuning)", "Irem M90",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_IREM_M90, GBF_PUZZLE, 0,
+	NULL, dicegameRomInfo, dicegameRomName, NULL, NULL, NULL, NULL, p2commonInputInfo, DicegameDIPInfo,
+	DicegameInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	320, 240, 4, 3
 };

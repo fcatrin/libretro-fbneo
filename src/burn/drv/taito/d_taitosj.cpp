@@ -212,26 +212,27 @@ static struct BurnInputInfo DualStickInputList[] = {
 	{"Coin 2",				BIT_DIGITAL,	DrvJoy3 + 0,	"p2 coin"	},
 	{"Coin 3",				BIT_DIGITAL,	DrvJoy4 + 4,	"p3 coin"	},
 	{"P1 Start",			BIT_DIGITAL,	DrvJoy3 + 6,	"p1 start"	},
-	{"P1 Leftstick Up",		BIT_DIGITAL,	DrvJoy4 + 3,	"p1 up"		},
-	{"P1 Leftstick Down",	BIT_DIGITAL,	DrvJoy4 + 2,	"p1 down"	},
-	{"P1 Leftstick Left",	BIT_DIGITAL,	DrvJoy4 + 0,	"p1 left"	},
-	{"P1 Leftstick Right",	BIT_DIGITAL,	DrvJoy4 + 1,	"p1 right"	},
-	{"P1 Rightstick Up",	BIT_DIGITAL,	DrvJoy1 + 3,	"p3 up"		},
-	{"P1 Rightstick Down",	BIT_DIGITAL,	DrvJoy1 + 2,	"p3 down"	},
-	{"P1 Rightstick Left",	BIT_DIGITAL,	DrvJoy1 + 0,	"p3 left"	},
-	{"P1 Rightstick Right",	BIT_DIGITAL,	DrvJoy1 + 1,	"p3 right"	},
+
+	{"P1 Leftstick Up",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 up"		},
+	{"P1 Leftstick Down",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 down"	},
+	{"P1 Leftstick Left",	BIT_DIGITAL,	DrvJoy1 + 0,	"p1 left"	},
+	{"P1 Leftstick Right",	BIT_DIGITAL,	DrvJoy1 + 1,	"p1 right"	},
+	{"P1 Rightstick Up",	BIT_DIGITAL,	DrvJoy4 + 3,	"p1 up 2"	},
+	{"P1 Rightstick Down",	BIT_DIGITAL,	DrvJoy4 + 2,	"p1 down 2"	},
+	{"P1 Rightstick Left",	BIT_DIGITAL,	DrvJoy4 + 0,	"p1 left 2"	},
+	{"P1 Rightstick Right",	BIT_DIGITAL,	DrvJoy4 + 1,	"p1 right 2"},
 	{"P1 Button 1",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",			BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
 	{"P2 Start",			BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"	},
-	{"P2 Leftstick Up",		BIT_DIGITAL,	DrvJoy5 + 3,	"p2 up"		},
-	{"P2 Leftstick Down",	BIT_DIGITAL,	DrvJoy5 + 2,	"p2 down"	},
-	{"P2 Leftstick Left",	BIT_DIGITAL,	DrvJoy5 + 0,	"p2 left"	},
-	{"P2 Leftstick Right",	BIT_DIGITAL,	DrvJoy5 + 1,	"p2 right"	},
-	{"P2 Rightstick Up",	BIT_DIGITAL,	DrvJoy2 + 3,	"p4 up"		},
-	{"P2 Rightstick Down",	BIT_DIGITAL,	DrvJoy2 + 2,	"p4 down"	},
-	{"P2 Rightstick Left",	BIT_DIGITAL,	DrvJoy2 + 0,	"p4 left"	},
-	{"P2 Rightstick Right",	BIT_DIGITAL,	DrvJoy2 + 1,	"p4 right"	},
+	{"P2 Leftstick Up",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 up"		},
+	{"P2 Leftstick Down",	BIT_DIGITAL,	DrvJoy2 + 2,	"p2 down"	},
+	{"P2 Leftstick Left",	BIT_DIGITAL,	DrvJoy2 + 0,	"p2 left"	},
+	{"P2 Leftstick Right",	BIT_DIGITAL,	DrvJoy2 + 1,	"p2 right"	},
+	{"P2 Rightstick Up",	BIT_DIGITAL,	DrvJoy5 + 3,	"p2 up 2"	},
+	{"P2 Rightstick Down",	BIT_DIGITAL,	DrvJoy5 + 2,	"p2 down 2"	},
+	{"P2 Rightstick Left",	BIT_DIGITAL,	DrvJoy5 + 0,	"p2 left 2"	},
+	{"P2 Rightstick Right",	BIT_DIGITAL,	DrvJoy5 + 1,	"p2 right 2"},
 	{"P2 Button 1",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",			BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
@@ -370,11 +371,11 @@ static struct BurnDIPInfo SpacecrDIPList[]=
 	{0x10, 0x01, 0x20, 0x00, "No"					},
 	{0x10, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
+	{0   , 0xfe, 0   ,    2, "Infinite Lives"		},
 	{0x10, 0x01, 0x40, 0x40, "Off"					},
 	{0x10, 0x01, 0x40, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x10, 0x01, 0x80, 0x80, "A and B"				},
 	{0x10, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -478,11 +479,11 @@ static struct BurnDIPInfo JunglekDIPList[]=
 	{0x12, 0x01, 0x20, 0x00, "No"					},
 	{0x12, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Infinite Lives"		},
-	{0x12, 0x01, 0x40, 0x40, "No"					},
-	{0x12, 0x01, 0x40, 0x00, "Yes"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x12, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x12, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x12, 0x01, 0x80, 0x80, "A and B"				},
 	{0x12, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -540,11 +541,11 @@ static struct BurnDIPInfo PiratpetDIPList[]=
 	{0x12, 0x01, 0x20, 0x00, "No"					},
 	{0x12, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Free Game (Cheat)"	},
+	{0   , 0xfe, 0   ,    2, "Infinite Lives"		},
 	{0x12, 0x01, 0x40, 0x40, "No"					},
 	{0x12, 0x01, 0x40, 0x00, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x12, 0x01, 0x80, 0x80, "A and B"				},
 	{0x12, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -563,13 +564,13 @@ static struct BurnDIPInfo AlpineDIPList[]=
 	{0x0c, 0x01, 0x03, 0x02, "1000-2500"			},
 	{0x0c, 0x01, 0x03, 0x03, "2000-4000"			},
 
-	{0   , 0xfe, 0   ,    0, "Time"					},
+	{0   , 0xfe, 0   ,    4, "Game Time"			},
 	{0x0c, 0x01, 0x18, 0x00, "1:00"					},
 	{0x0c, 0x01, 0x18, 0x08, "1:30"					},
 	{0x0c, 0x01, 0x18, 0x10, "2:00"					},
 	{0x0c, 0x01, 0x18, 0x18, "2:30"					},
 
-	{0   , 0xfe, 0   ,    4, "Race End Time Bonus"	},
+	{0   , 0xfe, 0   ,    2, "End of Race Time Bonus"	},
 	{0x0c, 0x01, 0x20, 0x20, "0:10"					},
 	{0x0c, 0x01, 0x20, 0x00, "0:20"					},
 
@@ -583,31 +584,31 @@ static struct BurnDIPInfo AlpineDIPList[]=
 
 	COMMON_COIN_DIPS(0x0d)
 
-	{0   , 0xfe, 0   ,    16, "1st Extended Time"	},
-	{0x0e, 0x01, 0x03, 0x00, "10k"					},
-	{0x0e, 0x01, 0x03, 0x01, "15k"					},
-	{0x0e, 0x01, 0x03, 0x02, "20k"					},
-	{0x0e, 0x01, 0x03, 0x03, "25k"					},
+	{0   , 0xfe, 0   ,    4, "1st Extended Time"	},
+	{0x0e, 0x01, 0x03, 0x00, "10000"				},
+	{0x0e, 0x01, 0x03, 0x01, "15000"				},
+	{0x0e, 0x01, 0x03, 0x02, "20000"				},
+	{0x0e, 0x01, 0x03, 0x03, "25000"				},
 
-	{0   , 0xfe, 0   ,    4, "Extended Time Every"	},
-	{0x0e, 0x01, 0x1c, 0x00, "5k"					},
-	{0x0e, 0x01, 0x1c, 0x04, "6k"					},
-	{0x0e, 0x01, 0x1c, 0x08, "7k"					},
-	{0x0e, 0x01, 0x1c, 0x0c, "8k"					},
-	{0x0e, 0x01, 0x1c, 0x10, "9k"					},
-	{0x0e, 0x01, 0x1c, 0x14, "10k"					},
-	{0x0e, 0x01, 0x1c, 0x18, "11k"					},
-	{0x0e, 0x01, 0x1c, 0x1c, "12k"					},
+	{0   , 0xfe, 0   ,    8, "Extended Time Every"	},
+	{0x0e, 0x01, 0x1c, 0x00, "5000"					},
+	{0x0e, 0x01, 0x1c, 0x04, "6000"					},
+	{0x0e, 0x01, 0x1c, 0x08, "7000"					},
+	{0x0e, 0x01, 0x1c, 0x0c, "8000"					},
+	{0x0e, 0x01, 0x1c, 0x10, "9000"					},
+	{0x0e, 0x01, 0x1c, 0x14, "10000"				},
+	{0x0e, 0x01, 0x1c, 0x18, "11000"				},
+	{0x0e, 0x01, 0x1c, 0x1c, "12000"				},
 
-	{0   , 0xfe, 0   ,    8, "Year Display"			},
+	{0   , 0xfe, 0   ,    2, "Year Display"			},
 	{0x0e, 0x01, 0x20, 0x00, "No"					},
 	{0x0e, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x0e, 0x01, 0x40, 0x40, "Off"					},
-	{0x0e, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x0e, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x0e, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x0e, 0x01, 0x80, 0x80, "A and B"				},
 	{0x0e, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -626,7 +627,7 @@ static struct BurnDIPInfo AlpineaDIPList[]=
 	{0x0c, 0x01, 0x03, 0x02, "1000-2500"			},
 	{0x0c, 0x01, 0x03, 0x03, "2000-4000"			},
 
-	{0   , 0xfe, 0   ,    0, "Time"					},
+	{0   , 0xfe, 0   ,    4, "Game Time"			},
 	{0x0c, 0x01, 0x18, 0x00, "1:00"					},
 	{0x0c, 0x01, 0x18, 0x08, "1:30"					},
 	{0x0c, 0x01, 0x18, 0x10, "2:00"					},
@@ -636,7 +637,7 @@ static struct BurnDIPInfo AlpineaDIPList[]=
 	{0x0c, 0x01, 0x20, 0x20, "Off"					},
 	{0x0c, 0x01, 0x20, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    4, "Flip Screen"			},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"			},
 	{0x0c, 0x01, 0x40, 0x40, "Off"					},
 	{0x0c, 0x01, 0x40, 0x00, "On"					},
 
@@ -646,31 +647,31 @@ static struct BurnDIPInfo AlpineaDIPList[]=
 
 	COMMON_COIN_DIPS(0x0d)
 
-	{0   , 0xfe, 0   ,    16, "1st Extended Time"	},
-	{0x0e, 0x01, 0x03, 0x00, "10k"					},
-	{0x0e, 0x01, 0x03, 0x01, "15k"					},
-	{0x0e, 0x01, 0x03, 0x02, "20k"					},
-	{0x0e, 0x01, 0x03, 0x03, "25k"					},
+	{0   , 0xfe, 0   ,    4, "1st Extended Time"	},
+	{0x0e, 0x01, 0x03, 0x00, "10000"				},
+	{0x0e, 0x01, 0x03, 0x01, "15000"				},
+	{0x0e, 0x01, 0x03, 0x02, "20000"				},
+	{0x0e, 0x01, 0x03, 0x03, "25000"				},
 
-	{0   , 0xfe, 0   ,    4, "Extended Time Every"	},
-	{0x0e, 0x01, 0x1c, 0x00, "5k"					},
-	{0x0e, 0x01, 0x1c, 0x04, "6k"					},
-	{0x0e, 0x01, 0x1c, 0x08, "7k"					},
-	{0x0e, 0x01, 0x1c, 0x0c, "8k"					},
-	{0x0e, 0x01, 0x1c, 0x10, "9k"					},
-	{0x0e, 0x01, 0x1c, 0x14, "10k"					},
-	{0x0e, 0x01, 0x1c, 0x18, "11k"					},
-	{0x0e, 0x01, 0x1c, 0x1c, "12k"					},
+	{0   , 0xfe, 0   ,    8, "Extended Time Every"	},
+	{0x0e, 0x01, 0x1c, 0x00, "5000"					},
+	{0x0e, 0x01, 0x1c, 0x04, "6000"					},
+	{0x0e, 0x01, 0x1c, 0x08, "7000"					},
+	{0x0e, 0x01, 0x1c, 0x0c, "8000"					},
+	{0x0e, 0x01, 0x1c, 0x10, "9000"					},
+	{0x0e, 0x01, 0x1c, 0x14, "10000"				},
+	{0x0e, 0x01, 0x1c, 0x18, "11000"				},
+	{0x0e, 0x01, 0x1c, 0x1c, "12000"				},
 
-	{0   , 0xfe, 0   ,    8, "Year Display"			},
+	{0   , 0xfe, 0   ,    2, "Year Display"			},
 	{0x0e, 0x01, 0x20, 0x00, "No"					},
 	{0x0e, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x0e, 0x01, 0x40, 0x40, "Off"					},
-	{0x0e, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x0e, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x0e, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x0e, 0x01, 0x80, 0x80, "A and B"				},
 	{0x0e, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -711,11 +712,11 @@ static struct BurnDIPInfo TimetunlDIPList[]=
 	{0x0e, 0x01, 0x20, 0x00, "No"					},
 	{0x0e, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x0e, 0x01, 0x40, 0x40, "Off"					},
-	{0x0e, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x0e, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x0e, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x0e, 0x01, 0x80, 0x80, "A and B"				},
 	{0x0e, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -768,11 +769,11 @@ static struct BurnDIPInfo ElevatorDIPList[]=
 	{0x14, 0x01, 0x20, 0x00, "No"					},
 	{0x14, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"					},
-	{0x14, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x14, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x14, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x14, 0x01, 0x80, 0x80, "A and B"				},
 	{0x14, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -789,7 +790,7 @@ static struct BurnDIPInfo WaterskiDIPList[]=
 	{0x0e, 0x01, 0x04, 0x04, "Off"					},
 	{0x0e, 0x01, 0x04, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    4, "Time"					},
+	{0   , 0xfe, 0   ,    4, "Game Time"			},
 	{0x0e, 0x01, 0x18, 0x00, "2:00"					},
 	{0x0e, 0x01, 0x18, 0x08, "2:10"					},
 	{0x0e, 0x01, 0x18, 0x10, "2:20"					},
@@ -813,11 +814,11 @@ static struct BurnDIPInfo WaterskiDIPList[]=
 	{0x10, 0x01, 0x20, 0x00, "No"					},
 	{0x10, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x10, 0x01, 0x40, 0x40, "Off"					},
-	{0x10, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x10, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x10, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x10, 0x01, 0x80, 0x80, "A and B"				},
 	{0x10, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -856,11 +857,11 @@ static struct BurnDIPInfo BioatackDIPList[]=
 	{0x12, 0x01, 0x20, 0x00, "No"					},
 	{0x12, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x12, 0x01, 0x40, 0x40, "Off"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x12, 0x01, 0x40, 0x40, "No Hit"				},
 	{0x12, 0x01, 0x40, 0x00, "On"					},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x12, 0x01, 0x80, 0x80, "A and B"				},
 	{0x12, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -911,11 +912,11 @@ static struct BurnDIPInfo FrontlinDIPList[]=
 	{0x1d, 0x01, 0x20, 0x00, "No"					},
 	{0x1d, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x1d, 0x01, 0x40, 0x40, "Off"					},
-	{0x1d, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x1d, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x1d, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x1d, 0x01, 0x80, 0x80, "A and B"				},
 	{0x1d, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -958,11 +959,11 @@ static struct BurnDIPInfo WwesternDIPList[]=
 
 	COMMON_COIN_DIPS(0x1c)
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x1d, 0x01, 0x40, 0x40, "Off"					},
-	{0x1d, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x1d, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x1d, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x1d, 0x01, 0x80, 0x80, "A and B"				},
 	{0x1d, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -1013,11 +1014,11 @@ static struct BurnDIPInfo TinstarDIPList[]=
 	{0x1d, 0x01, 0x20, 0x00, "No"					},
 	{0x1d, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x1d, 0x01, 0x40, 0x40, "Off"					},
-	{0x1d, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x1d, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x1d, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x1d, 0x01, 0x80, 0x80, "A and B"				},
 	{0x1d, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -1054,11 +1055,11 @@ static struct BurnDIPInfo SfposeidDIPList[]=
 	{0x14, 0x01, 0x20, 0x00, "No"					},
 	{0x14, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"					},
-	{0x14, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x14, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x14, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x14, 0x01, 0x80, 0x80, "A and B"				},
 	{0x14, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -1097,11 +1098,11 @@ static struct BurnDIPInfo HwraceDIPList[]=
 	{0x14, 0x01, 0x20, 0x00, "No"					},
 	{0x14, 0x01, 0x20, 0x20, "Yes"					},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x14, 0x01, 0x40, 0x40, "Off"					},
-	{0x14, 0x01, 0x40, 0x00, "On"					},
+	{0   , 0xfe, 0   ,    2, "Hit Detection"		},
+	{0x14, 0x01, 0x40, 0x40, "Normal Game"			},
+	{0x14, 0x01, 0x40, 0x00, "No Hit"				},
 
-	{0   , 0xfe, 0   ,    2, "Coinage"				},
+	{0   , 0xfe, 0   ,    2, "Coin Slots"			},
 	{0x14, 0x01, 0x80, 0x80, "A and B"				},
 	{0x14, 0x01, 0x80, 0x00, "A only"				},
 };
@@ -1159,6 +1160,16 @@ static void ram_decode(INT32 offset)
 	}
 }
 
+static void sync_mcu()
+{
+	if (has_mcu) {
+		INT32 cyc = (ZetTotalCycles(0) * (3000000 / 4) / 4000000) - m6805TotalCycles();
+		if (cyc > 0) {
+			m6805Run(cyc);
+		}
+	}
+}
+
 static void bankswitch(INT32 data)
 {
 	rom_bank = data;
@@ -1193,7 +1204,7 @@ static void __fastcall taitosj_main_write(UINT16 address, UINT8 data)
 		case 0x8800:
 		{
 			if (has_mcu == 0) return;
-
+			sync_mcu();
 			zready = 1;
 			m68705SetIrqLine(0, 1);
 			fromz80 = data;
@@ -1283,11 +1294,13 @@ static UINT8 __fastcall taitosj_main_read(UINT16 address)
 	switch (address)
 	{
 		case 0x8800:
+			sync_mcu();
 			zaccept = 1;
 			return toz80;
 
 		case 0x8801:
 			if (has_mcu) {
+				sync_mcu();
 				return ~((zready << 0) | (zaccept << 1));
 			}
 			return 0xff;
@@ -1702,12 +1715,7 @@ static INT32 DrvLoadRoms()
 
 static INT32 CommonInit(INT32 coinstate, INT32 charramxor, INT32 kikstart)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (DrvLoadRoms()) return 1;
 
@@ -1806,7 +1814,7 @@ static INT32 DrvExit()
 	AY8910Exit(3);
 	DACExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	input2_xor = 0;
 	has_mcu = 0;
@@ -2436,12 +2444,12 @@ static INT32 DrvFrame()
 
 		if (has_mcu) {
 			ZetOpen(0);
-			CPU_RUN(2, m6805);
+			CPU_RUN_SYNCINT(2, m6805);
 			ZetClose();
 		}
 
 		sound_irq_timer++;
-		if (sound_irq_timer == 420)
+		if (sound_irq_timer >= 420)
 			sound_irq_timer = 0;
 	}
 
@@ -2480,6 +2488,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		BurnAcb(&ba);
 
 		ZetScan(nAction);
+		m6805Scan(nAction);
+
 		AY8910Scan(nAction, pnMin);
 		DACScan(nAction, pnMin);
 		BurnWatchdogScan(nAction);
@@ -2497,6 +2507,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(protection_value);
 		SCAN_VAR(dac_volume);
 		SCAN_VAR(dac_out_data);
+		SCAN_VAR(sound_irq_timer);
 		SCAN_VAR(toz80);
 		SCAN_VAR(fromz80);
 		SCAN_VAR(mcu_address);
@@ -2505,7 +2516,6 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(zready);
 		SCAN_VAR(zaccept);
 		SCAN_VAR(busreq);
-		SCAN_VAR(sound_irq_timer);
 		SCAN_VAR(kikstart_gears);
 	}
 
@@ -2559,7 +2569,7 @@ struct BurnDriver BurnDrvSpaceskr = {
 	"spaceskr", NULL, NULL, NULL, "1981",
 	"Space Seeker\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, spaceskrRomInfo, spaceskrRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, SpaceskrDIPInfo,
 	spaceskrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2606,7 +2616,7 @@ struct BurnDriver BurnDrvSpacecr = {
 	"spacecr", NULL, NULL, NULL, "1981",
 	"Space Cruiser\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, spacecrRomInfo, spacecrRomName, NULL, NULL, NULL, NULL, TwoButtonLRInputInfo, SpacecrDIPInfo,
 	spacecrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -2654,7 +2664,7 @@ struct BurnDriver BurnDrvJunglek = {
 	"junglek", NULL, NULL, NULL, "1982",
 	"Jungle King (Japan)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglekRomInfo, junglekRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2697,7 +2707,7 @@ struct BurnDriver BurnDrvJunglekas = {
 	"junglekas", "junglek", NULL, NULL, "1982",
 	"Jungle King (alternate sound)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglekasRomInfo, junglekasRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2740,7 +2750,7 @@ struct BurnDriver BurnDrvJungleby = {
 	"jungleby", "junglek", NULL, NULL, "1982",
 	"Jungle Boy (bootleg)\0", NULL, "bootleg", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglebyRomInfo, junglebyRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2783,7 +2793,7 @@ struct BurnDriver BurnDrvJunglekj2 = {
 	"junglekj2", "junglek", NULL, NULL, "1982",
 	"Jungle King (Japan, earlier)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglekj2RomInfo, junglekj2RomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2826,7 +2836,7 @@ struct BurnDriver BurnDrvJungleh = {
 	"jungleh", "junglek", NULL, NULL, "1982",
 	"Jungle Hunt (US)\0", NULL, "Taito America Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglehRomInfo, junglehRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2871,7 +2881,7 @@ struct BurnDriver BurnDrvJunglehbr = {
 	"junglehbr", "junglek", NULL, NULL, "1983",
 	"Jungle Hunt (Brazil)\0", NULL, "Taito do Brasil", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, junglehbrRomInfo, junglehbrRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, JunglekDIPInfo,
 	junglehbrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2913,7 +2923,7 @@ struct BurnDriver BurnDrvPiratpet = {
 	"piratpet", "junglek", NULL, NULL, "1982",
 	"Pirate Pete\0", NULL, "Taito America Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM | GBF_ACTION, 0,
 	NULL, piratpetRomInfo, piratpetRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, PiratpetDIPInfo,
 	junglekInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -2955,7 +2965,7 @@ struct BurnDriver BurnDrvAlpine = {
 	"alpine", NULL, NULL, NULL, "1982",
 	"Alpine Ski (set 1)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, alpineRomInfo, alpineRomName, NULL, NULL, NULL, NULL, AlpineInputInfo, AlpineDIPInfo,
 	alpineInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -2997,7 +3007,7 @@ struct BurnDriver BurnDrvAlpinea = {
 	"alpinea", "alpine", NULL, NULL, "1982",
 	"Alpine Ski (set 2)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, alpineaRomInfo, alpineaRomName, NULL, NULL, NULL, NULL, AlpineInputInfo, AlpineaDIPInfo,
 	alpineaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -3044,7 +3054,7 @@ struct BurnDriver BurnDrvTimetunl = {
 	"timetunl", NULL, NULL, NULL, "1982",
 	"Time Tunnel\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_MAZE, 0,
 	NULL, timetunlRomInfo, timetunlRomName, NULL, NULL, NULL, NULL, TimetunlInputInfo, TimetunlDIPInfo,
 	timetunlInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -3087,7 +3097,7 @@ struct BurnDriver BurnDrvWwestern = {
 	"wwestern", NULL, NULL, NULL, "1982",
 	"Wild Western (set 1)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, wwesternRomInfo, wwesternRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, WwesternDIPInfo,
 	wwesternInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -3124,43 +3134,34 @@ struct BurnDriver BurnDrvWwestern1 = {
 	"wwestern1", "wwestern", NULL, NULL, "1982",
 	"Wild Western (set 2)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
 	NULL, wwestern1RomInfo, wwestern1RomName, NULL, NULL, NULL, NULL, DualStickInputInfo, WwesternDIPInfo,
 	wwesternInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };
 
 
-// Front Line
+// Front Line (set 1)
 
 static struct BurnRomInfo frontlinRomDesc[] = {
-	{ "fl69.u69",			0x1000, 0x93b64599, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "fl68.u68",			0x1000, 0x82dccdfb, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "fl67.u67",			0x1000, 0x3fa1ba12, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "fl66.u66",			0x1000, 0x4a3db285, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "fl65.u65",			0x1000, 0xda00ec70, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "fl64.u64",			0x1000, 0x9fc90a20, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "fl55.u55",			0x1000, 0x359242c2, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "fl54.u54",			0x1000, 0xd234c60f, 1 | BRF_PRG | BRF_ESS }, //  7
-	{ "fl53.u53",			0x1000, 0x67429975, 1 | BRF_PRG | BRF_ESS }, //  8
-	{ "fl52.u52",			0x1000, 0xcb223d34, 1 | BRF_PRG | BRF_ESS }, //  9
-	{ "aa1_10.8",			0x1000, 0x2704aa4c, 1 | BRF_PRG | BRF_ESS }, // 10
+	{ "aa1_05.ic1",			0x2000, 0x4b7c0d81, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "aa1_06.ic2",			0x2000, 0xcaacdc02, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "aa1_07.ic3",			0x2000, 0xdf2b2691, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "aa1_08.ic6",			0x2000, 0xf9bc3374, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "aa1_09.ic7",			0x2000, 0xe24d1f05, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "aa1_10.ic8",			0x1000, 0x2704aa4c, 1 | BRF_PRG | BRF_ESS }, //  5
+	
+	{ "aa1_11.ic70",		0x1000, 0x15f4ed8c, 2 | BRF_PRG | BRF_ESS }, // 11 Sound Z80 Code
+	{ "aa1_12.ic71",		0x1000, 0xc3eb38e7, 2 | BRF_PRG | BRF_ESS }, // 12
 
-	{ "fl70.u70",			0x1000, 0x15f4ed8c, 2 | BRF_PRG | BRF_ESS }, // 11 Sound Z80 Code
-	{ "fl71.u71",			0x1000, 0xc3eb38e7, 2 | BRF_PRG | BRF_ESS }, // 12
+	{ "aa1_01.ic4",			0x2000, 0x724fd755, 3 | BRF_GRA },           // 13 Graphics data
+	{ "aa1_02.ic5",			0x2000, 0xb2d35070, 3 | BRF_GRA },           // 14
+	{ "aa1_03.ic9",			0x2000, 0xd0723026, 3 | BRF_GRA },           // 15
+	{ "aa1_04.ic10",		0x2000, 0xbdc0a4f0, 3 | BRF_GRA },           // 16
+	
+	{ "eb16.ic22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 21 Layer Priority
 
-	{ "fl1.u1",				0x1000, 0xe82c9f46, 3 | BRF_GRA },           // 13 Graphics data
-	{ "fl2.u2",				0x1000, 0x123055d3, 3 | BRF_GRA },           // 14
-	{ "fl3.u3",				0x1000, 0x7ea46347, 3 | BRF_GRA },           // 15
-	{ "fl4.u4",				0x1000, 0x9e2cff10, 3 | BRF_GRA },           // 16
-	{ "fl5.u5",				0x1000, 0x630b4be1, 3 | BRF_GRA },           // 17
-	{ "fl6.u6",				0x1000, 0x9e092d58, 3 | BRF_GRA },           // 18
-	{ "fl7.u7",				0x1000, 0x613682a3, 3 | BRF_GRA },           // 19
-	{ "fl8.u8",				0x1000, 0xf73b0d5e, 3 | BRF_GRA },           // 20
-
-	{ "eb16.22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 21 Layer Priority
-
-	{ "aa1.13",				0x0800, 0x7e78bdd3, 5 | BRF_PRG | BRF_ESS }, // 22 M68705 MCU Code
+	{ "aa1.13.ic24",		0x0800, 0x7e78bdd3, 5 | BRF_PRG | BRF_ESS }, // 22 M68705 MCU Code
 };
 
 STD_ROM_PICK(frontlin)
@@ -3174,44 +3175,83 @@ static INT32 frontlinInit()
 
 struct BurnDriver BurnDrvFrontlin = {
 	"frontlin", NULL, NULL, NULL, "1982",
-	"Front Line\0", NULL, "Taito Corporation", "Taito SJ System",
+	"Front Line (set 1)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RUNGUN, 0,
 	NULL, frontlinRomInfo, frontlinRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, FrontlinDIPInfo,
 	frontlinInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
 };
 
 
-// Elevator Action (5 pcb version, 1.1)
+// Front Line (set 2)
+
+static struct BurnRomInfo frontlinaRomDesc[] = {
+	{ "fl69.u69",			0x1000, 0x93b64599, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "fl68.u68",			0x1000, 0x82dccdfb, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "fl67.u67",			0x1000, 0x3fa1ba12, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "fl66.u66",			0x1000, 0x4a3db285, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "fl65.u65",			0x1000, 0xda00ec70, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "fl64.u64",			0x1000, 0x9fc90a20, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "fl55.u55",			0x1000, 0x359242c2, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "fl54.u54",			0x1000, 0xd234c60f, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "fl53.u53",			0x1000, 0x67429975, 1 | BRF_PRG | BRF_ESS }, //  8
+	{ "fl52.u52",			0x1000, 0xcb223d34, 1 | BRF_PRG | BRF_ESS }, //  9
+	{ "aa1_10.ic8",			0x1000, 0x2704aa4c, 1 | BRF_PRG | BRF_ESS }, // 10
+
+	{ "fl70.u70",			0x1000, 0x15f4ed8c, 2 | BRF_PRG | BRF_ESS }, // 11 Sound Z80 Code
+	{ "fl71.u71",			0x1000, 0xc3eb38e7, 2 | BRF_PRG | BRF_ESS }, // 12
+
+	{ "fl1.u1",				0x1000, 0xe82c9f46, 3 | BRF_GRA },           // 13 Graphics data
+	{ "fl2.u2",				0x1000, 0x123055d3, 3 | BRF_GRA },           // 14
+	{ "fl3.u3",				0x1000, 0x7ea46347, 3 | BRF_GRA },           // 15
+	{ "fl4.u4",				0x1000, 0x9e2cff10, 3 | BRF_GRA },           // 16
+	{ "fl5.u5",				0x1000, 0x630b4be1, 3 | BRF_GRA },           // 17
+	{ "fl6.u6",				0x1000, 0x9e092d58, 3 | BRF_GRA },           // 18
+	{ "fl7.u7",				0x1000, 0x613682a3, 3 | BRF_GRA },           // 19
+	{ "fl8.u8",				0x1000, 0xf73b0d5e, 3 | BRF_GRA },           // 20
+
+	{ "eb16.ic22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 21 Layer Priority
+
+	{ "aa1_13.ic24",		0x0800, 0x7e78bdd3, 5 | BRF_PRG | BRF_ESS }, // 22 M68705 MCU Code
+};
+
+STD_ROM_PICK(frontlina)
+STD_ROM_FN(frontlina)
+
+struct BurnDriver BurnDrvFrontlina = {
+	"frontlina", "frontlin", NULL, NULL, "1982",
+	"Front Line (set 2)\0", NULL, "Taito Corporation", "Taito SJ System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RUNGUN, 0,
+	NULL, frontlinaRomInfo, frontlinaRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, FrontlinDIPInfo,
+	frontlinInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
+	224, 256, 3, 4
+};
+
+
+// Elevator Action (BA3, 4 pcb version, 1.1)
+// later 4 board set, with rom data on 2764s, split between gfx and cpu data.
 
 static struct BurnRomInfo elevatorRomDesc[] = {
-	{ "ea_12.2732.ic69",	0x1000, 0x24e277ef, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "ea_13.2732.ic68",	0x1000, 0x13702e39, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ea_14.2732.ic67",	0x1000, 0x46f52646, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ea_15.2732.ic66",	0x1000, 0xe22fe57e, 1 | BRF_PRG | BRF_ESS }, //  3
-	{ "ea_16.2732.ic65",	0x1000, 0xc10691d7, 1 | BRF_PRG | BRF_ESS }, //  4
-	{ "ea_17.2732.ic64",	0x1000, 0x8913b293, 1 | BRF_PRG | BRF_ESS }, //  5
-	{ "ea_18.2732.ic55",	0x1000, 0x1cabda08, 1 | BRF_PRG | BRF_ESS }, //  6
-	{ "ea_19.2732.ic54",	0x1000, 0xf4647b4f, 1 | BRF_PRG | BRF_ESS }, //  7
+	{ "ba3__01.2764.ic1",		0x2000, 0xda775a24, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "ba3__02.2764.ic2",		0x2000, 0xfbfd8b3a, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ba3__03-1.2764.ic3",		0x2000, 0xa2e69833, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ba3__04-1.2764.ic6",		0x2000, 0x2b78c462, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "ea_9.2732.ic70",		0x1000, 0x6d5f57cb, 2 | BRF_PRG | BRF_ESS }, //  8 Sound Z80 Code
-	{ "ea_10.2732.ic71",	0x1000, 0xf0a769a1, 2 | BRF_PRG | BRF_ESS }, //  9
+	{ "ba3__09.2732.ic70",		0x1000, 0x6d5f57cb, 2 | BRF_PRG | BRF_ESS }, //  4 Sound Z80 Code
+	{ "ba3__10.2732.ic71",		0x1000, 0xf0a769a1, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "ea_20.2732.ic1",		0x1000, 0xbbbb3fba, 3 | BRF_GRA },           // 10 Graphics data
-	{ "ea_21.2732.ic2",		0x1000, 0x639cc2fd, 3 | BRF_GRA },           // 11
-	{ "ea_22.2732.ic3",		0x1000, 0x61317eea, 3 | BRF_GRA },           // 12
-	{ "ea_23.2732.ic4",		0x1000, 0x55446482, 3 | BRF_GRA },           // 13
-	{ "ea_24.2732.ic5",		0x1000, 0x77895c0f, 3 | BRF_GRA },           // 14
-	{ "ea_25.2732.ic6",		0x1000, 0x9a1b6901, 3 | BRF_GRA },           // 15
-	{ "ea_26.2732.ic7",		0x1000, 0x839112ec, 3 | BRF_GRA },           // 16
-	{ "ea_27.2732.ic8",		0x1000, 0xdb7ff692, 3 | BRF_GRA },           // 17
+	{ "ba3__05.2764.ic4",		0x2000, 0x6c4ee58f, 3 | BRF_GRA },           //  6 Graphics data
+	{ "ba3__06.2764.ic5",		0x2000, 0x41ab0afc, 3 | BRF_GRA },           //  7
+	{ "ba3__07.2764.ic9",		0x2000, 0xefe43731, 3 | BRF_GRA },           //  8
+	{ "ba3__08.2764.ic10",		0x2000, 0x3ca20696, 3 | BRF_GRA },           //  9
 
-	{ "eb16.ic22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 18 Layer Priority
+	{ "eb16.ic22",				0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 10 Layer Priority
 
-	{ "ba3__11.mc68705p3.ic4", 0x0800, 0x9ce75afc, 5 | BRF_PRG | BRF_ESS }, // 19 M68705 MCU Code
+	{ "ba3__11.mc68705p3.ic24",	0x0800, 0x9ce75afc, 5 | BRF_PRG | BRF_ESS }, // 11 M68705 MCU Code
 
-	{ "ww15.pal16l8.ic24.jed.bin",	0x0117, 0xc3ec20d6, 0 | BRF_OPT },   // 20 pal
+	{ "ww15.pal16l8.ic24.jed.bin",	0x0117, 0xc3ec20d6, 0 | BRF_OPT },   // 12 pal
 };
 
 STD_ROM_PICK(elevator)
@@ -3224,10 +3264,56 @@ static INT32 elevatorInit()
 
 struct BurnDriver BurnDrvElevator = {
 	"elevator", NULL, NULL, NULL, "1983",
-	"Elevator Action (5 pcb version, 1.1)\0", NULL, "Taito Corporation", "Taito SJ System",
+	"Elevator Action (BA3, 4 pcb version, 1.1)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, elevatorRomInfo, elevatorRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, ElevatorDIPInfo,
+	elevatorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
+	256, 224, 4, 3
+};
+
+
+// Elevator Action (EA, 5 pcb version, 1.1)
+// 5 board set, using 2732s on both mainboard and square rom board, and 68705 on daughterboard at bottom of stack, upside down
+
+static struct BurnRomInfo elevatoraRomDesc[] = {
+	{ "ea_12.2732.ic69",	   0x1000, 0x24e277ef, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "ea_13.2732.ic68",	   0x1000, 0x13702e39, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ea_14.2732.ic67",	   0x1000, 0x46f52646, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ea_15.2732.ic66",	   0x1000, 0xe22fe57e, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "ea_16.2732.ic65",	   0x1000, 0xc10691d7, 1 | BRF_PRG | BRF_ESS }, //  4
+	{ "ea_17.2732.ic64",	   0x1000, 0x8913b293, 1 | BRF_PRG | BRF_ESS }, //  5
+	{ "ea_18.2732.ic55",	   0x1000, 0x1cabda08, 1 | BRF_PRG | BRF_ESS }, //  6
+	{ "ea_19.2732.ic54",	   0x1000, 0xf4647b4f, 1 | BRF_PRG | BRF_ESS }, //  7
+
+	{ "ea_9.2732.ic70",		   0x1000, 0x6d5f57cb, 2 | BRF_PRG | BRF_ESS }, //  8 Sound Z80 Code
+	{ "ea_10.2732.ic71",	   0x1000, 0xf0a769a1, 2 | BRF_PRG | BRF_ESS }, //  9
+
+	{ "ea_20.2732.ic1",		   0x1000, 0xbbbb3fba, 3 | BRF_GRA },           // 10 Graphics data
+	{ "ea_21.2732.ic2",		   0x1000, 0x639cc2fd, 3 | BRF_GRA },           // 11
+	{ "ea_22.2732.ic3",		   0x1000, 0x61317eea, 3 | BRF_GRA },           // 12
+	{ "ea_23.2732.ic4",		   0x1000, 0x55446482, 3 | BRF_GRA },           // 13
+	{ "ea_24.2732.ic5",		   0x1000, 0x77895c0f, 3 | BRF_GRA },           // 14
+	{ "ea_25.2732.ic6",		   0x1000, 0x9a1b6901, 3 | BRF_GRA },           // 15
+	{ "ea_26.2732.ic7",		   0x1000, 0x839112ec, 3 | BRF_GRA },           // 16
+	{ "ea_27.2732.ic8",		   0x1000, 0xdb7ff692, 3 | BRF_GRA },           // 17
+
+	{ "eb16.ic22",			   0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 18 Layer Priority
+
+	{ "ba3__11.mc68705p3.ic4", 0x0800, 0x9ce75afc, 5 | BRF_PRG | BRF_ESS }, // 19 M68705 MCU Code
+
+	{ "ww15.pal16l8.ic24.jed.bin",	0x0117, 0xc3ec20d6, 0 | BRF_OPT },   // 20 pal
+};
+
+STD_ROM_PICK(elevatora)
+STD_ROM_FN(elevatora)
+
+struct BurnDriver BurnDrvElevatora = {
+	"elevatora", "elevator", NULL, NULL, "1983",
+	"Elevator Action (EA, 5 pcb version, 1.1)\0", NULL, "Taito Corporation", "Taito SJ System",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	NULL, elevatoraRomInfo, elevatoraRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, ElevatorDIPInfo,
 	elevatorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
 };
@@ -3275,53 +3361,59 @@ struct BurnDriver BurnDrvElevatorb = {
 	"elevatorb", "elevator", NULL, NULL, "1983",
 	"Elevator Action (bootleg)\0", NULL, "bootleg", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, elevatorbRomInfo, elevatorbRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, ElevatorDIPInfo,
 	elevatorbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
 };
 
 
-// Elevator Action (4 pcb version, 1.1)
+// The Tin Star (A10, 4 PCB version)
+// later 4 PCB stack
 
-static struct BurnRomInfo elevator4RomDesc[] = {
-	{ "ba3__01.2764.ic1",	0x2000, 0xda775a24, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "ba3__02.2764.ic2",	0x2000, 0xfbfd8b3a, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "ba3__03-1.2764.ic3",	0x2000, 0xa2e69833, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "ba3__04-1.2764.ic6",	0x2000, 0x2b78c462, 1 | BRF_PRG | BRF_ESS }, //  3
+static struct BurnRomInfo tinstarRomDesc[] = {
+	{ "a10-01.bin",			0x2000, 0x19faf0b3, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
+	{ "a10-02.bin",			0x2000, 0x99bb26ff, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "a10-03.bin",			0x2000, 0x3169e175, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "a10-04.bin",			0x2000, 0x6641233c, 1 | BRF_PRG | BRF_ESS }, //  3
 
-	{ "ba3__09.2732.ic70",	0x1000, 0x6d5f57cb, 2 | BRF_PRG | BRF_ESS }, //  4 Sound Z80 Code
-	{ "ba3__10.2732.ic71",	0x1000, 0xf0a769a1, 2 | BRF_PRG | BRF_ESS }, //  5
+	{ "a10-29.bin",			0x2000, 0x771f1a6a, 2 | BRF_PRG | BRF_ESS }, //  4 Sound Z80 Code
+	{ "a10-10.bin",			0x1000, 0xbeeed8f3, 2 | BRF_PRG | BRF_ESS }, //  5
 
-	{ "ba3__05.2764.ic4",	0x2000, 0x6c4ee58f, 3 | BRF_GRA },           //  6 Graphics data
-	{ "ba3__06.2764.ic5",	0x2000, 0x41ab0afc, 3 | BRF_GRA },           //  7
-	{ "ba3__07.2764.ic9",	0x2000, 0xefe43731, 3 | BRF_GRA },           //  8
-	{ "ba3__08.2764.ic10",	0x2000, 0x3ca20696, 3 | BRF_GRA },           //  9
+	{ "a10-05.bin",			0x2000, 0x6bb1bba9, 3 | BRF_GRA },           //  6 Graphics data
+	{ "a10-06.bin",			0x2000, 0x0abff1a1, 3 | BRF_GRA },           //  7
+	{ "a10-07.bin",			0x2000, 0xd1bec7a8, 3 | BRF_GRA },           //  8
+	{ "a10-08.bin",			0x2000, 0x15c6eb41, 3 | BRF_GRA },           //  9
 
-	{ "eb16.ic22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 10 Layer Priority
+	{ "eb16.22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 10 Layer Priority
 
-	{ "ba3__11.mc68705p3.ic24",	0x0800, 0x9ce75afc, 5 | BRF_PRG | BRF_ESS }, // 11 M68705 MCU Code
-
-	{ "ww15.pal16l8.ic24.jed.bin",	0x0117, 0xc3ec20d6, 0 | BRF_OPT },   // 12 pal
+	{ "a10-12",				0x0800, 0x889eefc9, 5 | BRF_PRG | BRF_ESS }, // 11 M68705 MCU Code
 };
 
-STD_ROM_PICK(elevator4)
-STD_ROM_FN(elevator4)
+STD_ROM_PICK(tinstar)
+STD_ROM_FN(tinstar)
 
-struct BurnDriver BurnDrvElevator4 = {
-	"elevator4", "elevator", NULL, NULL, "1983",
-	"Elevator Action (4 pcb version, 1.1)\0", NULL, "Taito Corporation", "Taito SJ System",
+static INT32 TinstarInit()
+{
+	input2_xor = 0x02;
+	return CommonInit(1, 0, 0);
+}
+
+struct BurnDriver BurnDrvTinstar = {
+	"tinstar", NULL, NULL, NULL, "1983",
+	"The Tin Star (A10, 4 PCB version)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
-	NULL, elevator4RomInfo, elevator4RomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, ElevatorDIPInfo,
-	elevatorInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
+	NULL, tinstarRomInfo, tinstarRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, TinstarDIPInfo,
+	TinstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
 };
 
 
-// The Tin Star (set 1)
+// The Tin Star (TS, 5 PCB version)
+// 5 PCB stack - same data as above in 2732 EPROM format
 
-static struct BurnRomInfo tinstarRomDesc[] = {
+static struct BurnRomInfo tinstaraRomDesc[] = {
 	{ "ts.69",				0x1000, 0xa930af60, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
 	{ "ts.68",				0x1000, 0x7f2714ca, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "ts.67",				0x1000, 0x49170786, 1 | BRF_PRG | BRF_ESS }, //  2
@@ -3349,56 +3441,15 @@ static struct BurnRomInfo tinstarRomDesc[] = {
 	{ "a10-12",				0x0800, 0x889eefc9, 5 | BRF_PRG | BRF_ESS }, // 20 M68705 MCU Code
 };
 
-STD_ROM_PICK(tinstar)
-STD_ROM_FN(tinstar)
+STD_ROM_PICK(tinstara)
+STD_ROM_FN(tinstara)
 
-static INT32 TinstarInit()
-{
-	input2_xor = 0x02;
-	return CommonInit(1, 0, 0);
-}
-
-struct BurnDriver BurnDrvTinstar = {
-	"tinstar", NULL, NULL, NULL, "1983",
-	"The Tin Star (set 1)\0", NULL, "Taito Corporation", "Taito SJ System",
+struct BurnDriver BurnDrvTinstara = {
+	"tinstara", "tinstar", NULL, NULL, "1983",
+	"The Tin Star (TS, 5 PCB version)\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
-	NULL, tinstarRomInfo, tinstarRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, TinstarDIPInfo,
-	TinstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
-	256, 224, 4, 3
-};
-
-
-// The Tin Star (set 2)
-
-static struct BurnRomInfo tinstar2RomDesc[] = {
-	{ "a10-01.bin",			0x2000, 0x19faf0b3, 1 | BRF_PRG | BRF_ESS }, //  0 Main Z80 Code
-	{ "a10-02.bin",			0x2000, 0x99bb26ff, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "a10-03.bin",			0x2000, 0x3169e175, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "a10-04.bin",			0x2000, 0x6641233c, 1 | BRF_PRG | BRF_ESS }, //  3
-
-	{ "a10-29.bin",			0x2000, 0x771f1a6a, 2 | BRF_PRG | BRF_ESS }, //  4 Sound Z80 Code
-	{ "a10-10.bin",			0x1000, 0xbeeed8f3, 2 | BRF_PRG | BRF_ESS }, //  5
-
-	{ "a10-05.bin",			0x2000, 0x6bb1bba9, 3 | BRF_GRA },           //  6 Graphics data
-	{ "a10-06.bin",			0x2000, 0x0abff1a1, 3 | BRF_GRA },           //  7
-	{ "a10-07.bin",			0x2000, 0xd1bec7a8, 3 | BRF_GRA },           //  8
-	{ "a10-08.bin",			0x2000, 0x15c6eb41, 3 | BRF_GRA },           //  9
-
-	{ "eb16.22",			0x0100, 0xb833b5ea, 4 | BRF_GRA },           // 10 Layer Priority
-
-	{ "a10-12",				0x0800, 0x889eefc9, 5 | BRF_PRG | BRF_ESS }, // 11 M68705 MCU Code
-};
-
-STD_ROM_PICK(tinstar2)
-STD_ROM_FN(tinstar2)
-
-struct BurnDriver BurnDrvTinstar2 = {
-	"tinstar2", "tinstar", NULL, NULL, "1983",
-	"The Tin Star (set 2)\0", NULL, "Taito Corporation", "Taito SJ System",
-	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
-	NULL, tinstar2RomInfo, tinstar2RomName, NULL, NULL, NULL, NULL, DualStickInputInfo, TinstarDIPInfo,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SHOOT, 0,
+	NULL, tinstaraRomInfo, tinstaraRomName, NULL, NULL, NULL, NULL, DualStickInputInfo, TinstarDIPInfo,
 	TinstarInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
 };
@@ -3439,7 +3490,7 @@ struct BurnDriver BurnDrvWaterski = {
 	"waterski", NULL, NULL, NULL, "1983",
 	"Water Ski\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, waterskiRomInfo, waterskiRomName, NULL, NULL, NULL, NULL, TwoButtonLRInputInfo, WaterskiDIPInfo,
 	waterskiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -3485,7 +3536,7 @@ struct BurnDriver BurnDrvBioatack = {
 	"bioatack", NULL, NULL, NULL, "1983",
 	"Bio Attack\0", NULL, "Taito Corporation (Fox Video Games license)", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_VERSHOOT, 0,
 	NULL, bioatackRomInfo, bioatackRomName, NULL, NULL, NULL, NULL, OneButtonInputInfo, BioatackDIPInfo,
 	bioatackInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -3526,7 +3577,7 @@ struct BurnDriver BurnDrvSfposeid = {
 	"sfposeid", NULL, NULL, NULL, "1984",
 	"Sea Fighter Poseidon\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, sfposeidRomInfo, sfposeidRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, SfposeidDIPInfo,
 	sfposeidInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3
@@ -3572,7 +3623,7 @@ struct BurnDriver BurnDrvHwrace = {
 	"hwrace", NULL, NULL, NULL, "1983",
 	"High Way Race\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, hwraceRomInfo, hwraceRomName, NULL, NULL, NULL, NULL, TwoButtonInputInfo, HwraceDIPInfo,
 	hwraceInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x40,
 	224, 256, 3, 4
@@ -3619,7 +3670,7 @@ struct BurnDriver BurnDrvKikstart = {
 	"kikstart", NULL, NULL, NULL, "1984",
 	"Kick Start - Wheelie King\0", NULL, "Taito Corporation", "Taito SJ System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_RUNAHEAD_DRAWSYNC, 2, HARDWARE_TAITO_MISC, GBF_RACING, 0,
 	NULL, kikstartRomInfo, kikstartRomName, NULL, NULL, NULL, NULL, KikstartInputInfo, KikstartDIPInfo,
 	kikstartInit, DrvExit, DrvFrame, KikstartDraw, DrvScan, &DrvRecalc, 0x40,
 	256, 224, 4, 3

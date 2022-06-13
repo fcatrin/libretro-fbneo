@@ -341,8 +341,7 @@ void AtariJSAInit(UINT8 *rom, void (*int_cb)(), UINT8 *samples0, UINT8 *samples1
 	PokeyInit(3579545/2, 1, 0.40, 1);
 	PokeySetTotalCyclesCB(M6502TotalCycles);
 
-	tms5220c_init(M6502TotalCycles, 1789773);
-    tms5220_set_frequency((3579545*2)/11);
+	tms5220c_init((3579545*2)/11, M6502TotalCycles, 1789773);
     tms5220_volume(1.50);
 }
 
@@ -387,17 +386,38 @@ void AtariJSAScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(speech_data);
 		SCAN_VAR(last_ctl);
 		SCAN_VAR(oki_banks);
+		SCAN_VAR(timed_int);
+		SCAN_VAR(ym2151_int);
+		SCAN_VAR(ym2151_ct1);
+
+		SCAN_VAR(pokey_volume);
+		SCAN_VAR(ym2151_volume);
+		SCAN_VAR(oki6295_volume);
+
 		SCAN_VAR(atarigen_cpu_to_sound);
 		SCAN_VAR(atarigen_cpu_to_sound_ready);
 		SCAN_VAR(atarigen_sound_to_cpu);
 		SCAN_VAR(atarigen_sound_to_cpu_ready);
+
 		SCAN_VAR(atarijsa_int_state);
+		SCAN_VAR(atarijsa_sound_timer);
+		SCAN_VAR(atarijsa_input_port);
+		SCAN_VAR(atarijsa_test_port);
+		SCAN_VAR(atarijsa_test_mask);
+		SCAN_VAR(atarijsa_sound_timer);
+		SCAN_VAR(atarijsa_int_state);
+
 	}
 	if (nAction & ACB_WRITE)
 	{
 		M6502Open(0);
 		bankswitch(atarijsa_bank);
 		M6502Close();
+
+		if (samples[1]) oki_bankswitch(1, oki_banks[1]);
+		if (samples[0]) oki_bankswitch(0, oki_banks[0]);
+
+		update_all_volumes();
 	}
 }
 

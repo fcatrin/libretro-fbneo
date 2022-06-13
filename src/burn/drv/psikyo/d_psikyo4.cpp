@@ -42,10 +42,11 @@ static UINT8 DrvMah8[8];
 static UINT8 DrvMah9[8];
 static UINT8 DrvMahs[10];
 static UINT32 DrvInputs[2];
-static UINT8 DrvDips[2];
+static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
 static INT32 mahjong = 0;
+static INT32 loderndf = 0;
 static INT32 nGfxMask;
 
 static UINT32 speedhack_address = ~0;
@@ -97,6 +98,7 @@ static struct BurnInputInfo LoderndfInputList[] = {
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 7,	"service"	},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Loderndf)
@@ -134,109 +136,129 @@ static struct BurnInputInfo HotdebutInputList[] = {
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 4,	"service"	},
 	{"Service",		BIT_DIGITAL,	DrvJoy1 + 7,	"service"	},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Hotdebut)
 
 static struct BurnInputInfo HotgmckInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvMah1 + 0,	"p1 coin"	},
-	{"P1 Start",		BIT_DIGITAL,	DrvMah2 + 5,	"p1 start"	},
-	{"A",			BIT_DIGITAL,	DrvMah2 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvMah3 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvMah4 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvMah5 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvMah2 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvMah3 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvMah4 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvMah5 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvMah2 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvMah3 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvMah2 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvMah5 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvMah2 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvMah3 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvMah5 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvMah4 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvMah2 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvMah4 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvMah3 + 4,	"mah reach"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvMah2 + 5,	"p1 start"	},
+	{"P1 A",		BIT_DIGITAL,	DrvMah2 + 0,	"mah a"		},
+	{"P1 B",		BIT_DIGITAL,	DrvMah3 + 0,	"mah b"		},
+	{"P1 C",		BIT_DIGITAL,	DrvMah4 + 0,	"mah c"		},
+	{"P1 D",		BIT_DIGITAL,	DrvMah5 + 0,	"mah d"		},
+	{"P1 E",		BIT_DIGITAL,	DrvMah2 + 1,	"mah e"		},
+	{"P1 F",		BIT_DIGITAL,	DrvMah3 + 1,	"mah f"		},
+	{"P1 G",		BIT_DIGITAL,	DrvMah4 + 1,	"mah g"		},
+	{"P1 H",		BIT_DIGITAL,	DrvMah5 + 1,	"mah h"		},
+	{"P1 I",		BIT_DIGITAL,	DrvMah2 + 2,	"mah i"		},
+	{"P1 J",		BIT_DIGITAL,	DrvMah3 + 2,	"mah j"		},
+	{"P1 K",		BIT_DIGITAL,	DrvMah2 + 4,	"mah k"		},
+	{"P1 L",		BIT_DIGITAL,	DrvMah5 + 2,	"mah l"		},
+	{"P1 M",		BIT_DIGITAL,	DrvMah2 + 3,	"mah m"		},
+	{"P1 N",		BIT_DIGITAL,	DrvMah3 + 3,	"mah n"		},
+	{"P1 Pon",		BIT_DIGITAL,	DrvMah5 + 3,	"mah pon"	},
+	{"P1 Chi",		BIT_DIGITAL,	DrvMah4 + 3,	"mah chi"	},
+	{"P1 Kan",		BIT_DIGITAL,	DrvMah2 + 4,	"mah kan"	},
+	{"P1 Ron",		BIT_DIGITAL,	DrvMah4 + 4,	"mah ron"	},
+	{"P1 Reach",	BIT_DIGITAL,	DrvMah3 + 4,	"mah reach"	},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvMah1 + 2,	"p2 coin"	},
-	{"P2 Start",		BIT_DIGITAL,	DrvMah6 + 5,	"p2 start"	},
-	{"A",			BIT_DIGITAL,	DrvMah6 + 0,	"mah a"		},
-	{"B",			BIT_DIGITAL,	DrvMah7 + 0,	"mah b"		},
-	{"C",			BIT_DIGITAL,	DrvMah8 + 0,	"mah c"		},
-	{"D",			BIT_DIGITAL,	DrvMah9 + 0,	"mah d"		},
-	{"E",			BIT_DIGITAL,	DrvMah6 + 1,	"mah e"		},
-	{"F",			BIT_DIGITAL,	DrvMah7 + 1,	"mah f"		},
-	{"G",			BIT_DIGITAL,	DrvMah8 + 1,	"mah g"		},
-	{"H",			BIT_DIGITAL,	DrvMah9 + 1,	"mah h"		},
-	{"I",			BIT_DIGITAL,	DrvMah6 + 2,	"mah i"		},
-	{"J",			BIT_DIGITAL,	DrvMah7 + 2,	"mah j"		},
-	{"K",			BIT_DIGITAL,	DrvMah6 + 4,	"mah k"		},
-	{"L",			BIT_DIGITAL,	DrvMah9 + 2,	"mah l"		},
-	{"M",			BIT_DIGITAL,	DrvMah6 + 3,	"mah m"		},
-	{"N",			BIT_DIGITAL,	DrvMah7 + 3,	"mah n"		},
-	{"Pon",			BIT_DIGITAL,	DrvMah9 + 3,	"mah pon"	},
-	{"Chi",			BIT_DIGITAL,	DrvMah8 + 3,	"mah chi"	},
-	{"Kan",			BIT_DIGITAL,	DrvMah6 + 4,	"mah kan"	},
-	{"Ron",			BIT_DIGITAL,	DrvMah8 + 4,	"mah ron"	},
-	{"Reach",		BIT_DIGITAL,	DrvMah7 + 4,	"mah reach"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvMah6 + 5,	"p2 start"	},
+	{"P2 A",		BIT_DIGITAL,	DrvMah6 + 0,	"mah a"		},
+	{"P2 B",		BIT_DIGITAL,	DrvMah7 + 0,	"mah b"		},
+	{"P2 C",		BIT_DIGITAL,	DrvMah8 + 0,	"mah c"		},
+	{"P2 D",		BIT_DIGITAL,	DrvMah9 + 0,	"mah d"		},
+	{"P2 E",		BIT_DIGITAL,	DrvMah6 + 1,	"mah e"		},
+	{"P2 F",		BIT_DIGITAL,	DrvMah7 + 1,	"mah f"		},
+	{"P2 G",		BIT_DIGITAL,	DrvMah8 + 1,	"mah g"		},
+	{"P2 H",		BIT_DIGITAL,	DrvMah9 + 1,	"mah h"		},
+	{"P2 I",		BIT_DIGITAL,	DrvMah6 + 2,	"mah i"		},
+	{"P2 J",		BIT_DIGITAL,	DrvMah7 + 2,	"mah j"		},
+	{"P2 K",		BIT_DIGITAL,	DrvMah6 + 4,	"mah k"		},
+	{"P2 L",		BIT_DIGITAL,	DrvMah9 + 2,	"mah l"		},
+	{"P2 M",		BIT_DIGITAL,	DrvMah6 + 3,	"mah m"		},
+	{"P2 N",		BIT_DIGITAL,	DrvMah7 + 3,	"mah n"		},
+	{"P2 Pon",		BIT_DIGITAL,	DrvMah9 + 3,	"mah pon"	},
+	{"P2 Chi",		BIT_DIGITAL,	DrvMah8 + 3,	"mah chi"	},
+	{"P2 Kan",		BIT_DIGITAL,	DrvMah6 + 4,	"mah kan"	},
+	{"P2 Ron",		BIT_DIGITAL,	DrvMah8 + 4,	"mah ron"	},
+	{"P2 Reach",	BIT_DIGITAL,	DrvMah7 + 4,	"mah reach"	},
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvMah1 + 4,	"service"	},
 	{"Service",		BIT_DIGITAL,	DrvMah1 + 7,	"service"	},
 	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Hotgmck)
 
 static struct BurnDIPInfo LoderndfDIPList[]=
 {
-	{0x27, 0xff, 0xff, 0x60, NULL					},
-	{0x28, 0xff, 0xff, 0x01, NULL					},
+	DIP_OFFSET(0x27)
+	{0x00, 0xff, 0xff, 0x60, NULL					},
+	{0x01, 0xff, 0xff, 0x01, NULL					},
+	{0x02, 0xff, 0xff, 0x01, NULL					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"				},
-	{0x27, 0x01, 0x20, 0x20, "Off"					},
-	{0x27, 0x01, 0x20, 0x00, "On"					},
+	{0x00, 0x01, 0x20, 0x20, "Off"					},
+	{0x00, 0x01, 0x20, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Debug"				},
-	{0x27, 0x01, 0x40, 0x40, "Off"					},
-	{0x27, 0x01, 0x40, 0x00, "On"					},
+	{0x00, 0x01, 0x40, 0x40, "Off"					},
+	{0x00, 0x01, 0x40, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Region"				},
-	{0x28, 0x01, 0x03, 0x00, "Japan (Shows Version Number)"		},
-	{0x28, 0x01, 0x03, 0x01, "World (Does Not Show Version Number)"	},
+	{0x01, 0x01, 0x03, 0x00, "Japan (Shows Version Number)"		},
+	{0x01, 0x01, 0x03, 0x01, "World (Does Not Show Version Number)"	},
+
+	{0   , 0xfe, 0   ,    2, "Multi-Screen Mode"	},
+	{0x02, 0x01, 0x01, 0x01, "Disabled"				},
+	{0x02, 0x01, 0x01, 0x00, "Enabled"				},
 };
 
 STDDIPINFO(Loderndf)
 
 static struct BurnDIPInfo HotdebutDIPList[]=
 {
-	{0x1b, 0xff, 0xff, 0x60, NULL		},
+	DIP_OFFSET(0x1b)
+	{0x00, 0xff, 0xff, 0x60, NULL		},
+	{0x01, 0xff, 0xff, 0x01, NULL		},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x1b, 0x01, 0x20, 0x20, "Off"		},
-	{0x1b, 0x01, 0x20, 0x00, "On"		},
+	{0x00, 0x01, 0x20, 0x20, "Off"		},
+	{0x00, 0x01, 0x20, 0x00, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Debug"	},
-	{0x1b, 0x01, 0x40, 0x40, "Off"		},
-	{0x1b, 0x01, 0x40, 0x00, "On"		},
+	{0x00, 0x01, 0x40, 0x40, "Off"		},
+	{0x00, 0x01, 0x40, 0x00, "On"		},
+
+	{0   , 0xfe, 0   ,    2, "Multi-Screen Mode"	},
+	{0x01, 0x01, 0x01, 0x01, "Disabled"				},
+	{0x01, 0x01, 0x01, 0x00, "Enabled"				},
 };
 
 STDDIPINFO(Hotdebut)
 
 static struct BurnDIPInfo HotgmckDIPList[]=
 {
-	{0x2d, 0xff, 0xff, 0x60, NULL		},
+	DIP_OFFSET(0x2d)
+	{0x00, 0xff, 0xff, 0x60, NULL		},
+	{0x01, 0xff, 0xff, 0x01, NULL		},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x2d, 0x01, 0x20, 0x20, "Off"		},
-	{0x2d, 0x01, 0x20, 0x00, "On"		},
+	{0x00, 0x01, 0x20, 0x20, "Off"		},
+	{0x00, 0x01, 0x20, 0x00, "On"		},
 
 	{0   , 0xfe, 0   ,    2, "Debug"	},
-	{0x2d, 0x01, 0x40, 0x40, "Off"		},
-	{0x2d, 0x01, 0x40, 0x00, "On"		},
+	{0x00, 0x01, 0x40, 0x40, "Off"		},
+	{0x00, 0x01, 0x40, 0x00, "On"		},
+
+	{0   , 0xfe, 0   ,    2, "Multi-Screen Mode"	},
+	{0x01, 0x01, 0x01, 0x01, "Disabled"				},
+	{0x01, 0x01, 0x01, 0x00, "Enabled"				},
 };
 
 STDDIPINFO(Hotgmck)
@@ -600,6 +622,27 @@ static INT32 MemIndex(INT32 gfx_len)
 	return 0;
 }
 
+static INT32 MultiScreenCheck()
+{
+	INT32 screensize = (DrvDips[loderndf ? 2 : 1] & 1) ? 320 : 640;
+	if (screensize != nScreenWidth)
+	{
+		BurnTransferSetDimensions(screensize, nScreenHeight);
+		GenericTilesSetClipRaw(0, screensize, 0, nScreenHeight);
+		BurnDrvSetVisibleSize(screensize, nScreenHeight);
+		if (screensize == 320) {
+			BurnDrvSetAspect(4, 3);
+		} else {
+			BurnDrvSetAspect(8, 3);
+		}
+		Reinitialise();
+
+		return 1; // don't draw this time around
+	}
+
+	return 0;
+}
+
 static INT32 DrvDoReset()
 {
 	Sh2Reset();
@@ -622,6 +665,8 @@ static INT32 DrvDoReset()
 		pcmbank_previous = ~0;
 		set_pcm_bank();
 	}
+
+	MultiScreenCheck();
 
 	return 0;
 }
@@ -745,6 +790,7 @@ static INT32 DrvExit()
 	BurnFree(AllMem);
 
 	mahjong = 0;
+	loderndf = 0;
 
 	return 0;
 }
@@ -862,22 +908,38 @@ static INT32 DrvDraw()
 	DrvRecalcPalette();
 	BurnTransferClear();
 
-	for (INT32 y = 0; y < nScreenHeight; y++) {
-		for (INT32 x = 0; x < 320; x++) {
-			pTransDraw[y * 640 + x] = 0x1000;
-			pTempDraw[y * 320+x] = 0x1001;
-		}
+	if (MultiScreenCheck()) {
+		return 1; // if mode changed, don't draw this time around
 	}
 
-	nScreenWidth = 640;
-	draw_sprites(pTransDraw, 0x0000);	// left screen
+	if (~DrvDips[loderndf ? 2 : 1] & 1) {
+		for (INT32 y = 0; y < nScreenHeight; y++) {
+			for (INT32 x = 0; x < 320; x++) {
+				pTransDraw[y * 640 + x] = 0x1000;
+				pTempDraw[y * 320+x] = 0x1001;
+			}
+		}
 
-	nScreenWidth = 320;
-	draw_sprites(pTempDraw, 0x2000);	// right screen
+		nScreenWidth = 640;
+		draw_sprites(pTransDraw, 0x0000);	// left screen
 
-	nScreenWidth = 640;
-	for (INT32 y = 0; y < nScreenHeight; y++) {
-		memcpy (pTransDraw + y * 640 + 320, pTempDraw + y * 320, 320 * sizeof(INT16));
+		nScreenWidth = 320;
+		draw_sprites(pTempDraw, 0x2000);	// right screen
+
+		nScreenWidth = 640;
+		for (INT32 y = 0; y < nScreenHeight; y++) {
+			memcpy (pTransDraw + y * 640 + 320, pTempDraw + y * 320, 320 * sizeof(INT16));
+		}
+	}
+	else {
+		for (INT32 y = 0; y < nScreenHeight; y++) {
+			for (INT32 x = 0; x < 320; x++) {
+				pTransDraw[y * 320 + x] = 0x1001;
+			}
+		}
+
+		nScreenWidth = 320;
+		draw_sprites(pTransDraw, 0x0000);
 	}
 
 	BurnTransferCopy(DrvPalette);
@@ -1315,6 +1377,8 @@ static INT32 LoderndfInit()
 	speedhack_pc[0] = 0x00001B3E;
 	speedhack_pc[1] = 0x00001B40;
 
+	loderndf = 1;
+
 	return DrvInit(LoderndfLoadCallback, 0x2000000);
 }
 
@@ -1351,6 +1415,8 @@ static INT32 LoderndfaInit()
 	speedhack_address = 0x0020;
 	speedhack_pc[0] = 0x00001B4A;
 	speedhack_pc[1] = 0x00001B4C;
+
+	loderndf = 1;
 
 	return DrvInit(LoderndfLoadCallback, 0x2000000);
 }

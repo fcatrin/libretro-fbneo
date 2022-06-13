@@ -12,6 +12,7 @@ int nIpsSelectedLanguage		= 0;
 static TCHAR szFullName[1024];
 static TCHAR szLanguages[NUM_LANGUAGES][32];
 static TCHAR szLanguageCodes[NUM_LANGUAGES][6];
+static TCHAR szPngName[MAX_PATH];
 
 static HTREEITEM hItemHandles[MAX_NODES];
 
@@ -442,6 +443,7 @@ static int IpsManagerInit()
 
 static void RefreshPatch()
 {
+	szPngName[0] = _T('\0');  // Reset the file name of the preview picture
 	SendMessage(GetDlgItem(hIpsDlg, IDC_TEXTCOMMENT), WM_SETTEXT, (WPARAM)0, (LPARAM)NULL);
 	SendDlgItemMessage(hIpsDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hPreview);
 
@@ -481,6 +483,7 @@ static void RefreshPatch()
 			fp = _tfopen(szImageFileName, _T("rb"));
 			HBITMAP hNewImage = NULL;
 			if (fp) {
+				_tcscpy(szPngName, szImageFileName);  // Associated preview picture
 				hNewImage = PNGLoadBitmap(hIpsDlg, fp, 304, 228, 3);
 				fclose(fp);
 			}
@@ -591,10 +594,38 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 			SetWindowLongPtr (GetDlgItem(hIpsDlg, IDC_TREE1), GWL_STYLE, Style);
 
 			IpsManagerInit();
-
+			int nBurnDrvActiveOld = nBurnDrvActive;		// RockyWall Add
 			WndInMid(hDlg, hScrnWnd);
-			SetFocus(hDlg);											// Enable Esc=close
+			SetFocus(hDlg);								// Enable Esc=close
+			nBurnDrvActive = nBurnDrvActiveOld;			// RockyWall Add
 			break;
+		}
+
+		case WM_LBUTTONDBLCLK: {
+			RECT PreviewRect;
+			POINT Point;
+
+			memset(&PreviewRect, 0, sizeof(RECT));
+			memset(&Point, 0, sizeof(POINT));
+
+			if (GetCursorPos(&Point) && GetWindowRect(GetDlgItem(hIpsDlg, IDC_SCREENSHOT_H), &PreviewRect)) {
+				if (PtInRect(&PreviewRect, Point)) {
+					FILE* fp = NULL;
+
+					fp = _tfopen(szPngName, _T("rb"));
+					if (fp) {
+						fclose(fp);
+						ShellExecute(  // Open the image with the associated program
+							GetDlgItem(hIpsDlg, IDC_SCREENSHOT_H),
+							NULL,
+							szPngName,
+							NULL,
+							NULL,
+							SW_SHOWNORMAL);
+					}
+				}
+			}
+			return 0;
 		}
 
 		case WM_COMMAND: {
@@ -631,7 +662,6 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				RefreshPatch();
 				return 0;
 			}
-
 			break;
 		}
 
@@ -663,6 +693,13 @@ static INT_PTR CALLBACK DefInpProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				if (thi.flags == TVHT_ONITEMSTATEICON) {
 					TreeView_SelectItem(hIpsList, thi.hItem);
 				}
+
+				return 1;
+			}
+
+			if (LOWORD(wParam) == IDC_CHOOSE_LIST && pNmHdr->code == NM_DBLCLK) {
+				// disable double-click node-expand
+				SetWindowLongPtr(hIpsDlg, DWLP_MSGRESULT, 1);
 
 				return 1;
 			}
@@ -711,7 +748,7 @@ int IpsManagerCreate(HWND hParentWND)
     (((unsigned int)(bp)[0] << 8) & 0xFF00) | \
     ((unsigned int) (bp)[1] & 0x00FF)
 
-bool bDoIpsPatch = FALSE;
+bool bDoIpsPatch = false;
 
 static void PatchFile(const char* ips_path, UINT8* base, bool readonly)
 {
@@ -720,8 +757,10 @@ static void PatchFile(const char* ips_path, UINT8* base, bool readonly)
 	int Offset, Size;
 	UINT8* mem8 = NULL;
 
-	if (NULL == (f = fopen(ips_path, "rb")))
+	if (NULL == (f = fopen(ips_path, "rb"))) {
+		bprintf(0, _T("IPS - Can't open file %S!  Aborting.\n"), ips_path);
 		return;
+	}
 
 	memset(buf, 0, sizeof(buf));
 	fread(buf, 1, 5, f);
@@ -757,7 +796,7 @@ static void PatchFile(const char* ips_path, UINT8* base, bool readonly)
 			}
 
 			while (Size--) {
-				mem8 = base + Offset;
+				if (!readonly) mem8 = base + Offset; // When in the read-only state, the only thing is to get nIpsMaxFileLen, thus avoiding memory out-of-bounds.
                 Offset++;
                 if (Offset > nIpsMaxFileLen) nIpsMaxFileLen = Offset; // file size is growing
                 if (readonly) {
@@ -805,7 +844,7 @@ static char* stristr_int(const char* str1, const char* str2)
     return (*p2) ? NULL : (char*)r;
 }
 
-static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base, INT32 readonly)
+static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base, bool readonly)
 {
 	char s[MAX_PATH];
     char* p = NULL;
@@ -851,6 +890,8 @@ static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base, IN
 
                 ips_name = strtok(NULL, "\r\n");
 
+				if (ips_name[0] == '\t') ips_name++;
+
 				if (!ips_name)
 					continue;
 
@@ -867,7 +908,7 @@ static void DoPatchGame(const char* patch_name, char* game_name, UINT8* base, IN
                 }
 
                 // clean-up IPS name beginning (could be quoted or not)
-                while (ips_name && (ips_name[0] == ' ' || ips_name[0] == '\"'))
+                while (ips_name && (ips_name[0] == '\t' || ips_name[0] == ' ' || ips_name[0] == '\"'))
                     ips_name++;
 
                 char *has_ext = stristr_int(ips_name, ".ips");
@@ -897,7 +938,7 @@ void IpsApplyPatches(UINT8* base, char* rom_name)
 {
 	char ips_data[MAX_PATH];
 
-    nIpsMaxFileLen = 0;
+	nIpsMaxFileLen = 0;
 
 	int nActivePatches = GetIpsNumActivePatches();
 
@@ -905,10 +946,124 @@ void IpsApplyPatches(UINT8* base, char* rom_name)
 		memset(ips_data, 0, MAX_PATH);
 		TCHARToANSI(szIpsActivePatches[i], ips_data, sizeof(ips_data));
 		DoPatchGame(ips_data, rom_name, base, false);
-    }
+	}
+}
+
+UINT32 GetIpsDrvDefine()
+{
+	if (!bDoIpsPatch) return 0;
+
+	UINT32 nRet = 0;
+
+	char ips_data[MAX_PATH];
+	int nActivePatches = GetIpsNumActivePatches();
+
+	for (int i = 0; i < nActivePatches; i++) {
+		memset(ips_data, 0, MAX_PATH);
+		TCHARToANSI(szIpsActivePatches[i], ips_data, sizeof(ips_data));
+
+		char str[MAX_PATH] = { 0 }, * ptr = NULL, * tmp = NULL;
+		FILE* fp = NULL;
+
+		if (NULL != (fp = fopen(ips_data, "rb"))) {
+			while (!feof(fp)) {
+				if (NULL != fgets(str, sizeof(str), fp)) {
+					ptr = str;
+
+					// skip UTF-8 sig
+					if (0 == strncmp(ptr, UTF8_SIGNATURE, strlen(UTF8_SIGNATURE)))
+						ptr += strlen(UTF8_SIGNATURE);
+
+					if (NULL == (tmp = strtok(ptr, " \t\r\n")))
+						continue;
+					if (0 != strcmp(tmp, "#define"))
+						continue;
+					if (NULL == (tmp = strtok(NULL, " \t\r\n")))
+						break;
+
+					if (0 == strcmp(tmp, "IPS_USE_PROTECT")) {
+						nRet |= IPS_USE_PROTECT;
+						continue;
+					}
+
+					// Assignment is only allowed once
+					if (!INCLUDE_NEOP3(nRet)) {
+						if (0 == strcmp(tmp, "IPS_NEOP3_20000")) {
+							nRet |= IPS_NEOP3_20000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_NEOP3_40000")) {
+							nRet |= IPS_NEOP3_40000;
+							continue;
+						}
+					}
+					if (!INCLUDE_PROG(nRet)) {
+						if (0 == strcmp(tmp, "IPS_PROG_100000")) {
+							nRet |= IPS_PROG_100000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_200000")) {
+							nRet |= IPS_PROG_200000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_300000")) {
+							nRet |= IPS_PROG_300000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_400000")) {
+							nRet |= IPS_PROG_400000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_500000")) {
+							nRet |= IPS_PROG_500000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_600000")) {
+							nRet |= IPS_PROG_600000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_700000")) {
+							nRet |= IPS_PROG_700000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_800000")) {
+							nRet |= IPS_PROG_800000;
+							continue;
+						}
+						if (0 == strcmp(tmp, "IPS_PROG_900000")) {
+							nRet |= IPS_PROG_900000;
+							continue;
+						}
+					}
+				}
+			}
+			fclose(fp);
+		}
+	}
+
+	return nRet;
+}
+
+INT32 GetIpsesMaxLen(char* rom_name)
+{
+	INT32 nRet = -1;	// The function returns the last patched address if it succeeds, and -1 if it fails.
+
+	if (NULL != rom_name) {
+		char ips_data[MAX_PATH];
+		nIpsMaxFileLen = 0;
+		int nActivePatches = GetIpsNumActivePatches();
+
+		for (int i = 0; i < nActivePatches; i++) {
+			memset(ips_data, 0, MAX_PATH);
+			TCHARToANSI(szIpsActivePatches[i], ips_data, sizeof(ips_data));
+			DoPatchGame(ips_data, rom_name, NULL, true);
+			if (nIpsMaxFileLen > nRet) nRet = nIpsMaxFileLen;	// Returns the address with the largest length in ipses.
+		}
+	}
+	return nRet;
 }
 
 void IpsPatchExit()
 {
-	bDoIpsPatch = FALSE;
+	bDoIpsPatch = false;
 }

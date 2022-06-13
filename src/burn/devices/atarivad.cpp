@@ -9,8 +9,9 @@ static INT32 palette_bank;
 static UINT16 control_data[32];
 static UINT16 pf_scrolly[2];
 static UINT16 pf_scrollx[2];
-static INT32 mo_xscroll = 0;
-static INT32 mo_yscroll = 0;
+
+static INT32 pf_offsetx[2];
+static INT32 mob_offsetx;
 
 static UINT8 *playfield_data[3];
 static UINT16 *pf_data[3];
@@ -31,16 +32,16 @@ static void (*atari_palette_write)(INT32 offset, UINT16 data) = NULL;
 
 static tilemap_callback( bg ) // offtwall // shuuz
 {
-	UINT16 code = pf_data[0][offs];
-	UINT16 color = pf_data[2][offs] >> 8;
+	UINT16 code = BURN_ENDIAN_SWAP_INT16(pf_data[0][offs]);
+	UINT16 color = BURN_ENDIAN_SWAP_INT16(pf_data[2][offs]) >> 8;
 
 	TILE_SET_INFO(0, code, color, TILE_FLIPYX(code >> 15));
 }
 
 static tilemap_callback( bg0 )
 {
-	UINT16 code = pf_data[0][offs];
-	UINT16 color = pf_data[2][offs];
+	UINT16 code = BURN_ENDIAN_SWAP_INT16(pf_data[0][offs]);
+	UINT16 color = BURN_ENDIAN_SWAP_INT16(pf_data[2][offs]);
 
 	TILE_SET_INFO(0, code, color, TILE_FLIPYX(code >> 15) | TILE_GROUP((color >> 4) & 3));
 //	*category = (color >> 4) & 3;
@@ -48,8 +49,8 @@ static tilemap_callback( bg0 )
 
 static tilemap_callback( bg1 )
 {
-	UINT16 code = pf_data[1][offs];
-	UINT16 color = pf_data[2][offs] >> 8;
+	UINT16 code = BURN_ENDIAN_SWAP_INT16(pf_data[1][offs]);
+	UINT16 color = BURN_ENDIAN_SWAP_INT16(pf_data[2][offs]) >> 8;
 
 	TILE_SET_INFO(1, code, color, TILE_FLIPYX(code >> 15) | TILE_GROUP((color >> 4) & 3));
 //	*category = (color >> 4) & 3;
@@ -66,7 +67,7 @@ static void update_parameter(UINT16 data)
 	switch (control)
 	{
 		case 9:
-			mo_xscroll = data;
+			atarimo_set_xscroll(0, data + mob_offsetx);
 		break;
 
 		case 10:
@@ -78,7 +79,7 @@ static void update_parameter(UINT16 data)
 		break;
 
 		case 13:
-			mo_yscroll = data;
+			atarimo_set_yscroll(0, data);
 		break;
 
 		case 14:
@@ -95,7 +96,7 @@ void AtariVADRecalcPalette()
 {
 	if (atari_palette_write) {
 		for (INT32 i = 0; i < 0x7ff; i++) {
-			UINT16 pal = *((UINT16*)(palette_ram + (i << 1)));
+			UINT16 pal = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(palette_ram + (i << 1))));
 			atari_palette_write(i, pal);
 		}
 	}
@@ -108,7 +109,7 @@ static void __fastcall atari_vad_write_word(UINT32 address, UINT16 data)
 //	bprintf (0, _T("VAD,WW: %5.5x, %4.4x\n"), address, data);
 
 	if ((address & 0xff000) == 0x00000) {
-		*((UINT16*)(palette_ram + address)) = data;
+		*((UINT16*)(palette_ram + address)) = BURN_ENDIAN_SWAP_INT16(data);
 		if (atari_palette_write) {
 			atari_palette_write(address / 2, data);
 		}
@@ -166,33 +167,33 @@ static void __fastcall atari_vad_write_word(UINT32 address, UINT16 data)
 
 	if ((address & 0xfe000) == 0x10000) { // playfield2_latched_msb_w
 		address = (address & 0x1ffe) / 2;
-		pf_data[1][address] = data;
+		pf_data[1][address] = BURN_ENDIAN_SWAP_INT16(data);
 		if (playfield_latched) {
-			pf_data[2][address] = (pf_data[2][address] & 0x00ff) | (control_data[0x1c] & 0xff00);
+			pf_data[2][address] = BURN_ENDIAN_SWAP_INT16((BURN_ENDIAN_SWAP_INT16(pf_data[2][address]) & 0x00ff) | (control_data[0x1c] & 0xff00));
 		}
 		return;
 	}
 
-	if ((address & 0xfe000) == 0x12000) { // playfield_latched_lsb_w
+	if ((address & 0xfe000) == 0x12000 || (address & 0xfe000) == 0x18000) { // playfield_latched_lsb_w - 18000 for marble madness 2
 		address = (address & 0x1ffe) / 2;
-		pf_data[0][address] = data;
+		pf_data[0][address] = BURN_ENDIAN_SWAP_INT16(data);
 		if (playfield_latched) {
-			pf_data[2][address] = (pf_data[2][address] & 0xff00) | (control_data[0x1d] & 0x00ff);
+			pf_data[2][address] = BURN_ENDIAN_SWAP_INT16((BURN_ENDIAN_SWAP_INT16(pf_data[2][address]) & 0xff00) | (control_data[0x1d] & 0x00ff));
 		}
 		return;
 	}
 
 	if ((address & 0xfe000) == 0x14000) { // playfield_latched_msb_w
 		address = (address & 0x1ffe) / 2;
-		pf_data[0][address] = data;
+		pf_data[0][address] = BURN_ENDIAN_SWAP_INT16(data);
 		if (playfield_latched) {
-			pf_data[2][address] = (pf_data[2][address] & 0x00ff) | (control_data[0x1c] & 0xff00);
+			pf_data[2][address] = BURN_ENDIAN_SWAP_INT16((BURN_ENDIAN_SWAP_INT16(pf_data[2][address]) & 0x00ff) | (control_data[0x1c] & 0xff00));
 		}
 		return;
 	}
 
 	// relief pitcher goes nuts with unmapped writes.
-	//bprintf (0, _T("VAD,WW: %5.5x, %4.4x\n"), address, data);
+	bprintf (0, _T("VAD,WW: %5.5x, %4.4x\n"), address, data);
 }
 
 static UINT16 __fastcall atari_vad_read_word(UINT32 address)
@@ -238,8 +239,11 @@ INT32 AtariVADScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(control_data);
 		SCAN_VAR(pf_scrolly);
 		SCAN_VAR(pf_scrollx);
-		SCAN_VAR(mo_xscroll);
-		SCAN_VAR(mo_yscroll);
+		SCAN_VAR(tilerow_scanline);
+		SCAN_VAR(tilerow_partial_prev_line);
+		SCAN_VAR(atarivad_scanline_timer);
+		SCAN_VAR(atarivad_scanline_timer_enabled);
+		SCAN_VAR(atarivad_scanline);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -251,7 +255,7 @@ INT32 AtariVADScan(INT32 nAction, INT32 *pnMin)
 
 void AtariVADReset()
 {
-	memset (playfield_data[0], 0, 0x2000 * 3);
+	memset (playfield_data[0], 0, 0x4000 * 3);
 
 	playfield_latched = 0;
 	palette_bank = 0;
@@ -266,9 +270,13 @@ void AtariVADReset()
 
 	pf_scrolly[0] = pf_scrolly[1] = 0;
 	pf_scrollx[0] = pf_scrollx[1] = 0;
+}
 
-	mo_xscroll = 0;
-	mo_yscroll = 0;
+void AtariVADSetXOffsets(INT32 pf0, INT32 pf1, INT32 mob)
+{
+	pf_offsetx[0] = pf0;
+	pf_offsetx[1] = pf1;
+	mob_offsetx = mob;
 }
 
 void AtariVADInit(INT32 tmap_num0, INT32 tmap_num1, INT32 bg_map_type, void (*sl_timer_cb)(INT32), void (*palette_write)(INT32 offset, UINT16 data))
@@ -294,6 +302,8 @@ void AtariVADInit(INT32 tmap_num0, INT32 tmap_num1, INT32 bg_map_type, void (*sl
 	playfield_number[1] = tmap_num1;
 
 	atari_palette_write = palette_write ? palette_write : palette_write_dummy;
+
+	AtariVADSetXOffsets(0, 4, 0); // defaults for most games
 }
 
 void AtariVADSetPartialCB(void (*partial_cb)(INT32))
@@ -307,24 +317,32 @@ void AtariVADExit()
 	BurnFree(palette_ram);
 }
 
-void AtariVADMap(INT32 startaddress, INT32 endaddress, INT32 shuuz)
+void AtariVADMap(INT32 startaddress, INT32 endaddress, INT32 config)
 {
 	INT32 range = (endaddress + 1) - startaddress;
 	INT32 address = startaddress;
 
-	SekMapHandler(5,					address, address + range - 1, MAP_WRITE);
+	if (config != 2)
+	{
+		SekMapHandler(5,					address, address + range - 1, MAP_WRITE);
+	}
 	SekSetWriteWordHandler(5,			atari_vad_write_word);
 	SekSetWriteByteHandler(5,			atari_vad_write_byte);
 
-	SekMapHandler(6,					address + 0xfc00, address + 0x0ffff, MAP_READ);
+	SekMapHandler(6,					address + 0xfc00, address + 0x0ffff, MAP_RAM);
 	SekSetReadWordHandler(6,			atari_vad_read_word);
 	SekSetReadByteHandler(6,			atari_vad_read_byte);
+	SekSetWriteWordHandler(6,			atari_vad_write_word);
+	SekSetWriteByteHandler(6,			atari_vad_write_byte);
 
 	SekMapMemory(palette_ram,			address + 0x00000, address + 0x00fff, MAP_ROM);
 
-	if (shuuz) { // shuuz
+	if (config == 1) { // shuuz
 		SekMapMemory(playfield_data[0],		address + 0x14000, address + 0x15fff, MAP_ROM);
 		SekMapMemory(playfield_data[2],		address + 0x16000, address + 0x17fff, MAP_RAM);
+	} else if (config == 2) { // marble madness 2
+		SekMapHandler(5,					address + 0x18000, address + 0x19fff, MAP_WRITE);
+		SekMapMemory(playfield_data[0],		address + 0x18000, address + 0x19fff, MAP_ROM);
 	} else {
 		SekMapMemory(playfield_data[1],		address + 0x10000, address + 0x11fff, MAP_ROM);
 		SekMapMemory(playfield_data[0],		address + 0x12000, address + 0x13fff, MAP_ROM);
@@ -337,7 +355,7 @@ void AtariVADEOFUpdate(UINT16 *eof_data)
 {
 	for (INT32 i = 0; i < 0x1f; i++) {
 		if (eof_data[i]) {
-			atari_vad_write_word(0x0ffc0 + (i*2), eof_data[i]);
+			atari_vad_write_word(0x0ffc0 + (i*2), BURN_ENDIAN_SWAP_INT16(eof_data[i]));
 		}
 	}
 
@@ -360,8 +378,8 @@ void AtariVADTileRowUpdate(INT32 scanline, UINT16 *alphamap_ram)
 	if ((scanline < nScreenHeight) && (control_data[0x0a] & 0x2000))
 	{
 		INT32 offset = ((scanline / 8) * 64) + 48 + (2 * (scanline & 7));
-		INT32 data0 = alphamap_ram[offset];
-		INT32 data1 = alphamap_ram[offset+1];
+		INT32 data0 = BURN_ENDIAN_SWAP_INT16(alphamap_ram[offset]);
+		INT32 data1 = BURN_ENDIAN_SWAP_INT16(alphamap_ram[offset+1]);
 
 		if (scanline > 0 && ((data0 | data1) & 0xf) && pBurnDraw)
 		{
@@ -383,12 +401,9 @@ void AtariVADTileRowUpdate(INT32 scanline, UINT16 *alphamap_ram)
 
 void AtariVADDraw(UINT16 *pDestDraw, INT32 use_categories)
 {
-	atarimo_set_xscroll(0, mo_xscroll);
-	atarimo_set_yscroll(0, mo_yscroll);
-
-	GenericTilemapSetScrollX(playfield_number[0], pf_scrollx[0] + (pf_scrollx[1] & 7));
+	GenericTilemapSetScrollX(playfield_number[0], pf_scrollx[0] + (pf_scrollx[1] & 7) + pf_offsetx[0]);
 	GenericTilemapSetScrollY(playfield_number[0], pf_scrolly[0]);
-	GenericTilemapSetScrollX(playfield_number[1], pf_scrollx[1] + 4);
+	GenericTilemapSetScrollX(playfield_number[1], pf_scrollx[1] + pf_offsetx[1]);
 	GenericTilemapSetScrollY(playfield_number[1], pf_scrolly[1]);
 
 	if (use_categories)

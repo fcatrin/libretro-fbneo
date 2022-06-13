@@ -29,7 +29,7 @@ static INT32 vector_offsetY     = 0;
 static float vector_gamma_corr  = 1.2;
 static float vector_intens      = 1.0;
 static INT32 vector_antialias   = 1;
-static INT32 vector_beam        = 0x0001865e; // 16.16 beam width
+static INT32 vector_beam        = 0x0001f65e; // 16.16 beam width
 
 #define CLAMP8(x) do { if (x > 0xff) x = 0xff; if (x < 0) x = 0; } while (0)
 
@@ -77,7 +77,10 @@ void vector_set_scale(INT32 x, INT32 y)
 
 void vector_rescale(INT32 x, INT32 y)
 {
-	BurnDrvSetVisibleSize(x, y);
+	if(BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL)
+		BurnDrvSetVisibleSize(y, x);
+	else
+		BurnDrvSetVisibleSize(x, y);
 	Reinitialise();
 	GenericTilesExit();
 	GenericTilesInit(); // create pTransDraw w/ new size
@@ -87,6 +90,9 @@ void vector_rescale(INT32 x, INT32 y)
 	vector_set_clip(0, nScreenWidth, 0, nScreenHeight);
 
 	vector_set_scale(vector_scaleX_int, vector_scaleY_int);
+
+	// This is bit hacky, but thicker lines are more enjoyable at 1080p -barbudreadmon
+	vector_intens = (y == 1080 ? 2.0 : 1.0);
 }
 
 void vector_add_point(INT32 x, INT32 y, INT32 color, INT32 intensity)
@@ -289,30 +295,19 @@ void draw_vector(UINT32 *palette)
 		for (INT32 y = 0; y < nScreenHeight; y++)
 		{
 			if (y < clip_ymin || y > clip_ymax) continue;
+			UINT32 idx = (y * nScreenWidth);
 
 			for (INT32 x = 0; x < nScreenWidth; x++)
 			{
 				if (x < clip_xmin || x > clip_xmax) continue;
 
-				UINT32 idx = (y * nScreenWidth) + x;
-				UINT32 p = pBitmap[idx];
+				UINT32 p = pBitmap[idx + x];
 
 				if (p) {
-					PutPix(pBurnDraw + idx * nBurnBpp, BurnHighCol((p >> 16) & 0xff, (p >> 8) & 0xff, p & 0xff, 0));
+					PutPix(pBurnDraw + (idx + x) * nBurnBpp, BurnHighCol((p >> 16) & 0xff, (p >> 8) & 0xff, p & 0xff, 0));
 				}
 			}
 		}
-
-#if 0
-		for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++)
-		{
-			UINT32 p = pBitmap[i];
-			
-			if (p) {
-				PutPix(pBurnDraw + i * nBurnBpp, BurnHighCol((p >> 16) & 0xff, (p >> 8) & 0xff, p & 0xff, 0));
-			}
-		}
-#endif
 	}
 }
 

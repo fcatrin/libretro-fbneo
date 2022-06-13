@@ -37,29 +37,29 @@ static INT32 charlienmode = 0;
 static INT32 DrvOkiBank;
 
 static struct BurnInputInfo Simpl156InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 15,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy2 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Simpl156)
@@ -297,6 +297,8 @@ static INT32 DrvDoReset()
 	DrvOkiBank = -1;
 	oki_set_bank(0);
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -388,8 +390,8 @@ static INT32 CommonInit(INT32 (*pRomLoad)(INT32 *, INT32 *), void (*pMap)(), INT
 
 	MSM6295Init(0, 1006875 / 132, 0);
 	MSM6295Init(1, 2013750 / 132 / msm, 1);
-	MSM6295SetRoute(0, 0.60, BURN_SND_ROUTE_BOTH);
-	MSM6295SetRoute(1, 0.20, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(0, 0.85, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(1, 0.45, BURN_SND_ROUTE_BOTH);
 
 	deco16Init(1, 0, 1);
 	deco16_set_bank_callback(0, simpl156_bank_callback);
@@ -514,9 +516,7 @@ static INT32 DrvDraw()
 	deco16_pf12_update();
 	deco16_clear_prio_map();
 
-	for (INT32 i = 0; i < nScreenWidth * nScreenHeight; i++) {
-		pTransDraw[i] = 0x100;
-	}
+	BurnTransferClear(0x100);
 
 	deco16_draw_layer(1, pTransDraw, 2);
 	deco16_draw_layer(0, pTransDraw, 4);
@@ -820,7 +820,7 @@ struct BurnDriver BurnDrvChainrec = {
 	"chainrec", NULL, NULL, NULL, "1995",
 	"Chain Reaction (World, Version 2.2, 1995.09.25)\0", NULL, "Data East", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
 	NULL, chainrecRomInfo, chainrecRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	chainrecInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
@@ -877,7 +877,7 @@ struct BurnDriver BurnDrvMagdrop = {
 	"magdrop", "chainrec", NULL, NULL, "1995",
 	"Magical Drop (Japan, Version 1.1, 1995.06.21)\0", NULL, "Data East", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
 	NULL, magdropRomInfo, magdropRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	magdropInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
@@ -913,7 +913,7 @@ struct BurnDriver BurnDrvMagdropp = {
 	"magdropp", "chainrec", NULL, NULL, "1995",
 	"Magical Drop Plus 1 (Japan, Version 2.1, 1995.09.12)\0", NULL, "Data East", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PUZZLE, 0,
 	NULL, magdroppRomInfo, magdroppRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	magdroppInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
@@ -972,7 +972,7 @@ struct BurnDriver BurnDrvCharlien = {
 	"charlien", NULL, NULL, NULL, "1995",
 	"Charlie Ninja\0", NULL, "Mitchell", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_RUNGUN, 0,
 	NULL, charlienRomInfo, charlienRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	charlienInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
@@ -1038,7 +1038,7 @@ struct BurnDriver BurnDrvPrtytime = {
 	"prtytime", NULL, NULL, NULL, "1995",
 	"Party Time: Gonta the Diver II / Ganbare! Gonta!! 2 (World Release)\0", NULL, "Mitchell", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE, 0,
 	NULL, prtytimeRomInfo, prtytimeRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	prtytimeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4
@@ -1071,7 +1071,7 @@ struct BurnDriver BurnDrvGangonta = {
 	"gangonta", "prtytime", NULL, NULL, "1995",
 	"Ganbare! Gonta!! 2 / Party Time: Gonta the Diver II (Japan Release)\0", NULL, "Mitchell", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_MAZE, 0,
 	NULL, gangontaRomInfo, gangontaRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	prtytimeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 320, 3, 4
@@ -1109,7 +1109,7 @@ struct BurnDriver BurnDrvOsman = {
 	"osman", NULL, NULL, NULL, "1996",
 	"Osman (World)\0", NULL, "Mitchell", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, osmanRomInfo, osmanRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	osmanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
@@ -1142,7 +1142,7 @@ struct BurnDriver BurnDrvCandance = {
 	"candance", "osman", NULL, NULL, "1996",
 	"Cannon Dancer (Japan)\0", NULL, "Mitchell (Atlus license)", "Simple 156",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_PREFIX_DATAEAST, GBF_PLATFORM | GBF_SCRFIGHT, 0,
 	NULL, candanceRomInfo, candanceRomName, NULL, NULL, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
 	osmanInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3

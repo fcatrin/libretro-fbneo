@@ -4,10 +4,28 @@
 
 int bDrvOkay = 0;						// 1 if the Driver has been initted okay, and it's okay to use the BurnDrv functions
 
-TCHAR szAppRomPaths[DIRS_MAX][MAX_PATH] = { { _T("") }, { _T("") }, { _T("") }, { _T("") }, { _T("") },
-											{ _T("") }, { _T("") }, { _T("") }, { _T("") }, { _T("spectrum/") },
-											{ _T("msx/") }, { _T("sms/") }, { _T("gamegear/") }, { _T("sg1000/") }, { _T("coleco/") },
-											{ _T("tg16/") }, { _T("sgx/") }, { _T("pce/") }, { _T("megadriv/") }, { _T("roms/") } };
+TCHAR szAppRomPaths[DIRS_MAX][MAX_PATH] = {
+	{ _T("") },
+	{ _T("") },
+	{ _T("") },
+	{ _T("") },
+	{ _T("roms/channelf/") },
+	{ _T("roms/ngp/") },
+	{ _T("roms/nes/") },
+	{ _T("roms/fds/") },
+	{ _T("roms/spectrum/") },
+	{ _T("roms/msx/") },
+	{ _T("roms/sms/") },
+	{ _T("roms/gamegear/") },
+	{ _T("roms/sg1000/") },
+	{ _T("roms/coleco/") },
+	{ _T("roms/tg16/") },
+	{ _T("roms/sgx/") },
+	{ _T("roms/pce/") },
+	{ _T("roms/megadrive/") },
+	{ _T("roms/arcade/") },
+	{ _T("roms/") }
+};
 
 static bool bSaveRAM = false;
 
@@ -174,10 +192,12 @@ int DrvInit(int nDrvNum, bool bRestore)
 		NeoCDZRateChange();
 	}
 
-	{ // Init input and audio, save blitter init for later. (reduce # of mode changes, nice for emu front-ends)
-		bVidOkay = 1;
+	{ // Init input, save audio and blitter init for later. (reduce # of mode changes, nice for emu front-ends)
+		bVidOkay = 1; // don't init video yet
+		bAudOkay = 1; // don't init audio yet, but grab soundcard params (nBurnSoundRate) so soundcores can init.
 		MediaInit();
 		bVidOkay = 0;
+		bAudOkay = 0;
 	}
 
 	// Define nMaxPlayers early; GameInpInit() needs it (normally defined in DoLibInit()).
@@ -236,9 +256,8 @@ int DrvInit(int nDrvNum, bool bRestore)
 		if (bRestore) {
 			StatedAuto(0);
 			bSaveRAM = true;
-
-			ConfigCheatLoad();
 		}
+		ConfigCheatLoad();
 	}
 
 	nBurnLayer = 0xFF;				// show all layers
@@ -248,6 +267,7 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 	VidExit();
 	POST_INITIALISE_MESSAGE;
+	CallRegisteredLuaFunctions(LUACALL_ONSTART);
 
 	return 0;
 }

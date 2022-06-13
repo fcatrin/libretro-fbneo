@@ -673,7 +673,7 @@ static void DrvMakeInputs()
 		DrvInput[3] = 0x80;
 	}
 
-	if (use_paddle) {
+	if (use_paddle && !bBurnRunAheadFrame) {
 		if (DrvJoy4[0]) Paddle += 0x04;
 		if (DrvJoy4[1]) Paddle -= 0x04;
 		if (Paddle < 0x10) Paddle = 0x10;
@@ -1065,8 +1065,8 @@ static INT32 DrvExit()
 
 static void plot_pixel(INT32 x, INT32 y, INT32 pen)
 {
-	if (x < 0 || x > nScreenWidth) return;
-	if (y < 0 || y > nScreenHeight) return;
+	if (x < 0 || x >= nScreenWidth) return;
+	if (y < 0 || y >= nScreenHeight) return;
 
 	UINT16 *pPixel = pTransDraw + (y * nScreenWidth) + x;
 	*pPixel = pen;
@@ -1145,11 +1145,12 @@ static INT32 DrvFrame()
 	DrvMakeInputs();
 
 	INT32 nInterleave = 256;
-	INT32 nCyclesTotal = 2048000 / 60;
+	INT32 nCyclesTotal[1] = { 2048000 / 60 };
+	INT32 nCyclesDone[1] = { 0 };
 
 	ZetOpen(0);
 	for (INT32 i = 0; i < nInterleave; i++) {
-		ZetRun(nCyclesTotal / nInterleave);
+		CPU_RUN(0, Zet);
 
 		if (i == nInterleave - 1 && ball_on)
 			ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
@@ -1157,7 +1158,7 @@ static INT32 DrvFrame()
 		if (navaronemode && i == 0 && bombbeemode == 0) // weird timing.
 			ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
 
-		warpwarp_timer_tiktiktik(nCyclesTotal / nInterleave);
+		warpwarp_timer_tiktiktik(nCyclesTotal[0] / nInterleave);
 	}
 	ZetClose();
 

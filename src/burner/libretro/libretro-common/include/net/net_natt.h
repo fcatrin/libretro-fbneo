@@ -1,4 +1,4 @@
-/* Copyright  (C) 2010-2018 The RetroArch team
+/* Copyright  (C) 2010-2020 The RetroArch team
  *
  * ---------------------------------------------------------------------------------------
  * The following license statement only applies to this file (net_natt.h).
@@ -50,7 +50,7 @@ struct natt_status
    /** True if we've resolved an external IPv6 address */
    bool have_inet6;
 
-#if defined(AF_INET6) && !defined(HAVE_SOCKET_LEGACY)
+#if defined(AF_INET6) && !defined(HAVE_SOCKET_LEGACY) && !defined(_3DS)
    /** External IPv6 address */
    struct sockaddr_in6 ext_inet6_addr;
 #endif
@@ -62,7 +62,8 @@ struct natt_status
 /**
  * Initialize global NAT traversal structures (must be called once to use other
  * functions) */
-void natt_init(void);
+void natt_init(struct natt_status *status,
+      uint16_t port, enum socket_protocol proto);
 
 /** Initialize a NAT traversal status object */
 bool natt_new(struct natt_status *status);

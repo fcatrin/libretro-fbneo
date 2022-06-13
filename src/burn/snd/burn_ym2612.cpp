@@ -45,12 +45,14 @@ static void YM2612Render(INT32 nSegmentLength)
 	if (!DebugSnd_YM2612Initted) bprintf(PRINT_ERROR, _T("YM2612Render called without init\n"));
 #endif
 	
-	if (nYM2612Position >= nSegmentLength) {
+	if (nYM2612Position >= nSegmentLength || !pBurnSoundOut) {
 		return;
 	}
 
 	nSegmentLength -= nYM2612Position;
-	
+
+	if (nSegmentLength < 0) return;
+
 	pYM2612Buffer[0] = pBuffer + 0 * 4096 + 4 + nYM2612Position;
 	pYM2612Buffer[1] = pBuffer + 1 * 4096 + 4 + nYM2612Position;
 

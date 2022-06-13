@@ -1,7 +1,8 @@
-// Based on MAME driver by Quench, Yochizo, David Haywood
+// Based on original FBAlpha Toaplan driver by Jan Klaassen & MAME driver by Quench, Yochizo, David Haywood
 
 #include "toaplan.h"
 #include "z180_intf.h"
+#include "burn_gun.h"
 
 #define REFRESHRATE 60
 #define VBLANK_LINES (32)
@@ -12,8 +13,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0, 0, 0, 0, 0, 0};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static UINT8 *Mem = NULL, *MemEnd = NULL;
 static UINT8 *RamStart, *RamEnd;
@@ -23,212 +22,222 @@ static UINT8 *ShareRAM;
 static UINT8 *Rom02;
 static UINT8 *Ram02;
 
+static INT16 DrvAnalogPort[4] = { 0, 0, 0, 0 };
 static INT8 Paddle[2];
 static INT8 PaddleOld[2];
 
 static INT32 nColCount = 0x0800;
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo GhoxInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	A("P1 Spinner X", BIT_ANALOG_REL, &DrvAnalogPort[0],"p1 x-axis"),
+	A("P1 Spinner Y", BIT_ANALOG_REL, &DrvAnalogPort[1],"p1 y-axis"),
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	A("P2 Spinner X", BIT_ANALOG_REL, &DrvAnalogPort[2],"p2 x-axis"),
+	A("P2 Spinner Y", BIT_ANALOG_REL, &DrvAnalogPort[3],"p2 y-axis"),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Service",		BIT_DIGITAL,	DrvButton + 0,	"service"},
-	{"Tilt",		BIT_DIGITAL,	DrvButton + 1,	"tilt"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvButton + 0,	"service"	},
+	{"Tilt",			BIT_DIGITAL,	DrvButton + 1,	"tilt"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(Ghox)
 
 static struct BurnDIPInfo GhoxDIPList[]=
 {
-	{0x13, 0xff, 0xff, 0x00, NULL		},
-	{0x14, 0xff, 0xff, 0x00, NULL		},
-	{0x15, 0xff, 0xff, 0xf2, NULL		},
+	DIP_OFFSET(0x17)
 
-	{0   , 0xfe, 0   ,    2, "Unused"		},
-	{0x13, 0x01, 0x01, 0x00, "Off"		},
-	{0x13, 0x01, 0x01, 0x01, "On"		},
+	{0x00, 0xff, 0xff, 0x00, NULL						},
+	{0x01, 0xff, 0xff, 0x00, NULL						},
+	{0x02, 0xff, 0xff, 0xf2, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x13, 0x01, 0x02, 0x00, "Off"		},
-	{0x13, 0x01, 0x02, 0x02, "On"		},
+	{0   , 0xfe, 0   ,    2, "Unused"					},
+	{0x00, 0x01, 0x01, 0x00, "Off"						},
+	{0x00, 0x01, 0x01, 0x01, "On"						},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x13, 0x01, 0x04, 0x00, "Off"		},
-	{0x13, 0x01, 0x04, 0x04, "On"		},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
+	{0x00, 0x01, 0x02, 0x00, "Off"						},
+	{0x00, 0x01, 0x02, 0x02, "On"						},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x13, 0x01, 0x08, 0x08, "Off"		},
-	{0x13, 0x01, 0x08, 0x00, "On"		},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x00, 0x01, 0x04, 0x00, "Off"						},
+	{0x00, 0x01, 0x04, 0x04, "On"						},
 
-	{0   , 0xfe, 0   ,    7, "Coin A"		},
-	{0x13, 0x01, 0x30, 0x30, "4 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x20, "3 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x10, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x20, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x00, "1 Coin  1 Credits"		},
-	{0x13, 0x01, 0x30, 0x30, "2 Coins 3 Credits"		},
-	{0x13, 0x01, 0x30, 0x10, "1 Coin  2 Credits"		},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
+	{0x00, 0x01, 0x08, 0x08, "Off"						},
+	{0x00, 0x01, 0x08, 0x00, "On"						},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
-	{0x13, 0x01, 0xc0, 0x80, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0xc0, 0x00, "1 Coin  1 Credits"		},
-	{0x13, 0x01, 0xc0, 0xc0, "2 Coins 3 Credits"		},
-	{0x13, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"		},
-	{0x13, 0x01, 0xc0, 0x00, "1 Coin  2 Credits"		},
-	{0x13, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
-	{0x13, 0x01, 0xc0, 0x80, "1 Coin  4 Credits"		},
-	{0x13, 0x01, 0xc0, 0xc0, "1 Coin  6 Credits"		},
+	{0   , 0xfe, 0   ,    7, "Coin A"					},
+	{0x00, 0x01, 0x30, 0x30, "4 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x20, "3 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x10, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x20, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x00, "1 Coin  1 Credits"		},
+	{0x00, 0x01, 0x30, 0x30, "2 Coins 3 Credits"		},
+	{0x00, 0x01, 0x30, 0x10, "1 Coin  2 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x14, 0x01, 0x03, 0x03, "Hardest"		},
-	{0x14, 0x01, 0x03, 0x02, "Hard"		},
-	{0x14, 0x01, 0x03, 0x00, "Normal"		},
-	{0x14, 0x01, 0x03, 0x01, "Easy"		},
+	{0   , 0xfe, 0   ,    8, "Coin B"					},
+	{0x00, 0x01, 0xc0, 0x80, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0xc0, 0x00, "1 Coin  1 Credits"		},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 3 Credits"		},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"		},
+	{0x00, 0x01, 0xc0, 0x00, "1 Coin  2 Credits"		},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  4 Credits"		},
+	{0x00, 0x01, 0xc0, 0xc0, "1 Coin  6 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "None"		},
-	{0x14, 0x01, 0x0c, 0x08, "100k only"		},
-	{0x14, 0x01, 0x0c, 0x04, "100k and 300k"		},
-	{0x14, 0x01, 0x0c, 0x00, "100k and every 200k"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x01, 0x01, 0x03, 0x03, "Hardest"					},
+	{0x01, 0x01, 0x03, 0x02, "Hard"						},
+	{0x01, 0x01, 0x03, 0x00, "Normal"					},
+	{0x01, 0x01, 0x03, 0x01, "Easy"						},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x30, 0x30, "1"		},
-	{0x14, 0x01, 0x30, 0x20, "2"		},
-	{0x14, 0x01, 0x30, 0x00, "3"		},
-	{0x14, 0x01, 0x30, 0x10, "5"		},
+	{0   , 0xfe, 0   ,    4, "Bonus Life"				},
+	{0x01, 0x01, 0x0c, 0x0c, "None"						},
+	{0x01, 0x01, 0x0c, 0x08, "100k only"				},
+	{0x01, 0x01, 0x0c, 0x04, "100k and 300k"			},
+	{0x01, 0x01, 0x0c, 0x00, "100k and every 200k"		},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x14, 0x01, 0x40, 0x00, "Off"		},
-	{0x14, 0x01, 0x40, 0x40, "On"		},
+	{0   , 0xfe, 0   ,    4, "Lives"					},
+	{0x01, 0x01, 0x30, 0x30, "1"						},
+	{0x01, 0x01, 0x30, 0x20, "2"						},
+	{0x01, 0x01, 0x30, 0x00, "3"						},
+	{0x01, 0x01, 0x30, 0x10, "5"						},
 
-	{0   , 0xfe, 0   ,    2, "Unused"		},
-	{0x14, 0x01, 0x80, 0x00, "Off"		},
-	{0x14, 0x01, 0x80, 0x80, "On"		},
+	{0   , 0xfe, 0   ,    2, "Invulnerability"			},
+	{0x01, 0x01, 0x40, 0x00, "Off"						},
+	{0x01, 0x01, 0x40, 0x40, "On"						},
 
-	{0   , 0xfe, 0   ,   16, "Region"		},
-	{0x15, 0x01, 0x0f, 0x02, "Europe"		},
-	{0x15, 0x01, 0x0f, 0x0a, "Europe (Nova Apparate GMBH & Co)"		},
-	{0x15, 0x01, 0x0f, 0x0d, "Europe (Taito Corporation Japan)"		},
-	{0x15, 0x01, 0x0f, 0x01, "USA"		},
-	{0x15, 0x01, 0x0f, 0x09, "USA (Romstar)"		},
-	{0x15, 0x01, 0x0f, 0x0b, "USA (Taito America Corporation)"		},
-	{0x15, 0x01, 0x0f, 0x0c, "USA (Taito Corporation Japan)"		},
-	{0x15, 0x01, 0x0f, 0x00, "Japan"		},
-	{0x15, 0x01, 0x0f, 0x0e, "Japan (Licensed to [blank]"		},
-	{0x15, 0x01, 0x0f, 0x0f, "Japan (Taito Corporation)"		},
-	{0x15, 0x01, 0x0f, 0x04, "Korea"		},
-	{0x15, 0x01, 0x0f, 0x03, "Hong Kong (Honest Trading Co.)"		},
-	{0x15, 0x01, 0x0f, 0x05, "Taiwan"		},
-	{0x15, 0x01, 0x0f, 0x06, "Spain & Portugal (APM Electronics SA)"		},
-	{0x15, 0x01, 0x0f, 0x07, "Italy (Star Electronica SRL)"		},
-	{0x15, 0x01, 0x0f, 0x08, "UK (JP Leisure Limited)"		},
+	{0   , 0xfe, 0   ,    2, "Unused"					},
+	{0x01, 0x01, 0x80, 0x00, "Off"						},
+	{0x01, 0x01, 0x80, 0x80, "On"						},
+
+	{0   , 0xfe, 0   ,   16, "Region"					},
+	{0x02, 0x01, 0x0f, 0x02, "Europe"					},
+	{0x02, 0x01, 0x0f, 0x0a, "Europe (Nova Apparate GMBH & Co)"		},
+	{0x02, 0x01, 0x0f, 0x0d, "Europe (Taito Corporation Japan)"		},
+	{0x02, 0x01, 0x0f, 0x01, "USA"						},
+	{0x02, 0x01, 0x0f, 0x09, "USA (Romstar)"			},
+	{0x02, 0x01, 0x0f, 0x0b, "USA (Taito America Corporation)"		},
+	{0x02, 0x01, 0x0f, 0x0c, "USA (Taito Corporation Japan)"		},
+	{0x02, 0x01, 0x0f, 0x00, "Japan"					},
+	{0x02, 0x01, 0x0f, 0x0e, "Japan (Licensed to [blank]"			},
+	{0x02, 0x01, 0x0f, 0x0f, "Japan (Taito Corporation)"			},
+	{0x02, 0x01, 0x0f, 0x04, "Korea"					},
+	{0x02, 0x01, 0x0f, 0x03, "Hong Kong (Honest Trading Co.)"		},
+	{0x02, 0x01, 0x0f, 0x05, "Taiwan"					},
+	{0x02, 0x01, 0x0f, 0x06, "Spain & Portugal (APM Electronics SA)"},
+	{0x02, 0x01, 0x0f, 0x07, "Italy (Star Electronica SRL)"			},
+	{0x02, 0x01, 0x0f, 0x08, "UK (JP Leisure Limited)"				},
 };
 
 STDDIPINFO(Ghox)
 
 static struct BurnDIPInfo GhoxjoDIPList[]=
 {
-	{0x13, 0xff, 0xff, 0x00, NULL		},
-	{0x14, 0xff, 0xff, 0x00, NULL		},
-	{0x15, 0xff, 0xff, 0xf2, NULL		},
+	DIP_OFFSET(0x17)
 
-	{0   , 0xfe, 0   ,    2, "Unused"		},
-	{0x13, 0x01, 0x01, 0x00, "Off"		},
-	{0x13, 0x01, 0x01, 0x01, "On"		},
+	{0x00, 0xff, 0xff, 0x00, NULL						},
+	{0x01, 0xff, 0xff, 0x00, NULL						},
+	{0x02, 0xff, 0xff, 0xf2, NULL						},
 
-	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
-	{0x13, 0x01, 0x02, 0x00, "Off"		},
-	{0x13, 0x01, 0x02, 0x02, "On"		},
+	{0   , 0xfe, 0   ,    2, "Unused"					},
+	{0x00, 0x01, 0x01, 0x00, "Off"						},
+	{0x00, 0x01, 0x01, 0x01, "On"						},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x13, 0x01, 0x04, 0x00, "Off"		},
-	{0x13, 0x01, 0x04, 0x04, "On"		},
+	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
+	{0x00, 0x01, 0x02, 0x00, "Off"						},
+	{0x00, 0x01, 0x02, 0x02, "On"						},
 
-	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x13, 0x01, 0x08, 0x08, "Off"		},
-	{0x13, 0x01, 0x08, 0x00, "On"		},
+	{0   , 0xfe, 0   ,    2, "Service Mode"				},
+	{0x00, 0x01, 0x04, 0x00, "Off"						},
+	{0x00, 0x01, 0x04, 0x04, "On"						},
 
-	{0   , 0xfe, 0   ,    7, "Coin A"		},
-	{0x13, 0x01, 0x30, 0x30, "4 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x20, "3 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x10, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x20, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0x30, 0x00, "1 Coin  1 Credits"		},
-	{0x13, 0x01, 0x30, 0x30, "2 Coins 3 Credits"		},
-	{0x13, 0x01, 0x30, 0x10, "1 Coin  2 Credits"		},
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
+	{0x00, 0x01, 0x08, 0x08, "Off"						},
+	{0x00, 0x01, 0x08, 0x00, "On"						},
 
-	{0   , 0xfe, 0   ,    8, "Coin B"		},
-	{0x13, 0x01, 0xc0, 0x80, "2 Coins 1 Credits"		},
-	{0x13, 0x01, 0xc0, 0x00, "1 Coin  1 Credits"		},
-	{0x13, 0x01, 0xc0, 0xc0, "2 Coins 3 Credits"		},
-	{0x13, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"		},
-	{0x13, 0x01, 0xc0, 0x00, "1 Coin  2 Credits"		},
-	{0x13, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
-	{0x13, 0x01, 0xc0, 0x80, "1 Coin  4 Credits"		},
-	{0x13, 0x01, 0xc0, 0xc0, "1 Coin  6 Credits"		},
+	{0   , 0xfe, 0   ,    7, "Coin A"					},
+	{0x00, 0x01, 0x30, 0x30, "4 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x20, "3 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x10, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x20, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0x30, 0x00, "1 Coin  1 Credits"		},
+	{0x00, 0x01, 0x30, 0x30, "2 Coins 3 Credits"		},
+	{0x00, 0x01, 0x30, 0x10, "1 Coin  2 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x14, 0x01, 0x03, 0x03, "Hardest"		},
-	{0x14, 0x01, 0x03, 0x02, "Hard"		},
-	{0x14, 0x01, 0x03, 0x00, "Normal"		},
-	{0x14, 0x01, 0x03, 0x01, "Easy"		},
+	{0   , 0xfe, 0   ,    8, "Coin B"					},
+	{0x00, 0x01, 0xc0, 0x80, "2 Coins 1 Credits"		},
+	{0x00, 0x01, 0xc0, 0x00, "1 Coin  1 Credits"		},
+	{0x00, 0x01, 0xc0, 0xc0, "2 Coins 3 Credits"		},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"		},
+	{0x00, 0x01, 0xc0, 0x00, "1 Coin  2 Credits"		},
+	{0x00, 0x01, 0xc0, 0x40, "1 Coin  3 Credits"		},
+	{0x00, 0x01, 0xc0, 0x80, "1 Coin  4 Credits"		},
+	{0x00, 0x01, 0xc0, 0xc0, "1 Coin  6 Credits"		},
 
-	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
-	{0x14, 0x01, 0x0c, 0x0c, "None"		},
-	{0x14, 0x01, 0x0c, 0x08, "100k only"		},
-	{0x14, 0x01, 0x0c, 0x04, "100k and 300k"		},
-	{0x14, 0x01, 0x0c, 0x00, "100k and every 200k"		},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
+	{0x01, 0x01, 0x03, 0x03, "Hardest"					},
+	{0x01, 0x01, 0x03, 0x02, "Hard"						},
+	{0x01, 0x01, 0x03, 0x00, "Normal"					},
+	{0x01, 0x01, 0x03, 0x01, "Easy"						},
 
-	{0   , 0xfe, 0   ,    4, "Lives"		},
-	{0x14, 0x01, 0x30, 0x30, "1"		},
-	{0x14, 0x01, 0x30, 0x20, "2"		},
-	{0x14, 0x01, 0x30, 0x00, "3"		},
-	{0x14, 0x01, 0x30, 0x10, "5"		},
+	{0   , 0xfe, 0   ,    4, "Bonus Life"				},
+	{0x01, 0x01, 0x0c, 0x0c, "None"						},
+	{0x01, 0x01, 0x0c, 0x08, "100k only"				},
+	{0x01, 0x01, 0x0c, 0x04, "100k and 300k"			},
+	{0x01, 0x01, 0x0c, 0x00, "100k and every 200k"		},
 
-	{0   , 0xfe, 0   ,    2, "Invulnerability"		},
-	{0x14, 0x01, 0x40, 0x00, "Off"		},
-	{0x14, 0x01, 0x40, 0x40, "On"		},
+	{0   , 0xfe, 0   ,    4, "Lives"					},
+	{0x01, 0x01, 0x30, 0x30, "1"						},
+	{0x01, 0x01, 0x30, 0x20, "2"						},
+	{0x01, 0x01, 0x30, 0x00, "3"						},
+	{0x01, 0x01, 0x30, 0x10, "5"						},
 
-	{0   , 0xfe, 0   ,    2, "Unused"		},
-	{0x14, 0x01, 0x80, 0x00, "Off"		},
-	{0x14, 0x01, 0x80, 0x80, "On"		},
+	{0   , 0xfe, 0   ,    2, "Invulnerability"			},
+	{0x01, 0x01, 0x40, 0x00, "Off"						},
+	{0x01, 0x01, 0x40, 0x40, "On"						},
 
-	{0   , 0xfe, 0   ,   16, "Region"		},
-	{0x15, 0x01, 0x0f, 0x02, "Europe"		},
-	{0x15, 0x01, 0x0f, 0x0a, "Europe (Nova Apparate GMBH & Co)"		},
-	{0x15, 0x01, 0x0f, 0x0d, "Japan (Unused) [d]"		},
-	{0x15, 0x01, 0x0f, 0x01, "USA"		},
-	{0x15, 0x01, 0x0f, 0x09, "USA (Romstar)"		},
-	{0x15, 0x01, 0x0f, 0x0b, "Japan (Unused) [b]"		},
-	{0x15, 0x01, 0x0f, 0x0c, "Japan (Unused) [c]"		},
-	{0x15, 0x01, 0x0f, 0x00, "Japan"		},
-	{0x15, 0x01, 0x0f, 0x0e, "Japan (Unused) [e]"		},
-	{0x15, 0x01, 0x0f, 0x0f, "Japan (Unused) [f]"		},
-	{0x15, 0x01, 0x0f, 0x04, "Korea"		},
-	{0x15, 0x01, 0x0f, 0x03, "Hong Kong (Honest Trading Co.)"		},
-	{0x15, 0x01, 0x0f, 0x05, "Taiwan"		},
-	{0x15, 0x01, 0x0f, 0x06, "Spain & Portugal (APM Electronics SA)"		},
-	{0x15, 0x01, 0x0f, 0x07, "Italy (Star Electronica SRL)"		},
-	{0x15, 0x01, 0x0f, 0x08, "UK (JP Leisure Limited)"		},
+	{0   , 0xfe, 0   ,    2, "Unused"					},
+	{0x01, 0x01, 0x80, 0x00, "Off"						},
+	{0x01, 0x01, 0x80, 0x80, "On"						},
+
+	{0   , 0xfe, 0   ,   16, "Region"					},
+	{0x02, 0x01, 0x0f, 0x02, "Europe"					},
+	{0x02, 0x01, 0x0f, 0x0a, "Europe (Nova Apparate GMBH & Co)"		},
+	{0x02, 0x01, 0x0f, 0x0d, "Japan (Unused) [d]"		},
+	{0x02, 0x01, 0x0f, 0x01, "USA"						},
+	{0x02, 0x01, 0x0f, 0x09, "USA (Romstar)"			},
+	{0x02, 0x01, 0x0f, 0x0b, "Japan (Unused) [b]"		},
+	{0x02, 0x01, 0x0f, 0x0c, "Japan (Unused) [c]"		},
+	{0x02, 0x01, 0x0f, 0x00, "Japan"					},
+	{0x02, 0x01, 0x0f, 0x0e, "Japan (Unused) [e]"		},
+	{0x02, 0x01, 0x0f, 0x0f, "Japan (Unused) [f]"		},
+	{0x02, 0x01, 0x0f, 0x04, "Korea"					},
+	{0x02, 0x01, 0x0f, 0x03, "Hong Kong (Honest Trading Co.)"		},
+	{0x02, 0x01, 0x0f, 0x05, "Taiwan"					},
+	{0x02, 0x01, 0x0f, 0x06, "Spain & Portugal (APM Electronics SA)"},
+	{0x02, 0x01, 0x0f, 0x07, "Italy (Star Electronica SRL)"			},
+	{0x02, 0x01, 0x0f, 0x08, "UK (JP Leisure Limited)"	},
 };
 
 STDDIPINFO(Ghoxjo)
@@ -256,7 +265,7 @@ static INT32 MemIndex()
 }
 
 // Scan ram
-static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
+static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -272,12 +281,16 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		BurnAcb(&ba);
 
 		SekScan(nAction);				// scan 68000 states
-
 		Z180Scan(nAction);
+
+		BurnYM2151Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
 
-		bDrawScreen = true; // get background back ?
+		BurnTrackballScan();
+
+		SCAN_VAR(Paddle);
+		SCAN_VAR(PaddleOld);
 	}
 
 	return 0;
@@ -290,24 +303,26 @@ static INT32 LoadRoms()
 
 	// Load GP9001 tile data
 	ToaLoadGP9001Tiles(GP9001ROM[0], 2, 2, nGP9001ROMSize[0]);
-	
+
 	if (BurnLoadRom(Rom02, 4, 1)) return 1;
 
 	return 0;
 }
 
-UINT8 PaddleRead(UINT8 Num)
+static UINT8 PaddleRead(UINT8 Num)
 {
 	INT8 Value;
-	
+
+	Paddle[Num] = BurnTrackballRead(0, Num);
 	if (Paddle[Num] == PaddleOld[Num]) return 0;
-	
+
 	Value = Paddle[Num] - PaddleOld[Num];
 	PaddleOld[Num] = Paddle[Num];
-	return Value;	
+
+	return Value;
 }
 
-UINT8 __fastcall ghoxReadByte(UINT32 sekAddress)
+static UINT8 __fastcall ghoxReadByte(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x18100d:								// Dipswitch 3 - Territory
@@ -326,15 +341,15 @@ UINT8 __fastcall ghoxReadByte(UINT32 sekAddress)
 	}
 
 	if (sekAddress >= 0x180000 && sekAddress <= 0x180fff) {
-		return ShareRAM[(sekAddress - 0x180000) >> 1];
+		return ShareRAM[(sekAddress & 0xfff) >> 1];
 	}
-	
+
 //	bprintf(PRINT_NORMAL, _T("Read Byte %x\n"), sekAddress);
 
 	return 0;
 }
 
-UINT16 __fastcall ghoxReadWord(UINT32 sekAddress)
+static UINT16 __fastcall ghoxReadWord(UINT32 sekAddress)
 {
 	switch (sekAddress) {
 		case 0x140004:
@@ -361,31 +376,31 @@ UINT16 __fastcall ghoxReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall ghoxWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall ghoxWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	switch (sekAddress) {
 		case 0x181001: {
 			// coin counter
 			return;
 		}
-		
+
 		case 0x1c0001: {
 			// ????
 			return;
 		}
 	}
-	
+
 	if (sekAddress >= 0x180000 && sekAddress <= 0x180fff) {
-		if ((sekAddress & 0x01) == 0x01) {
-			ShareRAM[(sekAddress - 0x180000) >> 1] = byteValue;
+		if (sekAddress & 1) {
+			ShareRAM[(sekAddress & 0xfff) >> 1] = byteValue;
 		}
 		return;
 	}
-	
+
 //	bprintf(PRINT_NORMAL, _T("Write Byte %x, %x\n"), sekAddress, byteValue);
 }
 
-void __fastcall ghoxWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall ghoxWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	switch (sekAddress) {
 		case 0x140000:								// Set GP9001 VRAM address-pointer
@@ -420,34 +435,34 @@ static UINT8 __fastcall GhoxMCURead(UINT32 a)
 		case 0x80002: {
 			return DrvInput[3];
 		}
-		
+
 		case 0x80004: {
 			return DrvInput[4];
 		}
-		
+
 		case 0x80006: {
 			return 0x00;
 		}
-		
+
 		case 0x80008: {
 			return DrvInput[0];
 		}
-		
+
 		case 0x8000a: {
 			return DrvInput[1];
 		}
-		
+
 		case 0x8000c: {
 			return DrvInput[2];
 		}
-		
+
 		case 0x8000f: {
 			return BurnYM2151Read();
 		}
 	}
 
 //	bprintf(PRINT_NORMAL, _T("Read Prog %x\n"), a);
-	
+
 	return 0;
 }
 
@@ -458,13 +473,13 @@ static void __fastcall GhoxMCUWrite(UINT32 a, UINT8 d)
 			BurnYM2151SelectRegister(d);
 			return;
 		}
-		
+
 		case 0x8000f: {
 			BurnYM2151WriteRegister(d);
 			return;
 		}
 	}
-	
+
 //	bprintf(PRINT_NORMAL, _T("Write Prog %x, %x\n"), a, d);
 }
 
@@ -477,7 +492,7 @@ static INT32 DrvDoReset()
 	Z180Open(0);
 	Z180Reset();
 	Z180Close();
-	
+
 	BurnYM2151Reset();
 
 	Paddle[0] = 0;
@@ -543,7 +558,7 @@ static INT32 DrvInit()
 	nToaPalLen = nColCount;
 	ToaPalSrc = RamPal;
 	ToaPalInit();
-	
+
 	Z180Init(0);
 	Z180Open(0);
 	Z180MapMemory(Rom02,		0x00000, 0x03fff, MAP_ROM);
@@ -553,13 +568,14 @@ static INT32 DrvInit()
 	Z180SetReadHandler(GhoxMCURead);
 	Z180SetWriteHandler(GhoxMCUWrite);
 	Z180Close();
-	
-	BurnYM2151Init(27000000 / 8);
-	BurnYM2151SetAllRoutes(0.50, BURN_SND_ROUTE_BOTH);
 
-	bDrawScreen = true;
+	BurnYM2151Init(27000000 / 8);
+	BurnYM2151SetAllRoutes(0.30, BURN_SND_ROUTE_BOTH);
+
+	BurnTrackballInit(2);
 
 	DrvDoReset();			// Reset machine
+
 	return 0;
 }
 
@@ -569,10 +585,12 @@ static INT32 DrvExit()
 
 	ToaExitGP9001();
 	SekExit();				// Deallocate 68000s
-	
+
 	Z180Exit();
-	
+
 	BurnYM2151Exit();
+
+	BurnTrackballExit();
 
 	BurnFree(Mem);
 
@@ -583,10 +601,8 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
 
 	ToaPalUpdate();							// Update the palette
 
@@ -602,20 +618,38 @@ static INT32 DrvFrame()
 		DrvDoReset();
 	}
 
-	memset (DrvInput, 0, 3);
-	for (INT32 i = 0; i < 8; i++) {
-		DrvInput[0] |= (DrvJoy1[i] & 1) << i;
-		DrvInput[1] |= (DrvJoy2[i] & 1) << i;
-		DrvInput[2] |= (DrvButton[i] & 1) << i;
-	}
-	ToaClearOpposites(&DrvInput[0]);
-	ToaClearOpposites(&DrvInput[1]);
+	{
+		// Y-axis hack (Y axis moves digital up/down)
+		// P1:
+		UINT8 an = ProcessAnalog(DrvAnalogPort[1], 0, INPUT_DEADZONE, 0x00, 0xff);
 
-	if (DrvJoy1[2]) Paddle[0] -= 0x04;
-	if (DrvJoy1[3]) Paddle[0] += 0x04;
-	if (DrvJoy2[2]) Paddle[1] -= 0x04;
-	if (DrvJoy2[3]) Paddle[1] += 0x04;
-	
+		if (an > (0x80+10) || an < (0x80-10)) {
+			if (an < (0x80-10)) DrvJoy1[0] = 1;
+			if (an > (0x80+10)) DrvJoy1[1] = 1;
+		}
+		// P2:
+		an = ProcessAnalog(DrvAnalogPort[3], 0, INPUT_DEADZONE, 0x00, 0xff);
+
+		if (an > (0x80+10) || an < (0x80-10)) {
+			if (an < (0x80-10)) DrvJoy2[0] = 1;
+			if (an > (0x80+10)) DrvJoy2[1] = 1;
+		}
+
+		memset (DrvInput, 0, 3);
+		for (INT32 i = 0; i < 8; i++) {
+			DrvInput[0] |= (DrvJoy1[i] & 1) << i;
+			DrvInput[1] |= (DrvJoy2[i] & 1) << i;
+			DrvInput[2] |= (DrvButton[i] & 1) << i;
+		}
+		ToaClearOpposites(&DrvInput[0]);
+		ToaClearOpposites(&DrvInput[1]);
+
+		BurnTrackballConfig(0, AXIS_NORMAL, AXIS_NORMAL);
+		BurnTrackballFrame(0, DrvAnalogPort[0], DrvAnalogPort[2], 0x02, 0x0f);
+		BurnTrackballUDLR(0, DrvJoy2[2], DrvJoy2[3], DrvJoy1[2], DrvJoy1[3]);
+		BurnTrackballUpdate(0);
+	}
+
 	SekNewFrame();
 
 	SekOpen(0);
@@ -631,7 +665,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		INT32 nNext;
@@ -659,10 +693,10 @@ static INT32 DrvFrame()
 		nCyclesSegment = nNext - SekTotalCycles();
 
 		SekRun(nCyclesSegment);
-		
+
 		// Run MCU
 		nCyclesDone[1] += Z180Run(SekTotalCycles() - nCyclesDone[1]);
-		
+
 		// Render sound segment
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = (nBurnSoundLen * i / nInterleave) - nSoundBufferPos;
@@ -673,7 +707,7 @@ static INT32 DrvFrame()
 	}
 
 	nCyclesDone[0] = SekTotalCycles() - nCyclesTotal[0];
-	
+
 	if (pBurnSoundOut) {
 		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);

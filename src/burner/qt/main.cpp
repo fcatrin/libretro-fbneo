@@ -22,8 +22,19 @@ void IpsApplyPatches(UINT8 *, char *)
 
 }
 
+UINT32 GetIpsDrvDefine()
+{
+	return 0;
+}
+
+INT32 GetIpsesMaxLen(char *)
+{
+	return 0;
+}
+
 void InpDIPSWResetDIPs()
 {
+
 }
 
 

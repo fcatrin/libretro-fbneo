@@ -966,7 +966,7 @@ static void arkanoid_m68705_portC_read()
 	if (!mcu_sent) portC_in |= 0x02;
 }
 
-static INT32 arkanoid_mcu_run(INT32 cyc)
+static INT32 arkanoid_mcu_Run(INT32 cyc)
 {
 	if (cyc < 1) return 0;
 
@@ -989,7 +989,7 @@ static void arkanoid_mcu_sync()
 {
 	INT32 cyc = (ZetTotalCycles() / 8) - m6805TotalCycles();
 	if (cyc > 0) {
-		arkanoid_mcu_run(cyc);
+		arkanoid_mcu_Run(cyc);
 	}
 }
 
@@ -1190,12 +1190,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	if (GetRoms()) return 1;
 
@@ -1242,7 +1237,7 @@ static INT32 DrvExit()
 
 	AY8910Exit(0);
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	arkanoid_bootleg_id = 0;
 
@@ -1332,10 +1327,10 @@ static INT32 DrvFrame()
 		}
 
 		nAnalogAxis[0] -= DrvAxis[0];
-		DrvInputs[2] = (~nAnalogAxis[0] >> 8) & 0xfe;
+		DrvInputs[2] = (~nAnalogAxis[0] >> 8) & 0xff;
 
 		nAnalogAxis[1] -= DrvAxis[1];
-		DrvInputs[3] = (~nAnalogAxis[1] >> 8) & 0xfe;
+		DrvInputs[3] = (~nAnalogAxis[1] >> 8) & 0xff;
 	}
 
 	INT32 nInterleave = 264;
@@ -1348,7 +1343,7 @@ static INT32 DrvFrame()
 	m6805Open(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nCyclesDone[0] += ZetRun((nCyclesTotal[0] * (i + 1) / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, Zet);
 
 		if (i == 240-1) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
@@ -1359,7 +1354,7 @@ static INT32 DrvFrame()
 		}
 
 		if (use_mcu) {
-			arkanoid_mcu_run((nCyclesTotal[1] * (i + 1) / nInterleave) - nCyclesDone[1]);
+			CPU_RUN(1, arkanoid_mcu_);
 		}
 	}
 
@@ -1371,6 +1366,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 	}
 
 	return 0;
@@ -1400,8 +1396,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		AY8910Scan(nAction, pnMin);
 
-		SCAN_VAR(nAnalogAxis[0]);
-		SCAN_VAR(nAnalogAxis[1]);
+		SCAN_VAR(nAnalogAxis);
 		SCAN_VAR(arkanoid_bootleg_cmd);
 		SCAN_VAR(nExtraCycles);
 		SCAN_VAR(portC_latch);
@@ -1479,8 +1474,8 @@ static struct BurnRomInfo arkanoidRomDesc[] = {
 	
 	{ "arkanoid1_68705p3.ic14", 0x0800, 0x1b68e2d8, 0 | BRF_PRG | BRF_OPT },  //  9 Decapped roms
 	{ "arkanoid_mcu.ic14",      0x0800, 0x4e44b50a, 0 | BRF_PRG | BRF_OPT },  // 10
-	{ "a75__06.ic14",  0x0800, 0x0be83647, 0 | BRF_PRG | BRF_OPT },  // 11
-	{ "a75-06__bootleg_68705.ic14", 0x0800, 0x515d77b6, 0 | BRF_OPT },
+	{ "a75__06.ic14",  			0x0800, 0x0be83647, 0 | BRF_PRG | BRF_OPT },  // 11
+	{ "a75-06__bootleg_68705.ic14", 0x0800, 0x515d77b6, 0 | BRF_OPT },		  // 12
 };
 
 STD_ROM_PICK(arkanoid)
@@ -1562,7 +1557,8 @@ struct BurnDriver BurnDrvarkanoiduo = {
 };
 
 
-// Tournament Arkanoid (US)
+// Tournament Arkanoid (US, older)
+// Tournament version
 
 static struct BurnRomInfo arkatourRomDesc[] = {
 	{ "a75-27.ic17",  0x8000, 0xe3b8faf5, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
@@ -1584,10 +1580,42 @@ STD_ROM_FN(arkatour)
 
 struct BurnDriver BurnDrvarkatour = {
 	"arkatour", NULL, NULL, NULL, "1987",
-	"Tournament Arkanoid (US)\0", NULL, "Taito America Corporation (Romstar license)", "Arkanoid",
+	"Tournament Arkanoid (US, older)\0", NULL, "Taito America Corporation (Romstar license)", "Arkanoid",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
 	NULL, arkatourRomInfo, arkatourRomName, NULL, NULL, NULL, NULL, DrvInputInfo, arkanoidDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
+	224, 256, 3, 4
+};
+
+
+// Tournament Arkanoid (US, newer)
+// Tournament version, newer
+
+static struct BurnRomInfo arkatour2RomDesc[] = {
+	{ "a75-36.ic16",  0x8000, 0xf3b1923e, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "a75-37.ic17",  0x8000, 0x7c74987b, 1 | BRF_ESS | BRF_PRG }, //  1
+
+	{ "a75_38.ic14",  0x0800, 0x00000000, 2 | BRF_ESS | BRF_PRG | BRF_NODUMP }, //  2 MCU
+
+	{ "a75-29.ic64",  0x8000, 0x5ddea3cf, 3 | BRF_GRA },	       //  3 Graphics
+	{ "a75-30.ic63",  0x8000, 0x5fcf2e85, 3 | BRF_GRA },	       //  4
+	{ "a75-31.ic62",  0x8000, 0x7b76b192, 3 | BRF_GRA },	       //  5
+
+	{ "a75-33.ic24",  0x0200, 0xb4bf3c81, 4 | BRF_GRA },	       //  6 Color Proms
+	{ "a75-34.ic23",  0x0200, 0xde85a803, 4 | BRF_GRA },	       //  7
+	{ "a75-35.ic22",  0x0200, 0x38acfd3b, 4 | BRF_GRA },	       //  8
+};
+
+STD_ROM_PICK(arkatour2)
+STD_ROM_FN(arkatour2)
+
+struct BurnDriver BurnDrvarkatour2 = {
+	"arkatour2", "arkatour", NULL, NULL, "1987",
+	"Tournament Arkanoid (US, newer)\0", NULL, "Taito America Corporation (Romstar license)", "Arkanoid",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_TAITO_MISC, GBF_BREAKOUT, 0,
+	NULL, arkatour2RomInfo, arkatour2RomName, NULL, NULL, NULL, NULL, DrvInputInfo, arkanoidDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4
 };
@@ -1723,18 +1751,18 @@ struct BurnDriver BurnDrvarkanoidjbl = {
 // Arkanoid (bootleg with MCU set 2)
 
 static struct BurnRomInfo arkanoidjbl2RomDesc[] = {
-	{ "1.ic81",       0x8000, 0x9ff93dc2, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
-	{ "2.ic82",       0x8000, 0xbbc33ceb, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "1.ic81.3f",       			0x8000, 0x9ff93dc2, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "2.ic82.5f",       			0x8000, 0xbbc33ceb, 1 | BRF_ESS | BRF_PRG }, //  1
 
-	{ "a75-06__bootleg_68705.ic14",  0x0800, 0x515d77b6, 2 | BRF_ESS | BRF_PRG }, //  2 M68705 MCU
+	{ "a75-06__bootleg_68705.ic14", 0x0800, 0x515d77b6, 2 | BRF_ESS | BRF_PRG }, //  2 M68705 MCU
 
-	{ "a75-03.ic64",  0x8000, 0x038b74ba, 3 | BRF_GRA },	       //  3 Graphics
-	{ "a75-04.ic63",  0x8000, 0x71fae199, 3 | BRF_GRA },	       //  4
-	{ "a75-05.ic62",  0x8000, 0xc76374e2, 3 | BRF_GRA },	       //  5
+	{ "3.ic33.1c",  				0x8000, 0x038b74ba, 3 | BRF_GRA },	       //  3 Graphics
+	{ "4.ic34.3c",  				0x8000, 0x71fae199, 3 | BRF_GRA },	       //  4
+	{ "5.ic35.5c",  				0x8000, 0xc76374e2, 3 | BRF_GRA },	       //  5
 
-	{ "a75-07.ic24",  0x0200, 0x0af8b289, 4 | BRF_GRA },	       //  6 Color Proms
-	{ "a75-08.ic23",  0x0200, 0xabb002fb, 4 | BRF_GRA },	       //  7
-	{ "a75-09.ic22",  0x0200, 0xa7c6c277, 4 | BRF_GRA },	       //  8
+	{ "m1-7621-5.ic73.11e",  		0x0200, 0x0af8b289, 4 | BRF_GRA },	       //  6 Color Proms
+	{ "m1-7621-5.ic74.12e",  		0x0200, 0xabb002fb, 4 | BRF_GRA },	       //  7
+	{ "m1-7621-5.ic75.13e",  		0x0200, 0xa7c6c277, 4 | BRF_GRA },	       //  8
 };
 
 STD_ROM_PICK(arkanoidjbl2)
@@ -1788,18 +1816,18 @@ struct BurnDriver BurnDrvarkanoidjbla = {
 // Arkanoid (bootleg with MCU, harder)
 
 static struct BurnRomInfo ark1ballRomDesc[] = {
-	{ "a-1.7d",       0x8000, 0xdd4f2b72, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
-	{ "ark_2__1_palline.7f",  0x8000, 0xed6b62ab, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "a-1.7d",       				0x8000, 0xdd4f2b72, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "ark_2__1_palline.7f",  		0x8000, 0xed6b62ab, 1 | BRF_ESS | BRF_PRG }, //  1
 
-	{ "a75-06__bootleg_68705.ic14",  0x0800, 0x515d77b6, 2 | BRF_ESS | BRF_PRG }, //  2 M68705 MCU
+	{ "a75-06__bootleg_68705.ic14", 0x0800, 0x515d77b6, 2 | BRF_ESS | BRF_PRG }, //  2 M68705 MCU
 
-	{ "a-3.3a",       0x8000, 0x038b74ba, 3 | BRF_GRA },	       //  3 Graphics
-	{ "a-4.3d",       0x8000, 0x71fae199, 3 | BRF_GRA },	       //  4
-	{ "a-5.3f",       0x8000, 0xc76374e2, 3 | BRF_GRA },	       //  5
+	{ "a-3.3a",       				0x8000, 0x038b74ba, 3 | BRF_GRA },	       //  3 Graphics
+	{ "a-4.3d",       				0x8000, 0x71fae199, 3 | BRF_GRA },	       //  4
+	{ "a-5.3f",       				0x8000, 0xc76374e2, 3 | BRF_GRA },	       //  5
 
-	{ "a75-07.bpr",   0x0200, 0x0af8b289, 4 | BRF_GRA },	       //  6 Color Proms
-	{ "a75-08.bpr",   0x0200, 0xabb002fb, 4 | BRF_GRA },	       //  7
-	{ "a75-09.bpr",   0x0200, 0xa7c6c277, 4 | BRF_GRA },	       //  8
+	{ "n82s131n.6l",   				0x0200, 0x0af8b289, 4 | BRF_GRA },	       //  6 Color Proms
+	{ "n82s131n.6m",   				0x0200, 0xabb002fb, 4 | BRF_GRA },	       //  7
+	{ "n82s131n.6n",   				0x0200, 0xa7c6c277, 4 | BRF_GRA },	       //  8
 };
 
 STD_ROM_PICK(ark1ball)
@@ -2101,16 +2129,16 @@ struct BurnDriver BurnDrvarkatayt = {
 // Arkanoid (Tayto bootleg, harder)
 
 static struct BurnRomInfo arktayt2RomDesc[] = {
-	{ "ic81.3f",    0x8000, 0x6e0a2b6f, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
-	{ "ic82.5f",    0x8000, 0x5a97dd56, 1 | BRF_ESS | BRF_PRG }, //  1
+	{ "4.ic81.3f",  		  0x8000, 0x6e0a2b6f, 1 | BRF_ESS | BRF_PRG }, //  0 Z80 Code
+	{ "5.ic82.5f",  		  0x8000, 0x5a97dd56, 1 | BRF_ESS | BRF_PRG }, //  1
 
-	{ "1-ic33.2c",  0x8000, 0x038b74ba, 3 | BRF_GRA },	     //  2 Graphics
-	{ "2-ic34.3c",  0x8000, 0x71fae199, 3 | BRF_GRA },	     //  3
-	{ "3-ic35.5c",  0x8000, 0xc76374e2, 3 | BRF_GRA },	     //  4
+	{ "1.ic33.1c",  		  0x8000, 0x038b74ba, 3 | BRF_GRA },	     //  2 Graphics
+	{ "2.ic34.3c",  		  0x8000, 0x71fae199, 3 | BRF_GRA },	     //  3
+	{ "3.ic35.5c",  		  0x8000, 0xc76374e2, 3 | BRF_GRA },	     //  4
 
-	{ "ic73.11e",   0x0200, 0x0af8b289, 4 | BRF_GRA },	     //  5 Color Proms
-	{ "ic74.12e",   0x0200, 0xabb002fb, 4 | BRF_GRA },	     //  6
-	{ "ic75.13e",   0x0200, 0xa7c6c277, 4 | BRF_GRA },	     //  7
+	{ "m1-7621-5.ic73.11e",   0x0200, 0x0af8b289, 4 | BRF_GRA },	     //  5 Color Proms
+	{ "m1-7621-5.ic74.12e",   0x0200, 0xabb002fb, 4 | BRF_GRA },	     //  6
+	{ "m1-7621-5.ic75.13e",   0x0200, 0xa7c6c277, 4 | BRF_GRA },	     //  7
 };
 
 STD_ROM_PICK(arktayt2)

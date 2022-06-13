@@ -3,6 +3,7 @@
 
 #include "toaplan.h"
 #include "nec_intf.h"
+
 // Batsugun & Batsugun Special Version
 
 static UINT8 DrvButton[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -11,8 +12,6 @@ static UINT8 DrvJoy2[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 static UINT8 DrvInput[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static UINT8 DrvReset = 0;
-static UINT8 bDrawScreen;
-static bool bVBlank;
 
 static INT32 v25_reset = 0;
 
@@ -101,34 +100,54 @@ static struct BurnRomInfo batsugunbRomDesc[] = {
 STD_ROM_PICK(batsugunb)
 STD_ROM_FN(batsugunb)
 
+// very similar to batsuguna, same main CPU label, seems to have just a tiny bit more code
+static struct BurnRomInfo batsugncRomDesc[] = {
+	{ "tp-030_01.u69",				0x080000, 0x545305c4, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+
+	{ "tp030_rom3-l.u55",			0x100000, 0x3024b793, BRF_GRA },           //  1 GP9001 #1 Tile data
+	{ "tp030_rom3-h.u56",			0x100000, 0xed75730b, BRF_GRA },           //  2
+	{ "tp030_rom4-l.u54",			0x100000, 0xfedb9861, BRF_GRA },           //  3
+	{ "tp030_rom4-h.u57",			0x100000, 0xd482948b, BRF_GRA },           //  4
+
+	{ "tp030_rom5.u32",				0x100000, 0xbcf5ba05, BRF_GRA },           //  5
+	{ "tp030_rom6.u31",				0x100000, 0x0666fecd, BRF_GRA },           //  6
+
+	{ "tp030_rom2.u65",				0x040000, 0x276146f5, BRF_SND },           //  7 ADPCM data
+
+	{ "tp030_u19_gal16v8b-15.bin",	0x000117, 0xf71669e8, BRF_OPT },           //  8 Logic for mixing output of both GP9001 GFX controllers
+};
+
+STD_ROM_PICK(batsugnc)
+STD_ROM_FN(batsugnc)
+
 static struct BurnInputInfo batsugunInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvButton + 3,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvButton + 5,	"p1 start"	},
 
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"},
+	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",	BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",	BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"},
-	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"},
+	{"P2 Coin",		BIT_DIGITAL,	DrvButton + 4,	"p2 coin"	},
+	{"P2 Start",	BIT_DIGITAL,	DrvButton + 6,	"p2 start"	},
 
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"},
+	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",	BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",	BIT_DIGITAL,	DrvJoy2 + 6,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"},
-	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Diagnostics",	BIT_DIGITAL,	DrvButton + 0,	"diag"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvInput + 3,	"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvInput + 4,	"dip"		},
+	{"Dip C",		BIT_DIPSWITCH,	DrvInput + 5,	"dip"		},
 };
 
 STDINPUTINFO(batsugun)
@@ -287,10 +306,13 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SekScan(nAction);				// scan 68000 states
 		VezScan(nAction);
+
 		BurnYM2151Scan(nAction, pnMin);
 		MSM6295Scan(nAction, pnMin);
 
 		ToaScanGP9001(nAction, pnMin);
+
+		SCAN_VAR(v25_reset);
 	}
 
 	return 0;
@@ -364,7 +386,7 @@ static INT32 KoreaLoadRoms()
 	return 0;
 }
 
-UINT8 __fastcall batsugunReadByte(UINT32 sekAddress)
+static UINT8 __fastcall batsugunReadByte(UINT32 sekAddress)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		return ShareRAM[(sekAddress / 2) & 0x7fff];
@@ -387,7 +409,7 @@ UINT8 __fastcall batsugunReadByte(UINT32 sekAddress)
 	return 0;
 }
 
-UINT16 __fastcall batsugunReadWord(UINT32 sekAddress)
+static UINT16 __fastcall batsugunReadWord(UINT32 sekAddress)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		return ShareRAM[(sekAddress / 2) & 0x7fff];
@@ -423,7 +445,7 @@ UINT16 __fastcall batsugunReadWord(UINT32 sekAddress)
 	return 0;
 }
 
-void __fastcall batsugunWriteByte(UINT32 sekAddress, UINT8 byteValue)
+static void __fastcall batsugunWriteByte(UINT32 sekAddress, UINT8 byteValue)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		ShareRAM[(sekAddress / 2) & 0x7fff] = byteValue;
@@ -443,7 +465,7 @@ void __fastcall batsugunWriteByte(UINT32 sekAddress, UINT8 byteValue)
 	}
 }
 
-void __fastcall batsugunWriteWord(UINT32 sekAddress, UINT16 wordValue)
+static void __fastcall batsugunWriteWord(UINT32 sekAddress, UINT16 wordValue)
 {
 	if ((sekAddress & 0xff0000) == 0x210000) {
 		ShareRAM[(sekAddress / 2) & 0x7fff] = wordValue;
@@ -490,7 +512,7 @@ void __fastcall batsugunWriteWord(UINT32 sekAddress, UINT16 wordValue)
 	}
 }
 
-void __fastcall batsugun_v25_write(UINT32 address, UINT8 data)
+static void __fastcall batsugun_v25_write(UINT32 address, UINT8 data)
 {
 	switch (address)
 	{
@@ -508,7 +530,7 @@ void __fastcall batsugun_v25_write(UINT32 address, UINT8 data)
 	}
 }
 
-UINT8 __fastcall batsugun_v25_read(UINT32 address)
+static UINT8 __fastcall batsugun_v25_read(UINT32 address)
 {
 	switch (address)
 	{
@@ -522,7 +544,7 @@ UINT8 __fastcall batsugun_v25_read(UINT32 address)
 	return 0;
 }
 
-UINT8 __fastcall batsugun_v25_read_port(UINT32 port)
+static UINT8 __fastcall batsugun_v25_read_port(UINT32 port)
 {
 	switch (port)
 	{
@@ -628,8 +650,6 @@ static INT32 DrvInit(INT32 (*pRomLoad)())
 	ToaPalSrc = RamPal;
 	ToaPalInit();
 
-	bDrawScreen = true;
-
 	DrvDoReset(); // Reset machine
 
 	return 0;
@@ -667,18 +687,11 @@ static INT32 DrvDraw()
 {
 	ToaClearScreen(0);
 
-	if (bDrawScreen) {
-		ToaGetBitmap();
-		ToaRenderGP9001();					// Render GP9001 graphics
-	}
+	ToaGetBitmap();
+	ToaRenderGP9001();						// Render GP9001 graphics
 
 	ToaPalUpdate();							// Update the palette
 
-	return 0;
-}
-
-inline static INT32 CheckSleep(INT32)
-{
 	return 0;
 }
 
@@ -716,7 +729,7 @@ static INT32 DrvFrame()
 	SekSetCyclesScanline(nCyclesTotal[0] / 262);
 	nToaCyclesDisplayStart = nCyclesTotal[0] - ((nCyclesTotal[0] * (TOA_VBLANK_LINES + 240)) / 262);
 	nToaCyclesVBlankStart = nCyclesTotal[0] - ((nCyclesTotal[0] * TOA_VBLANK_LINES) / 262);
-	bVBlank = false;
+	bool bVBlank = false;
 
 	VezOpen(0);
 
@@ -747,13 +760,9 @@ static INT32 DrvFrame()
 		}
 
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		if (bVBlank || (!CheckSleep(nCurrentCPU))) {					// See if this CPU is busywaiting
-			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		} else {
-			nCyclesDone[nCurrentCPU] += SekIdle(nCyclesSegment);
-		}
+		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 
-		// sound! (increase interleave?)
+		// sound!
 		if (v25_reset) {
 			nCyclesDone[1] += nCyclesTotal[1] / nInterleave;
 		} else {
@@ -791,7 +800,7 @@ static INT32 DrvFrame()
 
 struct BurnDriver BurnDrvBatsugun = {
 	"batsugun", NULL, NULL, NULL, "1993",
-	"Batsugun (set 1)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	"Batsugun\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, batsugunRomInfo, batsugunRomName, NULL, NULL, NULL, NULL, batsugunInputInfo, batsugunDIPInfo,
@@ -801,7 +810,7 @@ struct BurnDriver BurnDrvBatsugun = {
 
 struct BurnDriver BurnDrvBatsugunSP = {
 	"batsugunsp", "batsugun", NULL, NULL, "1993",
-	"Batsugun (Special Ver.)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	"Batsugun - Special Version\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, batugnspRomInfo, batugnspRomName, NULL, NULL, NULL, NULL, batsugunInputInfo, batsugunDIPInfo,
@@ -811,7 +820,7 @@ struct BurnDriver BurnDrvBatsugunSP = {
 
 struct BurnDriver BurnDrvBatsugna = {
 	"batsuguna", "batsugun", NULL, NULL, "1993",
-	"Batsugun (set 2)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	"Batsugun (older, set 1)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, batsugnaRomInfo, batsugnaRomName, NULL, NULL, NULL, NULL, batsugunInputInfo, batsugunDIPInfo,
@@ -826,5 +835,15 @@ struct BurnDriver BurnDrvBatsugunb = {
 	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
 	NULL, batsugunbRomInfo, batsugunbRomName, NULL, NULL, NULL, NULL, batsugunInputInfo, batsugunDIPInfo,
 	BatsugunbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
+	240, 320, 3, 4
+};
+
+struct BurnDriver BurnDrvBatsugnc = {
+	"batsugunc", "batsugun", NULL, NULL, "1993",
+	"Batsugun (older, set 2)\0", NULL, "Toaplan", "Dual Toaplan GP9001 based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | TOA_ROTATE_GRAPHICS_CCW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_68K_Zx80, GBF_VERSHOOT, 0,
+	NULL, batsugncRomInfo, batsugncRomName, NULL, NULL, NULL, NULL, batsugunInputInfo, batsugunDIPInfo,
+	BatsugunInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &ToaRecalcPalette, 0x800,
 	240, 320, 3, 4
 };

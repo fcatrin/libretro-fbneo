@@ -372,19 +372,7 @@ static tilemap_callback( layer0 )
 	INT32 color = attr & 0xf;
 
 	TILE_SET_INFO(0, code, color, TILE_FLIPXY((attr & 0x30) >> 4));
-}
-
-static tilemap_callback( layer1 )
-{
-	INT32 attr = DrvVidRAM[offs * 2 + 1];
-	INT32 code = DrvVidRAM[offs * 2 + 0] | ((attr << 2) & 0x300);
-
-	INT32 color = attr & 0xf;
-
-	INT32 flags = TILE_FLIPXY((attr & 0x30) >> 4);
-	if (color == 0xf) flags |= TILE_GROUP(1);
-
-	TILE_SET_INFO(0, code, color, flags);
+	sTile->category = (color == 0xf) ? 1 : 0;
 }
 
 static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
@@ -448,16 +436,12 @@ static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, layer0_map_callback, 8, 8, 64, 32);
-	GenericTilemapInit(1, TILEMAP_SCAN_ROWS, layer1_map_callback, 8, 8, 64, 32);
 	GenericTilemapSetGfx(0, DrvGfxROM0, 3, 8, 8, 0x10000, 0, 0xf);
-	GenericTilemapSetGfx(1, DrvGfxROM0, 3, 8, 8, 0x10000, 0, 0xf); // this needed? -dink
 	GenericTilemapSetScrollRows(0, 4);
-	GenericTilemapSetScrollRows(1, 4);
-	GenericTilemapSetTransMask(1, 0, 0x3f);
 	GenericTilemapSetScrollRow(0, 3, 0);
-	GenericTilemapSetScrollRow(1, 3, 0);
 	GenericTilemapSetOffsets(0, -8, 0);
-	GenericTilemapSetOffsets(1, -8, 0);
+	GenericTilemapSetTransSplit(0, 0, 0xff, 0x00);
+	GenericTilemapSetTransSplit(0, 1, 0x3f, 0xc0);
 	if (YFlipping) GenericTilemapSetFlip(TMAP_GLOBAL, TMAP_FLIPY);
 	DrvDoReset();
 
@@ -522,9 +506,9 @@ static void DrvPaletteInit()
 static void draw_sprites()
 {
 	if (YFlipping) {
-		GenericTilesSetClip(0,240,64,256); // shtrider
+		GenericTilesSetClip(0, 240, 64, 256); // shtrider
 	} else {
-		GenericTilesSetClip(0,240,0,192); // everything else
+		GenericTilesSetClip(0, 240,  0, 192); // everything else
 	}
 
 	for (INT32 offs = 0x200 - 4; offs >= 0; offs -= 4)
@@ -559,14 +543,15 @@ static INT32 DrvDraw()
 
 	for (INT32 i = 0; i < 3; i++) {
 		GenericTilemapSetScrollRow(0, i, scrollx);
-		GenericTilemapSetScrollRow(1, i, scrollx);
 	}
 
-	if (nBurnLayer & 1) GenericTilemapDraw(0, pTransDraw, TMAP_FORCEOPAQUE);
+	BurnTransferClear();
+
+	if (nBurnLayer & 1) GenericTilemapDraw(0, pTransDraw, TMAP_DRAWLAYER1);
 
 	if (nSpriteEnable & 1) draw_sprites();
 
-	if (nBurnLayer & 2) GenericTilemapDraw(1, pTransDraw, TMAP_SET_GROUP(1));
+	if (nBurnLayer & 2) GenericTilemapDraw(0, pTransDraw, TMAP_DRAWLAYER0);
 
 	BurnTransferCopy(DrvPalette);
 
@@ -601,10 +586,14 @@ static INT32 DrvFrame()
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += ZetRun(nCyclesTotal[0] / nInterleave);
-		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		switch (i) {
+			case  0: ZetSetIRQLine(0, CPU_IRQSTATUS_ACK); break;
+			case 14: ZetSetIRQLine(0, CPU_IRQSTATUS_NONE); break;
+		}
 
-		nCyclesDone[1] += M6803Run(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(0, Zet);
+
+		CPU_RUN(1, M6803);
 		MSM5205Update(); // adpcm update samples
 	}
 
@@ -793,6 +782,43 @@ struct BurnDriver BurnDrvMototour = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, mototourRomInfo, mototourRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
+	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 240, 3, 4
+};
+
+
+// MotoTour / Zippy Race (Assa version of Tecfri license)
+
+static struct BurnRomInfo mototouraRomDesc[] = {
+	{ "a-00288_assa_m5_mp1.m3",		0x2000, 0xfe643567, 1 | BRF_PRG | BRF_ESS }, //  0  Z80 Code
+	{ "a-00288_assa_m5_mp2.l3",		0x2000, 0x38d9d0f5, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "a-00288_assa_m5_mp3.k3",		0x2000, 0xefd325f2, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "a-00288_assa_m5_mp4.j3",		0x2000, 0x5a69a393, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "snd.a1",						0x1000, 0xd1385740, 2 | BRF_GRA },           //  4 M6803 Code
+
+	{ "a-00288_assa_m5_mf1.e3",		0x2000, 0x65cb269a, 3 | BRF_GRA },           //  5 Background tiles
+	{ "a-00288_assa_m5_mf2.c3",		0x2000, 0x3a046dd1, 3 | BRF_GRA },           //  6
+	{ "a-00288_assa_m5_mf3.a3",		0x2000, 0x1cc3d3f4, 3 | BRF_GRA },           //  7
+
+	{ "a-00288_assa_m5_mm8.n3",		0x2000, 0x600a57f5, 4 | BRF_GRA },           //  8 Sprite tiles
+	{ "a-00288_assa_m5_mm9.m3",		0x2000, 0x6f9f2a4e, 4 | BRF_GRA },           //  9
+	{ "a-00288_assa_m5_mm10.k3",	0x2000, 0xd958def5, 4 | BRF_GRA },           // 10
+
+	{ "mmi6349.k2",					0x0200, 0xc9724350, 5 | BRF_GRA },           // 11 Color data
+	{ "prom1.f1",					0x0020, 0xa1130007, 5 | BRF_GRA },           // 12
+	{ "prom2.h2",					0x0100, 0x76062638, 5 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(mototoura)
+STD_ROM_FN(mototoura)
+
+struct BurnDriver BurnDrvMototoura = {
+	"mototoura", "travrusa", NULL, NULL, "1983",
+	"MotoTour / Zippy Race (Assa version of Tecfri license)\0", NULL, "Irem (Tecfri license / Assa)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	NULL, mototouraRomInfo, mototouraRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
 };

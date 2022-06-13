@@ -1,4 +1,4 @@
-# Makefile for FBA, for use with GNU make & Microsoft Visual C++ 2012
+# Makefile for FBNeo, for use with GNU make & Microsoft Visual C++ 2012
 #
 # The first pass makes sure all intermediary targets are present. The second pass updates
 # any targets, if necessary. (Intermediary) targets which have their own unique rules
@@ -47,7 +47,7 @@ ifndef BUILD_X86_ASM
 	COMPILENAME := $(COMPILENAME)x
 endif
 ifdef BUILD_X64_EXE
-	NAME = fba64
+	NAME = fbneo64
 	COMPILENAME = 6
 endif
 ifdef	DEBUG
@@ -105,7 +105,7 @@ srcdir	= src/
 include makefile.burn_rules
 include makefile.burner_win32_rules
 
-incdir	= $(foreach dir,$(alldir),/I$(srcdir)$(dir)) /I$(objdir)dep/generated
+incdir	= $(foreach dir,$(alldir),/I$(srcdir)$(dir)) /I$(objdir)dep/generated /I$(srcdir)dep/mingw/include/directx9 /I$(srcdir)dep/vc/include/xaudio2
 
 ifdef UNICODE
 # lib	= unicows.lib
@@ -146,7 +146,7 @@ allobj	= $(objdir)cpu/m68k/m68kcpu.o $(objdir)cpu/m68k/m68kops.o $(objdir)burner
 	  $(foreach file,$(autobj:.o=.asm), \
 		$(foreach dir,$(alldir),$(subst $(srcdir),$(objdir), \
 		$(firstword $(subst .asm,.o,$(wildcard $(srcdir)$(dir)/$(file)))))))
-		
+
 ifdef BUILD_A68K
 allobj += $(a68k.o)
 endif
@@ -174,11 +174,11 @@ endif
 
 ASFLAGS	=  -O1 -f coff -w-orphan-labels
 
-DEF		= /DBUILD_WIN32 /DUSE_SPEEDHACKS /DFILENAME=$(NAME) /DMMX=$(MMX) /DZLIB_WINAPI /DDECL_SPEC=__cdecl
+DEF		=  /D_USE_MATH_DEFINES /DBUILD_WIN32 /DUSE_SPEEDHACKS /DFILENAME=$(NAME) /DMMX=$(MMX) /DZLIB_WINAPI /DDECL_SPEC=__cdecl
 
 # For lib7z
 ifdef INCLUDE_7Z_SUPPORT
-DEF := $(DEF) /D_7ZIP_PPMD_SUPPPORT
+DEF := $(DEF) /D_7ZIP_PPMD_SUPPPORT /D_7ZIP_ST
 endif
 
 ifdef UNICODE
@@ -226,7 +226,7 @@ ifdef BUILD_X86_ASM
 endif
 
 ifdef BUILD_X64_EXE
-	DEF := $(DEF) /DBUILD_X64_EXE /DXBYAK_NO_OP_NAMES /DMIPS3_X64_DRC
+	DEF := $(DEF) /DBUILD_X64_EXE # /DXBYAK_NO_OP_NAMES /DMIPS3_X64_DRC
 endif
 
 ifdef BUILD_VS_XP_TARGET

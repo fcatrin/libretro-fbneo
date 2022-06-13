@@ -97,7 +97,7 @@ extern bool bDisableDebugConsole;                   // Disable debug console?
 extern HINSTANCE hAppInst;							// Application Instance
 extern HANDLE hMainThread;							// Handle to the main thread
 extern long int nMainThreadID;						// ID of the main thread
-extern int nAppThreadPriority;
+extern int nAppProcessPriority;
 extern int nAppShowCmd;
 
 extern HACCEL hAccel;
@@ -231,11 +231,14 @@ void NeoCDZRateChangeback();
 
 // burn_shift
 extern INT32 BurnShiftEnabled;
+// burn_gun
+extern bool bBurnGunDrawReticles;
 
 // run.cpp
 extern int bRunPause;
 extern int bAltPause;
 extern int bAlwaysDrawFrames;
+//extern INT32 bRunAhead;  // in burn.h! (partially platform agnostic feature)
 extern int kNetGame;
 int RunIdle();
 int RunFrame(int bDraw, int bPause);
@@ -266,6 +269,8 @@ int BurnerLoadDriver(TCHAR *szDriverName);
 int StartFromReset(TCHAR *szDriverName);
 void PausedRedraw(void);
 INT32 is_netgame_or_recording();
+void ScrnInitLua();
+void ScrnExitLua();
 
 // menu.cpp
 #define UM_DISPLAYPOPUP (WM_USER + 0x0100)
@@ -295,13 +300,14 @@ int MenuCreate();
 void MenuDestroy();
 int SetMenuPriority();
 void MenuUpdate();
+void MenuUpdateVolume();
 void CreateArcaderesItem();
 void MenuEnableItems();
 bool MenuHandleKeyboard(MSG*);
 void MenuRemoveTheme();
 
 // sel.cpp
-extern int nLoadMenuShowX;
+extern UINT64 nLoadMenuShowX;
 extern int nLoadMenuShowY;
 extern int nLoadMenuExpand;
 extern int nLoadMenuBoardTypeFilter;
@@ -315,6 +321,7 @@ extern UINT_PTR nTimer;
 extern HBITMAP hPrevBmp;
 extern HBITMAP hTitleBmp;
 extern int nDialogSelect;
+extern int nOldDlgSelected;
 void CreateToolTipForRect(HWND hwndParent, PTSTR pszText);
 int SelMVSDialog();
 void LoadDrvIcons();
@@ -463,6 +470,10 @@ int GameInfoDialogCreate(HWND hParentWND, int nDrvSel);
 void LoadFavorites();
 void AddFavorite_Ext(UINT8 addf);
 INT32 CheckFavorites(char *name);
+
+// luaconsole.cpp
+extern HWND LuaConsoleHWnd;
+void UpdateLuaConsole(const wchar_t* fname);
 
 // ---------------------------------------------------------------------------
 // Debugger

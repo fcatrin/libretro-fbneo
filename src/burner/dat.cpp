@@ -120,6 +120,10 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	if (bType == DAT_MSX_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - MSX 1 Games</name>\n");
 	if (bType == DAT_SPECTRUM_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - ZX Spectrum Games</name>\n");
 	if (bType == DAT_NEOGEO_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Neogeo Games</name>\n");
+	if (bType == DAT_NES_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - NES Games</name>\n");
+	if (bType == DAT_FDS_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - FDS Games</name>\n");
+	if (bType == DAT_NGP_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Neo Geo Pocket Games</name>\n");
+	if (bType == DAT_CHANNELF_ONLY) fprintf(fDat, "\t\t<name>" APP_TITLE " - Fairchild Channel F Games</name>\n");
 
 	if (bType == DAT_ARCADE_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Arcade Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_MEGADRIVE_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Megadrive Games</description>\n"), szAppBurnVer);
@@ -133,6 +137,10 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 	if (bType == DAT_MSX_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" MSX 1 Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_SPECTRUM_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" ZX Spectrum Games</description>\n"), szAppBurnVer);
 	if (bType == DAT_NEOGEO_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Neogeo Games</description>\n"), szAppBurnVer);
+	if (bType == DAT_NES_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" NES Games</description>\n"), szAppBurnVer);
+	if (bType == DAT_FDS_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" FDS Games</description>\n"), szAppBurnVer);
+	if (bType == DAT_NGP_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Neo Geo Pocket Games</description>\n"), szAppBurnVer);
+	if (bType == DAT_CHANNELF_ONLY) _ftprintf(fDat, _T("\t\t<description>") _T(APP_TITLE) _T(" v%s") _T(" Fairchild Channel F Games</description>\n"), szAppBurnVer);
 	fprintf(fDat, "\t\t<category>Standard DatFile</category>\n");
 	_ftprintf(fDat, _T("\t\t<version>%s</version>\n"), szAppBurnVer);
 	fprintf(fDat, "\t\t<author>" APP_TITLE "</author>\n");
@@ -169,6 +177,10 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_GAME_GEAR)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_MSX)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SPECTRUM)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_NES)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_FDS)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NGP)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_CHANNELF)
 			) && (bType == DAT_ARCADE_ONLY)) {
 			continue;
 		}
@@ -210,6 +222,22 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		}
 
 		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_SPECTRUM) && (bType == DAT_SPECTRUM_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_NES) && (bType == DAT_NES_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_FDS) && (bType == DAT_FDS_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_SNK_NGP) && (bType == DAT_NGP_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_CHANNELF) && (bType == DAT_CHANNELF_ONLY)) {
 			continue;
 		}
 
@@ -283,6 +311,10 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		remove_driver_leader(HARDWARE_SEGA_GAME_GEAR, 3, 1)
 		remove_driver_leader(HARDWARE_MSX, 4, 1)
 		remove_driver_leader(HARDWARE_SPECTRUM, 5, 1)
+		remove_driver_leader(HARDWARE_NES, 4, 1)
+		remove_driver_leader(HARDWARE_FDS, 4, 1)
+		remove_driver_leader(HARDWARE_SNK_NGP, 4, 1)
+		remove_driver_leader(HARDWARE_CHANNELF, 4, 1)
 
 		// Report problems
 		if (nParentSelect==-1U)
@@ -318,13 +350,17 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		char szGameNameBuffer[255];
 		char szManufacturer[255];
 		char szManufacturerBuffer[255];
+		char szGameDecoration[255];
+		char szGameDecorationBuffer[255];
 
 		memset(szGameName, 0, 255);
 		memset(szGameNameBuffer, 0, 255);
 		memset(szManufacturer, 0, 255);
 		memset(szManufacturerBuffer, 0, 255);
+		memset(szGameDecoration, 0, 255);
+		memset(szGameDecorationBuffer, 0, 255);
 
-		strcpy(szGameName, DecorateGameName(nBurnDrvActive));
+		strcpy(szGameName, BurnDrvGetTextA(DRV_FULLNAME));
 		ReplaceAmpersand(szGameNameBuffer, szGameName);
 		memset(szGameName, 0, 255);
 		strcpy(szGameName, szGameNameBuffer);
@@ -346,6 +382,20 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		memset(szManufacturerBuffer, 0, 255);
 		ReplaceGreaterThan(szManufacturerBuffer, szManufacturer);
 
+		strcpy(szGameDecoration, GameDecoration(nBurnDrvActive));
+		ReplaceAmpersand(szGameDecorationBuffer, szGameDecoration);
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, szGameDecorationBuffer);
+		memset(szGameDecorationBuffer, 0, 255);
+		ReplaceLessThan(szGameDecorationBuffer, szGameDecoration);
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, szGameDecorationBuffer);
+		memset(szGameDecorationBuffer, 0, 255);
+		ReplaceGreaterThan(szGameDecorationBuffer, szGameDecoration);
+
+		if (strlen(szGameDecoration) > 0) {
+			fprintf(fDat, "\t\t<comment>%s</comment>\n", szGameDecoration);
+		}
 		fprintf(fDat, "\t\t<description>%s</description>\n", szGameNameBuffer);
 		fprintf(fDat, "\t\t<year>%s</year>\n", BurnDrvGetTextA(DRV_DATE));
 		fprintf(fDat, "\t\t<manufacturer>%s</manufacturer>\n", szManufacturerBuffer);
@@ -507,10 +557,11 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			}
 		}
 
-		if (BurnDrvGetFlags() & BDF_GAME_WORKING)
-			fprintf(fDat, "\t\t<driver status=\"good\"/>\n");
-		else
-			fprintf(fDat, "\t\t<driver status=\"preliminary\"/>\n");
+		INT32 nGameWidth, nGameHeight, nGameAspectX, nGameAspectY;
+		BurnDrvGetVisibleSize(&nGameWidth, &nGameHeight);
+		BurnDrvGetAspect(&nGameAspectX, &nGameAspectY);
+		fprintf(fDat, "\t\t<video type=\"%s\" orientation=\"%s\" width=\"%d\" height=\"%d\" aspectx=\"%d\" aspecty=\"%d\"/>\n", (BurnDrvGetGenreFlags() & GBF_VECTOR ? "vector" : "raster"), (BurnDrvGetFlags() & BDF_ORIENTATION_VERTICAL ? "vertical" : "horizontal"), nGameWidth, nGameHeight, nGameAspectX, nGameAspectY);
+		fprintf(fDat, "\t\t<driver status=\"%s\"/>\n", (BurnDrvGetFlags() & BDF_GAME_WORKING ? "good" : "preliminary"));
 
 		fprintf(fDat, "\t</game>\n");
 	}
@@ -537,6 +588,10 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SEGA_GAME_GEAR)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_MSX)
 			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SPECTRUM)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_NES)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_FDS)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NGP)
+			|| ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_CHANNELF)
 			) && (bType == DAT_ARCADE_ONLY)) {
 			continue;
 		}
@@ -581,6 +636,22 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 			continue;
 		}
 
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_NES) && (bType == DAT_NES_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_FDS) && (bType == DAT_FDS_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_SNK_NGP) && (bType == DAT_NGP_ONLY)) {
+			continue;
+		}
+
+		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_CHANNELF) && (bType == DAT_CHANNELF_ONLY)) {
+			continue;
+		}
+
 		if (((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) != HARDWARE_SNK_NEOGEO) && (bType == DAT_NEOGEO_ONLY)) {
 			continue;
 		}
@@ -601,9 +672,19 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 		remove_driver_leader(HARDWARE_SEGA_GAME_GEAR, 3, 0)
 		remove_driver_leader(HARDWARE_MSX, 4, 0)
 		remove_driver_leader(HARDWARE_SPECTRUM, 5, 0)
+		remove_driver_leader(HARDWARE_NES, 4, 0)
+		remove_driver_leader(HARDWARE_FDS, 4, 0)
+		remove_driver_leader(HARDWARE_SNK_NGP, 4, 0)
+		remove_driver_leader(HARDWARE_CHANNELF, 4, 0)
 
 		fprintf(fDat, "\t<game isbios=\"yes\" name=\"%s\">\n", sgName);
-		fprintf(fDat, "\t\t<description>%s</description>\n", DecorateGameName(nBurnDrvActive));
+		char szGameDecoration[255];
+		memset(szGameDecoration, 0, 255);
+		strcpy(szGameDecoration, GameDecoration(nBurnDrvActive));
+		if (strlen(szGameDecoration) > 0) {
+			fprintf(fDat, "\t\t<comment>%s</comment>\n", szGameDecoration);
+		}
+		fprintf(fDat, "\t\t<description>%s</description>\n", BurnDrvGetTextA(DRV_FULLNAME));
 		fprintf(fDat, "\t\t<year>%s</year>\n", BurnDrvGetTextA(DRV_DATE));
 		fprintf(fDat, "\t\t<manufacturer>%s</manufacturer>\n", BurnDrvGetTextA(DRV_MANUFACTURER));
 
@@ -641,7 +722,11 @@ INT32 write_datfile(INT32 bType, FILE* fDat)
 					memset(szPossibleNameBuffer, 0, 255);
 					ReplaceGreaterThan(szPossibleNameBuffer, szPossibleNameBuffer2);
 
-					fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, ri.nLen, ri.nCrc);
+					if (ri.nType & BRF_NODUMP) {
+						fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" status=\"nodump\"/>\n", szPossibleNameBuffer, ri.nLen);
+					} else {
+						fprintf(fDat, "\t\t<rom name=\"%s\" size=\"%d\" crc=\"%08x\"/>\n", szPossibleNameBuffer, ri.nLen, ri.nCrc);
+					}
 				}
 			}
 		}

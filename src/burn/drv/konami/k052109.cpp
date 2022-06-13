@@ -54,6 +54,10 @@ static void update_scroll_one(INT32 nLayer, INT32 control, INT32 ram_offset)
 		UINT8 *scrollram = &sourceram[0x1a00];
 		INT32 yscroll = sourceram[0x180c];
 
+		if (nLayer == 2 && (control & 0x03) == 0x02 && K052109ScrollCtrl == 0x70) {
+			yscroll = sourceram[0x1823]; // hack for suratk 2nd boss rotating star field
+		}
+
 		for (INT32 offs = 0; offs < 256; offs++)
 		{
 			INT32 xscroll = scrollram[2 * (offs & andval) + 0] + 256 * scrollram[2 * (offs & andval) + 1];
@@ -179,8 +183,6 @@ void K052109RenderLayer(INT32 nLayer, INT32 Flags, INT32 Priority)
 	INT32 EnableCategory = Flags & 0x100;
 	INT32 Category = Flags & 0xff;
 
-	Priority = (EnableCategory) ? Category : Priority;
-
 	INT32 Opaque = (Flags >> 16) & 1;
 	INT32 ram_offset = nLayer * 0x800;
 
@@ -278,7 +280,7 @@ UINT8 K052109Read(UINT32 Offset)
 		INT32 Code = (Offset & 0x1fff) >> 5;
 		INT32 Colour = K052109RomSubBank;
 		INT32 Bank  =  K052109CharRomBank[(Colour & 0x0c) >> 2] >> 2;
-		    Bank |= (K052109CharRomBank2[(Colour & 0x0c) >> 2] >> 2);
+			  Bank |= (K052109CharRomBank2[(Colour & 0x0c) >> 2] >> 2);
 
 		if (has_extra_video_ram)
 			Code |= Colour << 8;	/* kludge for X-Men */
@@ -409,13 +411,13 @@ void K052109GfxDecode(UINT8 *src, UINT8 *dst, INT32 nLen)
 void K052109Init(UINT8 *pRomSrc, UINT8 *pRomSrcExp, UINT32 RomMask)
 {
 	K052109Ram = (UINT8*)BurnMalloc(0x6000);
-	
+
 	K052109RomMask = RomMask;
 	K052109RomExpMask = (RomMask * 2) / (8 * 8);
-	
+
 	K052109Rom = pRomSrc;
 	K052109RomExp = pRomSrcExp;
-	
+
 	KonamiIC_K052109InUse = 1;
 
 	for (INT32 i = 0; i < 3; i++) {
@@ -431,11 +433,11 @@ void K052109Init(UINT8 *pRomSrc, UINT8 *pRomSrcExp, UINT32 RomMask)
 void K052109Exit()
 {
 	BurnFree(K052109Ram);
-	
+
 	K052109Callback = NULL;
 	K052109RomMask = 0;
 	K052109Rom = NULL;
-	
+
 	memset(K052109ScrollX, 0, sizeof(K052109ScrollX));
 	memset(K052109ScrollY, 0, sizeof(K052109ScrollY));
 	K052109ScrollCtrl = 0;
@@ -461,26 +463,22 @@ void K052109Scan(INT32 nAction)
 	}
 
 	if (nAction & ACB_DRIVER_DATA) {
-		SCAN_VAR(K052109ScrollX[0]);
-		SCAN_VAR(K052109ScrollX[1]);
-		SCAN_VAR(K052109ScrollX[2]);
-		SCAN_VAR(K052109ScrollY[0]);
-		SCAN_VAR(K052109ScrollY[1]);
-		SCAN_VAR(K052109ScrollY[2]);
+		SCAN_VAR(K052109ScrollX);
+		SCAN_VAR(K052109ScrollY);
 		SCAN_VAR(K052109ScrollCtrl);
-		SCAN_VAR(K052109ScrollCtrl);
-		SCAN_VAR(K052109CharRomBank[0]);
-		SCAN_VAR(K052109CharRomBank[1]);
-		SCAN_VAR(K052109CharRomBank[2]);
-		SCAN_VAR(K052109CharRomBank[3]);
-		SCAN_VAR(K052109CharRomBank2[0]);
-		SCAN_VAR(K052109CharRomBank2[1]);
-		SCAN_VAR(K052109CharRomBank2[2]);
-		SCAN_VAR(K052109CharRomBank2[3]);
+		SCAN_VAR(K052109CharRomBank);
+		SCAN_VAR(K052109CharRomBank2);
 		SCAN_VAR(K052109RMRDLine);
 		SCAN_VAR(K052109RomSubBank);
 		SCAN_VAR(K052109FlipEnable);
 		SCAN_VAR(K052109_irq_enabled);
 		SCAN_VAR(has_extra_video_ram);
+
+		SCAN_VAR(K052109EnableRows);
+		SCAN_VAR(K052109EnableLine);
+		SCAN_VAR(K052109ScrollRows);
+		SCAN_VAR(K052109EnableCols);
+		SCAN_VAR(K052109ScrollCols);
+
 	}
 }

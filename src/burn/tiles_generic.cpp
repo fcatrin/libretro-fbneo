@@ -65,16 +65,16 @@ INT32 GenericTilesExit()
 
 void GenericTilesSetClip(INT32 nMinx, INT32 nMaxx, INT32 nMiny, INT32 nMaxy)
 {
-	if (nMinx > -1) nScreenWidthMin = nMinx;
-	if (nMaxx > -1) nScreenWidthMax = nMaxx;
-	if (nMiny > -1) nScreenHeightMin = nMiny;
-	if (nMaxy > -1) nScreenHeightMax = nMaxy;
-
 	if (nMinx < 0) nMinx = 0;
 	if (nMiny < 0) nMiny = 0;
 
 	if (nMaxx > nScreenWidth) nMaxx = nScreenWidth;
 	if (nMaxy > nScreenHeight) nMaxy = nScreenHeight;
+
+	if (nMinx > -1) nScreenWidthMin = nMinx;
+	if (nMaxx > -1) nScreenWidthMax = nMaxx;
+	if (nMiny > -1) nScreenHeightMin = nMiny;
+	if (nMaxy > -1) nScreenHeightMax = nMaxy;
 }
 
 void GenericTilesGetClip(INT32 *nMinx, INT32 *nMaxx, INT32 *nMiny, INT32 *nMaxy)
@@ -220,11 +220,34 @@ INT32 BurnTransferCopy(UINT32* pPalette)
 	return 0;
 }
 
+#define nTransOverflow 16 // 16 lines of overflow, some games spill past the end of the allocated height causing heap corruption.
+
+void BurnTransferSetDimensions(INT32 nWidth, INT32 nHeight)
+{
+	nTransHeight = nHeight;
+	nTransWidth = nWidth;
+}
+
 void BurnTransferExit()
 {
 #if defined FBNEO_DEBUG
 	if (!Debug_BurnTransferInitted) bprintf(PRINT_ERROR, _T("BurnTransferExit called without init\n"));
 #endif
+
+	if (Debug_BurnTransferInitted)
+	{ // pTransDraw spill detector v.0001.01 - handy for driver development!
+
+		INT32 uhoh_spill = 0;
+
+		for (INT32 y = nTransHeight; y < nTransHeight + nTransOverflow; y++) {
+			for (INT32 x = 0; x < nTransWidth; x++) {
+				if (pTransDraw[y * nTransWidth + x]) uhoh_spill = 1;
+			}
+		}
+		if (uhoh_spill) {
+			bprintf(PRINT_ERROR, _T("!!! BurnTransferExit(): Game wrote past pTransDraw's allocated dimensions!\n"));
+		}
+	}
 
 	BurnBitmapExit();
 	pTransDraw = NULL;
@@ -234,8 +257,6 @@ void BurnTransferExit()
 
 	Debug_BurnTransferInitted = 0;
 }
-
-#define nTransOverflow 10 // 10 lines of overflow, some games spill past the end of the allocated height causing heap corruption.
 
 INT32 BurnTransferInit()
 {
@@ -255,6 +276,35 @@ INT32 BurnTransferInit()
 	BurnTransferClear();
 
 	return 0;
+}
+
+void BurnTransferFlip(INT32 bFlipX, INT32 bFlipY)
+{
+	if (bFlipX) {
+		UINT16 *tmp = (UINT16*)pBurnDraw; // :D
+		for (INT32 y = 0; y < nScreenHeight; y++)
+		{
+			UINT16 *line = pTransDraw + y * nScreenWidth;
+			for (INT32 x = 0; x < nScreenWidth; x++)
+			{
+				tmp[(nScreenWidth - 1) - x] = line[x];
+			}
+			memcpy (line, tmp, nScreenWidth * 2);
+		}
+	}
+	if (bFlipY) {
+		UINT16 *tmp = (UINT16*)pBurnDraw;
+		UINT16 *src1 = pTransDraw;
+		UINT16 *src2 = pTransDraw + (nScreenHeight-1) * nScreenWidth;
+
+		for (INT32 y = 0; y < nScreenHeight / 2; y++) {
+			memcpy (tmp,  src1, nScreenWidth * 2);
+			memcpy (src1, src2, nScreenWidth * 2);
+			memcpy (src2, tmp,  nScreenWidth * 2);
+			src1 += nScreenWidth;
+			src2 -= nScreenWidth;
+		}
+	}
 }
 
 /*================================================================================================
@@ -5699,7 +5749,7 @@ void DrawGfxTile(INT32 nBitmap, INT32 nGfx, INT32 nTileNumber, INT32 nStartX, IN
 
 	GenericTilesGfx *gfx = &GenericGfxData[nGfx];
 
-	DrawCustomTile(bitmap, gfx->width, gfx->height, nTileNumber & gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, gfx->color_offset, gfx->gfxbase);
+	DrawCustomTile(bitmap, gfx->width, gfx->height, nTileNumber % gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, gfx->color_offset, gfx->gfxbase);
 
 	if (nBitmap != 0)
 	{
@@ -5725,7 +5775,7 @@ void DrawGfxMaskTile(INT32 nBitmap, INT32 nGfx, INT32 nTileNumber, INT32 nStartX
 
 	GenericTilesGfx *gfx = &GenericGfxData[nGfx];
 
-	DrawCustomMaskTile(bitmap, gfx->width, gfx->height, nTileNumber & gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, nMaskColor, gfx->color_offset, gfx->gfxbase);
+	DrawCustomMaskTile(bitmap, gfx->width, gfx->height, nTileNumber % gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, nMaskColor, gfx->color_offset, gfx->gfxbase);
 
 	if (nBitmap != 0)
 	{
@@ -5752,7 +5802,7 @@ void DrawGfxPrioTile(INT32 nBitmap, INT32 nGfx, INT32 nTileNumber, INT32 nStartX
 
 	GenericTilesGfx *gfx = &GenericGfxData[nGfx];
 
-	DrawCustomPrioTile(bitmap, gfx->width, gfx->height, nTileNumber & gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, gfx->color_offset, nPriority, gfx->gfxbase);
+	DrawCustomPrioTile(bitmap, gfx->width, gfx->height, nTileNumber % gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, gfx->color_offset, nPriority, gfx->gfxbase);
 
 	if (nBitmap != 0)
 	{
@@ -5780,7 +5830,7 @@ void DrawGfxPrioMaskTile(INT32 nBitmap, INT32 nGfx, INT32 nTileNumber, INT32 nSt
 
 	GenericTilesGfx *gfx = &GenericGfxData[nGfx];
 
-	DrawCustomPrioMaskTile(bitmap, gfx->width, gfx->height, nTileNumber & gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, nMaskColor, gfx->color_offset, nPriority, gfx->gfxbase);
+	DrawCustomPrioMaskTile(bitmap, gfx->width, gfx->height, nTileNumber % gfx->code_mask, nStartX, nStartY, nFlipx, nFlipy, nTilePalette & gfx->color_mask, gfx->depth, nMaskColor, gfx->color_offset, nPriority, gfx->gfxbase);
 
 	if (nBitmap != 0)
 	{
@@ -6126,6 +6176,7 @@ void RenderPrioSprite(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 color, INT32 t
 	}
 }
 
+
 void RenderZoomedPrioTranstabSpriteOffset(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 color, INT32 t, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy, UINT8 *tab, UINT32 color_offset, INT32 priority)
 {
 #if defined FBNEO_DEBUG
@@ -6193,3 +6244,43 @@ void RenderZoomedPrioTranstabSprite(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 
 	RenderZoomedPrioTranstabSpriteOffset(dest, gfx, code, color, t, sx, sy, fx, fy, width, height, zoomx, zoomy, tab, 0x00, priority);
 }
 
+
+void RenderPrioTransmaskSprite(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 color, INT32 tmask, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 priority)
+{
+#if defined FBNEO_DEBUG
+	if (!Debug_GenericTilesInitted) bprintf(PRINT_ERROR, _T("RenderPrioTransmaskSprite called without init\n"));
+#endif
+
+	if (sx < (nScreenWidthMin - (width - 1)) || sy < (nScreenHeightMin - (height - 1)) || sx >= nScreenWidthMax || sy >= nScreenHeightMax) return;
+
+	UINT8 *gfx_base = gfx + (code * width * height);
+
+	priority |= 1 << 31;
+
+	INT32 flipx = fx ? (width - 1) : 0;
+	INT32 flipy = fy ? (height - 1) : 0;
+
+	for (INT32 y = 0; y < height; y++, sy++)
+	{
+		if (sy < nScreenHeightMin || sy >= nScreenHeightMax) continue;
+
+		UINT16 *dst = dest + sy * nScreenWidth + sx;
+		UINT8 *pri = pPrioDraw + sy * nScreenWidth + sx;
+
+		for (INT32 x = 0; x < width; x++, sx++)
+		{
+			if (sx < nScreenWidthMin || sx >= nScreenWidthMax) continue;
+
+			INT32 pxl = gfx_base[(y ^ flipy) * width + (x ^ flipx)];
+
+			if ((tmask & (1 << pxl)) == 0) {
+				if ((priority & (1 << pri[x])) == 0) {
+					dst[x] = pxl + color;
+				}
+				pri[x] = 0x1f;
+			}
+		}
+
+		sx -= width;
+	}
+}

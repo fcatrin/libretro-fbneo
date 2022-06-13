@@ -1,4 +1,4 @@
-// FB Alpha Snow Bros. driver module
+// FB Neo Snow Bros. driver module
 // Based on MAME driver by David Haywood, Mike Coates
 
 // Todo:
@@ -209,7 +209,7 @@ static struct BurnDIPInfo Cookbib2DIPList[]=
 	{0x13, 0x01, 0x60, 0x00, "Easy"                   },
 	{0x13, 0x01, 0x60, 0x60, "Normal"                 },
 	{0x13, 0x01, 0x60, 0x40, "Hard"                   },
-	{0x13, 0x01, 0x60, 0x20, "Very Hard"              },
+	{0x13, 0x01, 0x60, 0x20, "Hardest"                },
 
 	{0   , 0xfe, 0   , 2   , "Mode"                   },
 	{0x13, 0x01, 0x80, 0x80, "Game"                   },
@@ -217,6 +217,44 @@ static struct BurnDIPInfo Cookbib2DIPList[]=
 };
 
 STDDIPINFO(Cookbib2)
+
+static struct BurnDIPInfo Cookbib2cDIPList[]=
+{
+	// Default Values
+	{0x13, 0xff, 0xff, 0xfc, NULL                     },
+	{0x14, 0xff, 0xff, 0xff, NULL                     },
+
+	// Dip 1
+	{0   , 0xfe, 0   , 2   , "Demo Sound"             },
+	{0x13, 0x01, 0x01, 0x01, "Off"                    },
+	{0x13, 0x01, 0x01, 0x00, "On"                     },
+
+	{0   , 0xfe, 0   , 2   , "Language"           	  },
+	{0x13, 0x01, 0x02, 0x02, "English"                },
+	{0x13, 0x01, 0x02, 0x00, "Korean"                 },
+
+	{0   , 0xfe, 0   , 8   , "Coin : Credit"          },
+	{0x13, 0x01, 0x1c, 0x00, "5 : 1"                  },
+	{0x13, 0x01, 0x1c, 0x04, "4 : 1"                  },
+	{0x13, 0x01, 0x1c, 0x08, "3 : 1"                  },
+	{0x13, 0x01, 0x1c, 0x0c, "2 : 1"                  },
+	{0x13, 0x01, 0x1c, 0x1c, "1 : 1"                  },
+	{0x13, 0x01, 0x1c, 0x14, "2 : 3"                  },
+	{0x13, 0x01, 0x1c, 0x18, "1 : 2"                  },
+	{0x13, 0x01, 0x1c, 0x10, "1 : 3"                  },
+
+	{0   , 0xfe, 0   , 4   , "Difficulty"             },
+	{0x13, 0x01, 0x60, 0x00, "Easy"                   },
+	{0x13, 0x01, 0x60, 0x60, "Normal"                 },
+	{0x13, 0x01, 0x60, 0x40, "Hard"                   },
+	{0x13, 0x01, 0x60, 0x20, "Hardest"                },
+
+	{0   , 0xfe, 0   , 2   , "Mode"                   },
+	{0x13, 0x01, 0x80, 0x80, "Game"                   },
+	{0x13, 0x01, 0x80, 0x00, "Test"                   },
+};
+
+STDDIPINFO(Cookbib2c)
 
 static struct BurnDIPInfo Cookbib3DIPList[]=
 {
@@ -733,20 +771,20 @@ STD_ROM_PICK(Hyperpacb)
 STD_ROM_FN(Hyperpacb)
 
 static struct BurnRomInfo Cookbib2RomDesc[] = {
-	{ "cookbib2.02",   0x40000, 0xb2909460, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
-	{ "cookbib2.01",   0x40000, 0x65aafde2, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+	{ "unico_02.uh12", 	0x40000, 0xb2909460, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "unico_01.ui12", 	0x40000, 0x65aafde2, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
 
-	{ "cookbib2.05",   0x80000, 0x89fb38ce, BRF_GRA },			 //  2	Sprites
-	{ "cookbib2.04",   0x80000, 0xf240111f, BRF_GRA },			 //  3	Sprites
-	{ "cookbib2.03",   0x40000, 0xe1604821, BRF_GRA },			 //  4	Sprites
+	{ "unico_05.ua4",  	0x80000, 0x89fb38ce, BRF_GRA },			 //  2	Sprites
+	{ "unico_04.ua5",  	0x80000, 0xf240111f, BRF_GRA },			 //  3	Sprites
+	{ "unico_03.ua6",  	0x40000, 0xe1604821, BRF_GRA },			 //  4	Sprites
 
-	{ "cookbib2.07",   0x10000, 0xf59f1c9a, BRF_SND },			 //  5	Z80 Program Code
+	{ "unico_07.u1",   	0x10000, 0xf59f1c9a, BRF_SND },			 //  5	Z80 Program Code
 
-	{ "cookbib2.06",   0x20000, 0x5e6f76b8, BRF_SND },			 //  6	Samples
+	{ "unico_06.uj15", 	0x20000, 0x5e6f76b8, BRF_SND },			 //  6	Samples
 
-	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },
+	{ "p87c52ebpn.bin",	0x02000, 0xef042cef, BRF_PRG | BRF_OPT },
 
-	{ "protdata.bin",  0x00200, 0xae6d8ed5, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+	{ "protdata.bin",  	0x00200, 0xae6d8ed5, BRF_ESS | BRF_PRG }, //  Data from shared RAM
 };
 
 
@@ -754,6 +792,27 @@ STD_ROM_PICK(Cookbib2)
 STD_ROM_FN(Cookbib2)
 
 static struct BurnRomInfo Cookbib2aRomDesc[] = {
+	{ "unico.uh12",    	0x40000, 0x19421631, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "unico.ui12",    	0x40000, 0x0d09ecf5, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "unico_05.ua4",  	0x80000, 0x89fb38ce, BRF_GRA },			 //  2	Sprites
+	{ "unico_04.ua5",  	0x80000, 0xf240111f, BRF_GRA },			 //  3	Sprites
+	{ "unico_03.ua6",  	0x40000, 0xe1604821, BRF_GRA },			 //  4	Sprites
+
+	{ "unico_07.u1",   	0x10000, 0xf59f1c9a, BRF_SND },			 //  5	Z80 Program Code
+
+	{ "unico_06.uj15", 	0x20000, 0x5e6f76b8, BRF_SND },			 //  6	Samples
+
+	{ "p87c52ebpn.bin",	0x02000, 0xef042cef, BRF_PRG | BRF_OPT },
+
+	{ "protdata.bin",  	0x00200, 0xae6d8ed5, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+};
+
+
+STD_ROM_PICK(Cookbib2a)
+STD_ROM_FN(Cookbib2a)
+
+static struct BurnRomInfo Cookbib2bRomDesc[] = {
 	{ "uh12.020",      		0x40000, 0xa44ec1f8, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "ui12.020",      		0x40000, 0xbdbcd0d1, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
 
@@ -765,14 +824,35 @@ static struct BurnRomInfo Cookbib2aRomDesc[] = {
 
 	{ "uj15.010",   		0x20000, 0x5e6f76b8, BRF_SND },			 //  6	Samples
 
-	{ "87c52.mcu",     		0x10000, 0x00000000, BRF_NODUMP },
+	{ "87c52.mcu",     		0x02000, 0x00000000, BRF_NODUMP },
 
 	{ "protdata_alt.bin",  	0x00200, 0xbc136ead, BRF_ESS | BRF_PRG }, //  Data from shared RAM
 };
 
 
-STD_ROM_PICK(Cookbib2a)
-STD_ROM_FN(Cookbib2a)
+STD_ROM_PICK(Cookbib2b)
+STD_ROM_FN(Cookbib2b)
+
+static struct BurnRomInfo Cookbib2cRomDesc[] = {
+	{ "unico.uh12",      	0x40000, 0xbe021efa, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "unico.ui12",      	0x40000, 0xed49a0e5, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "unico.ua4",   		0x80000, 0x3de7a813, BRF_GRA },			 //  2	Sprites
+	{ "unico.ua5",   		0x80000, 0x6d543788, BRF_GRA },			 //  3	Sprites
+	{ "unico.ua6",   		0x40000, 0x13cc9bf4, BRF_GRA },			 //  4	Sprites
+
+	{ "unico.u1",   	    0x10000, 0xf1100b20, BRF_SND },			 //  5	Z80 Program Code
+
+	{ "unico.uj15",   		0x20000, 0xae5cc9e5, BRF_SND },			 //  6	Samples
+
+	{ "87c52.mcu",     		0x02000, 0x00000000, BRF_NODUMP },
+
+	{ "protdata.bin",  		0x00200, 0xb956f056, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+};
+
+
+STD_ROM_PICK(Cookbib2c)
+STD_ROM_FN(Cookbib2c)
 
 static struct BurnRomInfo Cookbib3RomDesc[] = {
 	{ "u52.bin",       0x40000, 0x65134893, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -883,6 +963,28 @@ static struct BurnRomInfo Threein1semiRomDesc[] = {
 STD_ROM_PICK(Threein1semi)
 STD_ROM_FN(Threein1semi)
 
+static struct BurnRomInfo Threein1semiaRomDesc[] = {
+	{ "u52.bin",       0x40000, 0x388334a8, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "u74.bin",       0x40000, 0x555ae716, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "u75.bin",       0x80000, 0x9d705249, BRF_GRA },			 //  2	Sprites
+	{ "u76.bin",       0x80000, 0xb65f5d79, BRF_GRA },			 //  3	Sprites
+	{ "u77.bin",       0x80000, 0xb9728be9, BRF_GRA },			 //  4	Sprites
+	{ "u78.bin",       0x20000, 0xaefad49e, BRF_GRA },			 //  5	Sprites
+
+	{ "u35.bin",       0x10000, 0xe40481da, BRF_SND },			 //  6	Z80 Program Code
+
+	{ "u14.bin",       0x40000, 0xc83c11be, BRF_SND },			 //  7	Samples
+
+	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },
+
+	{ "protdata.bin",  0x00200, 0x85deba7c, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+};
+
+
+STD_ROM_PICK(Threein1semia)
+STD_ROM_FN(Threein1semia)
+
 static struct BurnRomInfo TwinkleRomDesc[] = {
 	{ "uh12.bin",      0x20000, 0xa99626fe, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "ui12.bin",      0x20000, 0x5af73684, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
@@ -901,6 +1003,25 @@ static struct BurnRomInfo TwinkleRomDesc[] = {
 
 STD_ROM_PICK(Twinkle)
 STD_ROM_FN(Twinkle)
+
+static struct BurnRomInfo TwinkleaRomDesc[] = {
+	{ "uh12.bin",      0x20000, 0x6cc6e53c, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "ui12.bin",      0x20000, 0x79420382, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "ua4.bin",       0x80000, 0x6b64bb09, BRF_GRA },			 //  2	Sprites
+
+	{ "u1.bin",        0x10000, 0xe40481da, BRF_SND },			 //  3	Z80 Program Code
+
+	{ "uj15.bin",      0x40000, 0x0a534b37, BRF_SND },			 //  4	Samples
+
+	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },
+
+	{ "protdata.bin",  0x00200, 0x00d3e4b4, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+};
+
+
+STD_ROM_PICK(Twinklea)
+STD_ROM_FN(Twinklea)
 
 static struct BurnRomInfo PzlbreakRomDesc[] = {
 	{ "4.uh12",        0x20000, 0xb3f04f80, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -921,6 +1042,26 @@ static struct BurnRomInfo PzlbreakRomDesc[] = {
 
 STD_ROM_PICK(Pzlbreak)
 STD_ROM_FN(Pzlbreak)
+
+static struct BurnRomInfo PzlbreakaRomDesc[] = {
+	{ "uh12",          0x20000, 0xc8a82ca8, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "ui12",          0x20000, 0x2f66c4ce, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "ua4",           0x80000, 0xd211705a, BRF_GRA },			 //  2	Sprites
+	{ "ua5",           0x80000, 0xeb3044bc, BRF_GRA },			 //  3
+
+	{ "u1",            0x10000, 0x1ad646b7, BRF_SND },			 //  4	Z80 Program Code
+
+	{ "uj15",          0x20000, 0x5cdffcc5, BRF_SND },			 //  5	Samples
+
+	{ "87c52.mcu",     0x10000, 0x00000000, BRF_NODUMP },
+
+	{ "protdata.bin",  0x00200, 0x092cb794, BRF_ESS | BRF_PRG }, //  Data from shared RAM
+};
+
+
+STD_ROM_PICK(Pzlbreaka)
+STD_ROM_FN(Pzlbreaka)
 
 static struct BurnRomInfo Fourin1bootRomDesc[] = {
 	{ "u52",           0x80000, 0x71815878, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
@@ -1226,6 +1367,8 @@ static INT32 SnowbrosDoReset()
 	ZetClose();
 
 	BurnYM3812Reset();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -2282,7 +2425,7 @@ static INT32 MoremoreInit()
 	HyperpacNumTiles = 16384;
 
 	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "moremore") || !strcmp(BurnDrvGetTextA(DRV_NAME), "moremorp")) Moremore = 1;
-	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "3in1semi")) Threein1semi = 1;
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "3in1semi") || !strcmp(BurnDrvGetTextA(DRV_NAME), "3in1semia")) Threein1semi = 1;
 
 	// Allocate and Blank all required memory
 	Mem = NULL;
@@ -2471,6 +2614,8 @@ static INT32 Fourin1bootInit()
 	nRet = BurnLoadRom(MSM6295ROM, 4, 1); if (nRet != 0) return 1;
 
 	nRet = HyperpacMachineInit(); if (nRet) return 1;
+
+	MSM6295SetRoute(0, 0.35, BURN_SND_ROUTE_BOTH);
 
 	return 0;
 }
@@ -4043,7 +4188,7 @@ struct BurnDriver BurnDrvHyperpacb = {
 
 struct BurnDriver BurnDrvCookbib2 = {
 	"cookbib2", NULL, NULL, NULL, "1996",
-	"Cookie & Bibi 2 (set 1)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	"Cookie & Bibi 2 (English, set 1)\0", NULL, "SemiCom", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, Cookbib2RomInfo, Cookbib2RomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, Cookbib2DIPInfo,
@@ -4053,10 +4198,30 @@ struct BurnDriver BurnDrvCookbib2 = {
 
 struct BurnDriver BurnDrvCookbib2a = {
 	"cookbib2a", "cookbib2", NULL, NULL, "1996",
-	"Cookie & Bibi 2 (set 2)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	"Cookie & Bibi 2 (English, set 2)\0", NULL, "SemiCom", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, Cookbib2aRomInfo, Cookbib2aRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, Cookbib2DIPInfo,
+	Cookbib2Init, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
+	NULL, 0x200, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvCookbib2b = {
+	"cookbib2b", "cookbib2", NULL, NULL, "1996",
+	"Cookie & Bibi 2 (English, set 3)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, Cookbib2bRomInfo, Cookbib2bRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, Cookbib2DIPInfo,
+	Cookbib2Init, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
+	NULL, 0x200, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvCookbib2c = {
+	"cookbib2c", "cookbib2", NULL, NULL, "1996",
+	"Cookie & Bibi 2 (English / Korean)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, Cookbib2cRomInfo, Cookbib2cRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, Cookbib2cDIPInfo,
 	Cookbib2Init, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
 	NULL, 0x200, 256, 224, 4, 3
 };
@@ -4093,10 +4258,20 @@ struct BurnDriver BurnDrvMoremorp = {
 
 struct BurnDriver BurnDrvThreein1semi = {
 	"3in1semi", NULL, NULL, NULL, "1997",
-	"XESS - The New Revolution (SemiCom 3-in-1)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	"New HyperMan (3-in-1 with Cookie & Bibi & HyperMan) (set 1)\0", NULL, "SemiCom / XESS", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, Threein1semiRomInfo, Threein1semiRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
+	MoremoreInit, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
+	NULL, 0x200, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvThreein1semia = {
+	"3in1semia", "3in1semi", NULL, NULL, "1997",
+	"New HyperMan (3-in-1 with Cookie & Bibi & HyperMan) (set 2)\0", NULL, "SemiCom / XESS", "Kaneko Pandora based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	NULL, Threein1semiaRomInfo, Threein1semiaRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
 	MoremoreInit, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
 	NULL, 0x200, 256, 224, 4, 3
 };
@@ -4113,7 +4288,7 @@ struct BurnDriver BurnDrvToppyrap = {
 
 struct BurnDriver BurnDrvTwinkle = {
 	"twinkle", NULL, NULL, NULL, "1997",
-	"Twinkle\0", NULL, "SemiCom", "Kaneko Pandora based",
+	"Twinkle (set 1)\0", NULL, "SemiCom", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
 	NULL, TwinkleRomInfo, TwinkleRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
@@ -4121,12 +4296,32 @@ struct BurnDriver BurnDrvTwinkle = {
 	NULL, 0x200, 256, 224, 4, 3
 };
 
+struct BurnDriver BurnDrvTwinklea = {
+	"twinklea", "twinkle", NULL, NULL, "1997",
+	"Twinkle (set 2)\0", NULL, "SemiCom", "Kaneko Pandora based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
+	NULL, TwinkleaRomInfo, TwinkleaRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
+	TwinkleInit, HyperpacExit, HyperpacFrame, HyperpacRender, HyperpacScan,
+	NULL, 0x200, 256, 224, 4, 3
+};
+
 struct BurnDriver BurnDrvPzlbreak = {
 	"pzlbreak", NULL, NULL, NULL, "1997",
-	"Puzzle Break\0", NULL, "SemiCom", "Kaneko Pandora based",
+	"Puzzle Break (set 1)\0", NULL, "SemiCom / Tirano", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_BREAKOUT, 0,
 	NULL, PzlbreakRomInfo, PzlbreakRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
+	PzlbreakInit, HyperpacExit, PzlbreakFrame, PzlbreakRender, HyperpacScan,
+	NULL, 0x200, 256, 224, 4, 3
+};
+
+struct BurnDriver BurnDrvPzlbreaka = {
+	"pzlbreaka", "pzlbreak", NULL, NULL, "1997",
+	"Puzzle Break (set 2)\0", NULL, "SemiCom / Tirano", "Kaneko Pandora based",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_BREAKOUT, 0,
+	NULL, PzlbreakaRomInfo, PzlbreakaRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, MoremoreDIPInfo,
 	PzlbreakInit, HyperpacExit, PzlbreakFrame, PzlbreakRender, HyperpacScan,
 	NULL, 0x200, 256, 224, 4, 3
 };
@@ -4183,7 +4378,7 @@ struct BurnDriver BurnDrvMulti96 = {
 
 struct BurnDriver BurnDrvHoneydol = {
 	"honeydol", NULL, NULL, NULL, "1995",
-	"Honey Dolls\0", NULL, "Barko Corp", "Kaneko Pandora based",
+	"Honey Doll\0", NULL, "Barko Corp", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, HoneydolRomInfo, HoneydolRomName, NULL, NULL, NULL, NULL, HyperpacInputInfo, HoneydolDIPInfo,
@@ -4195,7 +4390,7 @@ struct BurnDriver BurnDrvSnowbros = {
 	"snowbros", NULL, NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (set 1)\0", NULL, "Toaplan", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbrosRomInfo, SnowbrosRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4205,7 +4400,7 @@ struct BurnDriver BurnDrvSnowbroa = {
 	"snowbrosa", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (set 2)\0", NULL, "Toaplan", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbroaRomInfo, SnowbroaRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4215,7 +4410,7 @@ struct BurnDriver BurnDrvSnowbrob = {
 	"snowbrosb", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (set 3)\0", NULL, "Toaplan", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbrobRomInfo, SnowbrobRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4225,7 +4420,7 @@ struct BurnDriver BurnDrvSnowbroc = {
 	"snowbrosc", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (set 4)\0", NULL, "Toaplan", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbrocRomInfo, SnowbrocRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4235,7 +4430,7 @@ struct BurnDriver BurnDrvSnowbroj = {
 	"snowbrosj", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (Japan)\0", NULL, "Toaplan", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbrojRomInfo, SnowbrojRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrojDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4245,7 +4440,7 @@ struct BurnDriver BurnDrvSnowbrod = {
 	"snowbrosd", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (Dooyong license)\0", NULL, "Toaplan (Dooyong license)", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbrodRomInfo, SnowbrodRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrojDIPInfo,
 	SnowbrosInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4255,7 +4450,7 @@ struct BurnDriver BurnDrvWintbob = {
 	"wintbob", "snowbros", NULL, NULL, "1990",
 	"The Winter Bobble (bootleg)\0", NULL, "bootleg", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, WintbobRomInfo, WintbobRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	WintbobInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3
@@ -4265,7 +4460,7 @@ struct BurnDriver BurnDrvSnowbroswb = {
 	"snowbroswb", "snowbros", NULL, NULL, "1990",
 	"Snow Bros. - Nick & Tom (The Winter Bobble hardware bootleg)\0", NULL, "bootleg", "Kaneko Pandora based",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, SnowbroswbRomInfo, SnowbroswbRomName, NULL, NULL, NULL, NULL, SnowbrosInputInfo, SnowbrosDIPInfo,
 	WintbobInit, SnowbrosExit, SnowbrosFrame, SnowbrosRender, SnowbrosScan,
 	NULL, 0x200, 256, 224, 4, 3

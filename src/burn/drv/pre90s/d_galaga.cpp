@@ -411,7 +411,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin);
 static INT32 namcoInitBoard(void)
 {
 	// Allocate and Blank all required memory
-	memory.all.start = NULL;
+	memset(&memory, 0, sizeof(memory));
 	namcoMemIndex();
 
 	memory.all.start = (UINT8 *)BurnMalloc(memory.all.size);
@@ -480,9 +480,7 @@ static INT32 DrvDoReset(void)
 {
 	for (INT32 i = 0; i < NAMCO_BRD_CPU_COUNT; i ++)
 	{
-		ZetOpen(i);
-		ZetReset();
-		ZetClose();
+		ZetReset(i);
 	}
 
 	BurnSampleReset();
@@ -1120,14 +1118,10 @@ static void namcoZ80WriteSound(UINT16 Offset, UINT8 dta)
 static void namcoZ80WriteCPU1Irq(UINT16 Offset, UINT8 dta)
 {
 	cpus.CPU[CPU1].fireIRQ = dta & 0x01;
+
 	if (!cpus.CPU[CPU1].fireIRQ)
 	{
-		INT32 nActive = ZetGetActive();
-		ZetClose();
-		ZetOpen(CPU1);
-		ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-		ZetClose();
-		ZetOpen(nActive);
+		ZetSetIRQLine(CPU1, 0, CPU_IRQSTATUS_NONE);
 	}
 
 }
@@ -1137,12 +1131,7 @@ static void namcoZ80WriteCPU2Irq(UINT16 Offset, UINT8 dta)
 	cpus.CPU[CPU2].fireIRQ = dta & 0x01;
 	if (!cpus.CPU[CPU2].fireIRQ)
 	{
-		INT32 nActive = ZetGetActive();
-		ZetClose();
-		ZetOpen(CPU2);
-		ZetSetIRQLine(0, CPU_IRQSTATUS_NONE);
-		ZetClose();
-		ZetOpen(nActive);
+		ZetSetIRQLine(CPU2, 0, CPU_IRQSTATUS_NONE);
 	}
 
 }
@@ -1157,15 +1146,8 @@ static void namcoZ80WriteCPUReset(UINT16 Offset, UINT8 dta)
 {
 	if (!(dta & 0x01))
 	{
-		INT32 nActive = ZetGetActive();
-		ZetClose();
-		ZetOpen(CPU2);
-		ZetReset();
-		ZetClose();
-		ZetOpen(CPU3);
-		ZetReset();
-		ZetClose();
-		ZetOpen(nActive);
+		ZetReset(CPU2);
+		ZetReset(CPU3);
 		cpus.CPU[CPU2].halt = 1;
 		cpus.CPU[CPU3].halt = 1;
 		namcoCustomReset();
@@ -2685,7 +2667,7 @@ struct BurnDriver BurnDrvGalagamf =
 	/* GetSampleInfo func = */                   GalagaSampleInfo,
 	/* GetSampleName func = */                   GalagaSampleName,
 	/* GetInputInfo func = */                    GalagaInputInfo,
-	/* GetDIPInfo func = */                      GalagaDIPInfo,
+	/* GetDIPInfo func = */                      GalagamwDIPInfo,
 	/* Init func = */                            galagaInit,
 	/* Exit func = */                            DrvExit,
 	/* Frame func = */                           DrvFrame,
@@ -2937,6 +2919,41 @@ static struct BurnRomInfo digdugRomDesc[] = {
 
 STD_ROM_PICK(digdug)
 STD_ROM_FN(digdug)
+
+// Dig Dug (Atari, rev 2)
+
+static struct BurnRomInfo digdugatRomDesc[] = {
+	{ "136007.201",	  0x1000, 0x23d0b1a4, BRF_ESS | BRF_PRG  }, //  0 Z80 #1 Program Code
+	{ "136007.202",	  0x1000, 0x5453dc1f, BRF_ESS | BRF_PRG  }, //  1
+	{ "136007.203",	  0x1000, 0xc9077dfa, BRF_ESS | BRF_PRG  }, //  2
+	{ "136007.204",	  0x1000, 0xa8fc8eac, BRF_ESS | BRF_PRG  }, //  3
+
+	{ "136007.205",	  0x1000, 0x5ba385c5, BRF_ESS | BRF_PRG  }, //  4	Z80 #2 Program Code
+	{ "136007.206",	  0x1000, 0x382b4011, BRF_ESS | BRF_PRG  }, //  5
+
+	{ "136007.107",	  0x1000, 0xa41bce72, BRF_ESS | BRF_PRG  }, //  6	Z80 #3 Program Code
+
+	{ "136007.108",	  0x0800, 0x3d24a3af, BRF_GRA            }, //  7	Characters
+
+	{ "136007.116",	  0x1000, 0xe22957c8, BRF_GRA            }, //  8	Sprites
+	{ "136007.117",	  0x1000, 0xa3bbfd85, BRF_GRA            }, //  9
+	{ "136007.118",	  0x1000, 0x458499e9, BRF_GRA            }, // 10
+	{ "136007.119",	  0x1000, 0xc58252a0, BRF_GRA            }, // 11
+
+	{ "136007.115",	  0x1000, 0x754539be, BRF_GRA            }, // 12	Characters 8x8 2bpp
+
+	{ "136007.114",   0x1000, 0xd6822397, BRF_GRA            }, // 13 Playfield Data
+
+	{ "136007.113",   0x0020, 0x4cb9da99, BRF_GRA            }, // 14 Palette Prom
+	{ "136007.111",   0x0100, 0x00c7c419, BRF_GRA            }, // 15 Sprite Color Prom
+	{ "136007.112",   0x0100, 0xe9b3e08e, BRF_GRA            }, // 16 Character Color Prom
+
+	{ "136007.110",   0x0100, 0x7a2815b4, BRF_GRA            }, // 17 Namco Sound Proms
+	{ "136007.109",   0x0100, 0x77245b66, BRF_GRA            }, // 18
+};
+
+STD_ROM_PICK(digdugat)
+STD_ROM_FN(digdugat)
 
 static struct DigDug_PlayField_Params
 {
@@ -3431,6 +3448,9 @@ static INT32 digdugScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(playFieldParams.playEnable);
 		SCAN_VAR(playFieldParams.playColor);
 
+	}
+
+	if (nAction & ACB_NVRAM) {
 		earom_scan(nAction, pnMin);
 	}
 
@@ -3454,8 +3474,8 @@ struct BurnDriver BurnDrvDigdug =
 	/* System = */                               NULL,
 	/* Flags = */                                BDF_GAME_WORKING |
 	BDF_ORIENTATION_VERTICAL |
-	BDF_ORIENTATION_FLIPPED |
-	BDF_HISCORE_SUPPORTED,
+	BDF_ORIENTATION_FLIPPED,
+	/* digdug has EA-ROM, it saves highscores! BDF_HISCORE_SUPPORTED not needed. */
 	/* No of Players = */                        2,
 	/* Hardware Type = */                        HARDWARE_MISC_PRE90S,
 	/* Genre = */                                GBF_MAZE | GBF_ACTION,
@@ -3463,6 +3483,50 @@ struct BurnDriver BurnDrvDigdug =
 	/* GetZipName func = */                      NULL,
 	/* GetROMInfo func = */                      digdugRomInfo,
 	/* GetROMName func = */                      digdugRomName,
+	/* GetHDDInfo func = */                      NULL,
+	/* GetHDDName func = */                      NULL,
+	/* GetSampleInfo func = */                   NULL,
+	/* GetSampleName func = */                   NULL,
+	/* GetInputInfo func = */                    DigdugInputInfo,
+	/* GetDIPInfo func = */                      DigdugDIPInfo,
+	/* Init func = */                            digdugInit,
+	/* Exit func = */                            DrvExit,
+	/* Frame func = */                           DrvFrame,
+	/* Redraw func = */                          DrvDraw,
+	/* Areascan func = */                        digdugScan,
+	/* Recalc Palette = */                       NULL,
+	/* Palette Entries count = */                DIGDUG_PALETTE_SIZE,
+	/* Width, Height = */   	                  NAMCO_SCREEN_WIDTH, NAMCO_SCREEN_HEIGHT,
+	/* xAspect, yAspect = */   	               3, 4
+};
+
+struct BurnDriver BurnDrvDigdugat =
+{
+	/* filename of zip without extension = */    "digdugat",
+	/* filename of parent, no extension = */     "digdug",
+	/* filename of board ROMs = */               NULL,
+	/* filename of samples ZIP = */              NULL,
+	/* date = */                                 "1982",
+	/* FullName = */                             "Dig Dug (Atari, rev 2)\0",
+	/* Comment = */                              NULL,
+	/* Manufacturer = */                         "Namco (Atari license)",
+	/* System = */                               "Miscellaneous",
+	/* FullName = */                             NULL,
+	/* Comment = */                              NULL,
+	/* Manufacturer = */                         NULL,
+	/* System = */                               NULL,
+	/* Flags = */                                BDF_GAME_WORKING |
+	BDF_CLONE |
+	BDF_ORIENTATION_VERTICAL |
+	BDF_ORIENTATION_FLIPPED,
+	/* digdug has EA-ROM, it saves highscores! BDF_HISCORE_SUPPORTED not needed. */
+	/* No of Players = */                        2,
+	/* Hardware Type = */                        HARDWARE_MISC_PRE90S,
+	/* Genre = */                                GBF_MAZE | GBF_ACTION,
+	/* Family = */                               0,
+	/* GetZipName func = */                      NULL,
+	/* GetROMInfo func = */                      digdugatRomInfo,
+	/* GetROMName func = */                      digdugatRomName,
 	/* GetHDDInfo func = */                      NULL,
 	/* GetHDDName func = */                      NULL,
 	/* GetSampleInfo func = */                   NULL,

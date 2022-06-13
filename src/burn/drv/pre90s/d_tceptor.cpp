@@ -67,9 +67,9 @@ static UINT8 DrvInputs[2];
 static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 
-static INT32 DrvAnalogPort0 = 0;
-static INT32 DrvAnalogPort1 = 0;
-static INT32 DrvAnalogPort2 = 0;
+static INT16 DrvAnalogPort0 = 0;
+static INT16 DrvAnalogPort1 = 0;
+static INT16 DrvAnalogPort2 = 0;
 
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo TceptorInputList[] = {
@@ -199,7 +199,9 @@ static UINT8 tceptor_m6809_read(UINT16 address)
 			return 0; // nop
 
 		case 0x4f01: // pedal (accel)
-			if (DrvAnalogPort2 == 0xffff) DrvAnalogPort2 = 0xfc04; // digital button -> accel
+			if (DrvAnalogPort2 == -1 /* 0xffff */) { // digital button mapped to accel
+				DrvAnalogPort2 = -0x3fc; /* 0xfc04 */
+			}
 			return ProcessAnalog(DrvAnalogPort2, 0, 1, 0x00, 0xd6);
 
 		case 0x4f02: // x
@@ -451,7 +453,7 @@ static tilemap_callback( txt )
 	INT32 color = DrvTileAttrRAM[offs];
 
 	TILE_SET_INFO(0, code, color, 0);
-	*category = color;
+	sTile->category = color;
 }
 
 static tilemap_callback( bg1 )
@@ -877,32 +879,32 @@ static void draw_sprites(INT32 sprite_priority)
 
 	for (INT32 i = 0x100-2; i >= 0; i -= 2)
 	{
-		INT32 scalex = (mem1[1 + i] & 0xfc00) << 1;
-		INT32 scaley = (mem1[0 + i] & 0xfc00) << 1;
-		INT32 pri = 7 - ((mem1[1 + i] & 0x3c0) >> 6);
+		INT32 scalex = (BURN_ENDIAN_SWAP_INT16(mem1[1 + i]) & 0xfc00) << 1;
+		INT32 scaley = (BURN_ENDIAN_SWAP_INT16(mem1[0 + i]) & 0xfc00) << 1;
+		INT32 pri = 7 - ((BURN_ENDIAN_SWAP_INT16(mem1[1 + i]) & 0x3c0) >> 6);
 
 		if (pri == sprite_priority && scalex && scaley)
 		{
-			INT32 x = mem2[1 + i] & 0x3ff;
-			INT32 y = 512 - (mem2[0 + i] & 0x3ff);
-			INT32 flipx = mem2[0 + i] & 0x4000;
-			INT32 flipy = mem2[0 + i] & 0x8000;
-			INT32 color = mem1[1 + i] & 0x3f;
+			INT32 x = BURN_ENDIAN_SWAP_INT16(mem2[1 + i]) & 0x3ff;
+			INT32 y = 512 - (BURN_ENDIAN_SWAP_INT16(mem2[0 + i]) & 0x3ff);
+			INT32 flipx = BURN_ENDIAN_SWAP_INT16(mem2[0 + i]) & 0x4000;
+			INT32 flipy = BURN_ENDIAN_SWAP_INT16(mem2[0 + i]) & 0x8000;
+			INT32 color = BURN_ENDIAN_SWAP_INT16(mem1[1 + i]) & 0x3f;
 			UINT8 *gfx;
 			INT32 tsize;
 			INT32 code;
 
-			if (mem2[0 + i] & 0x2000)
+			if (BURN_ENDIAN_SWAP_INT16(mem2[0 + i]) & 0x2000)
 			{
 				gfx = DrvGfxROM3;
 				tsize = 32;
-				code = mem1[0 + i] & 0x3ff;
+				code = BURN_ENDIAN_SWAP_INT16(mem1[0 + i]) & 0x3ff;
 			}
 			else
 			{
 				gfx = DrvGfxROM2;
 				tsize = 16;
-				code = mem1[0 + i] & 0x1ff;
+				code = BURN_ENDIAN_SWAP_INT16(mem1[0 + i]) & 0x1ff;
 				scaley *= 2;
 			}
 

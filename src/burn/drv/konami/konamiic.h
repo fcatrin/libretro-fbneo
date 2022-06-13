@@ -10,6 +10,7 @@ extern UINT32 KonamiIC_K053250InUse;
 extern UINT32 KonamiIC_K055555InUse;
 extern UINT32 KonamiIC_K054338InUse;
 extern UINT32 KonamiIC_K056832InUse;
+extern UINT32 KonamiIC_GX_MixerInUse;
 
 extern UINT8 *konami_priority_bitmap;
 extern UINT32 *konami_bitmap32;
@@ -34,15 +35,17 @@ void konami_rom_deinterleave_4(UINT8 *src, INT32 len);
 // internal
 void KonamiAllocateBitmaps();
 void konami_draw_16x16_tile(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 sx, INT32 sy, INT32 flipx, INT32 flipy);
-void konami_draw_16x16_prio_tile(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 sx, INT32 sy, INT32 flipx, INT32 flipy, UINT32 priority);
+void konami_draw_16x16_prio_sprite(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 sx, INT32 sy, INT32 flipx, INT32 flipy, UINT32 priority);
 void konami_draw_16x16_zoom_tile(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 t, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy);
-void konami_draw_16x16_priozoom_tile(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 t, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy, UINT32 priority);
-void konami_render_zoom_shadow_tile(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy, UINT32 priority, INT32 shadow);
+void konami_draw_16x16_priozoom_sprite(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 t, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy, UINT32 priority);
+void konami_render_zoom_shadow_sprite(UINT8 *gfx, INT32 code, INT32 bpp, INT32 color, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height, INT32 zoomx, INT32 zoomy, UINT32 priority, INT32 shadow);
 
 // game-specific modes
 void konami_set_highlight_mode(INT32 mode);
 void konami_set_highlight_over_sprites_mode(INT32 mode);
 void konami_set_layer_shadow_inhibit_mode(INT32 mode);
+void konami_set_highlight_intensity(INT32 mode);
+void konami_set_shadow_intensity(INT32 mode);
 
 // k051960 / k052109 shared
 //---------------------------------------------------------------------------------------------------------------
@@ -180,6 +183,7 @@ void K056832SetGlobalOffsets(INT32 minx, INT32 miny);
 void K056832SetLayerOffsets(INT32 layer, INT32 xoffs, INT32 yoffs);
 void K056832SetExtLinescroll();
 void K056832SetLinemap();
+UINT16 K056832GetVram(INT32 address);
 INT32 K056832IsIrqEnabled();
 void K056832ReadAvac(INT32 *mode, INT32 *data);
 UINT16 K056832ReadRegister(int reg);
@@ -211,6 +215,7 @@ void K051316Reset();
 void K051316Exit();
 
 #define K051316_16BIT	(1<<8)
+#define K051316_OPAQUE  (2<<8)
 
 void K051316RedrawTiles(INT32 chip);
 
@@ -219,6 +224,7 @@ UINT8 K051316Read(INT32 chip, INT32 offset);
 void K051316Write(INT32 chip, INT32 offset, INT32 data);
 
 void K051316WriteCtrl(INT32 chip, INT32 offset, INT32 data);
+UINT8 K051316ReadCtrl(INT32 chip, INT32 offset);
 void K051316WrapEnable(INT32 chip, INT32 status);
 void K051316SetOffset(INT32 chip, INT32 xoffs, INT32 yoffs);
 void K051316_zoom_draw(INT32 chip, INT32 flags);
@@ -503,6 +509,7 @@ void K055555Scan(INT32 nAction);
 
 void konamigx_mixer_init(int objdma);
 void konamigx_mixer_exit();
+void konamigx_scan(INT32 nAction);
 void konamigx_mixer_primode(int mode);
 void konamigx_mixer(int sub1 /*extra tilemap 1*/, int sub1flags, int sub2 /*extra tilemap 2*/, int sub2flags, int mixerflags, int extra_bitmap /*extra tilemap 3*/, int rushingheroes_hack);
 extern INT32 konamigx_mystwarr_kludge;

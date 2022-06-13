@@ -97,7 +97,7 @@ static void update_interrupts()
 static void __fastcall toobin_main_write_word(UINT32 address, UINT16 data)
 {
 	if ((address & 0xfff800) == 0xc09800) {
-		*((UINT16*)(DrvMobRAM + (address & 0x7fe))) = data;
+		*((UINT16*)(DrvMobRAM + (address & 0x7fe))) = BURN_ENDIAN_SWAP_INT16(data);
 		AtariMoWrite(0, (address / 2) & 0x3ff, data);
 		return;
 	}
@@ -109,7 +109,7 @@ static void __fastcall toobin_main_write_word(UINT32 address, UINT16 data)
 		return;
 
 		case 0xff8100:
-			M6502Run(((double)SekTotalCycles()/4.47) - M6502TotalCycles());
+			M6502Run(((double)SekTotalCycles()/4.46984) - M6502TotalCycles());
 			AtariJSAWrite(data);
 		return;
 
@@ -123,8 +123,8 @@ static void __fastcall toobin_main_write_word(UINT32 address, UINT16 data)
 
 		case 0xff8380:
 			{
-				UINT8 old = atarimo_0_slipram[0];
-				atarimo_0_slipram[0] = data;
+				UINT8 old = BURN_ENDIAN_SWAP_INT16(atarimo_0_slipram[0]);
+				atarimo_0_slipram[0] = BURN_ENDIAN_SWAP_INT16(data);
 				if (old != data)
 					partial_update();
 				return;
@@ -145,13 +145,11 @@ static void __fastcall toobin_main_write_word(UINT32 address, UINT16 data)
 
 		case 0xff8600:
 			partial_update();
-			// iq_132 - partial update!!
 			playfield_scrollx = (data >> 6) & 0x3ff;
 		return;
 
 		case 0xff8700:
 			partial_update();
-			// iq_132 - partial update!!
 			playfield_scrolly = (data >> 6) & 0x1ff;
 		return;
 	}
@@ -163,7 +161,7 @@ static void __fastcall toobin_main_write_byte(UINT32 address, UINT8 data)
 {
 	if ((address & 0xfff800) == 0xc09800) {
 		DrvMobRAM[(address & 0x7ff)^1] = data;
-		AtariMoWrite(0, (address / 2) & 0x3ff, *((UINT16*)(DrvMobRAM + (address & 0x7fe))));
+		AtariMoWrite(0, (address / 2) & 0x3ff, BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvMobRAM + (address & 0x7fe)))));
 		return;
 	}
 
@@ -236,15 +234,15 @@ static UINT8 __fastcall toobin_main_read_byte(UINT32 address)
 
 static tilemap_callback( alpha )
 {
-	UINT16 data = *((UINT16*)(DrvAlphaRAM + (offs * 2)));
+	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvAlphaRAM + (offs * 2))));
 
 	TILE_SET_INFO(2, data, data >> 12, TILE_FLIPYX((data >> 10) & 1));
 }
 
 static tilemap_callback( bg )
 {
-	UINT16 data0 = *((UINT16*)(DrvPfRAM + (offs * 4 + 0)));
-	UINT16 data1 = *((UINT16*)(DrvPfRAM + (offs * 4 + 2)));
+	UINT16 data0 = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvPfRAM + (offs * 4 + 0))));
+	UINT16 data1 = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvPfRAM + (offs * 4 + 2))));
 
 	TILE_SET_INFO(0, data1, data0, TILE_FLIPYX(data1 >> 14) | TILE_GROUP((data0 >> 4) & 3));
 }
@@ -482,15 +480,15 @@ static void DrvPaletteUpdate()
 
 	for (INT32 offs = 0; offs < 0x800/2; offs++)
 	{
-		INT32 r = ((p[offs] >> 10) & 0x1f);
-		INT32 g = ((p[offs] >>  5) & 0x1f);
-		INT32 b = ((p[offs] >>  0) & 0x1f);
+		INT32 r = ((BURN_ENDIAN_SWAP_INT16(p[offs]) >> 10) & 0x1f);
+		INT32 g = ((BURN_ENDIAN_SWAP_INT16(p[offs]) >>  5) & 0x1f);
+		INT32 b = ((BURN_ENDIAN_SWAP_INT16(p[offs]) >>  0) & 0x1f);
 
 		r = (r << 3) | (r >> 2);
 		g = (g << 3) | (g >> 2);
 		b = (b << 3) | (b >> 2);
 
-		if ((p[offs] & 0x8000) == 0) {
+		if ((BURN_ENDIAN_SWAP_INT16(p[offs]) & 0x8000) == 0) {
 			r = (r * palette_brightness) / 31;
 			g = (g * palette_brightness) / 31;
 			b = (b * palette_brightness) / 31;
@@ -607,8 +605,8 @@ static INT32 DrvFrame()
 
 		linecycles = SekTotalCycles();
 
-		nCyclesDone[0] += SekRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
-		nCyclesDone[1] += M6502Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		CPU_RUN(0, Sek);
+		CPU_RUN(1, M6502);
 
 		if (i == 384) {
 			vblank = 1;

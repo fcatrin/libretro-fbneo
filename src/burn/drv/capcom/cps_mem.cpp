@@ -432,9 +432,12 @@ INT32 CpsAreaScan(INT32 nAction, INT32 *pnMin)
 
 		if (nAction & ACB_WRITE) {						// Palette could have changed
 			CpsRecalcPal = 1;
-			SekOpen(0);
-			CpsDoMapObjectBanks(nCpsObjectBank);        // Re-Map object banks
-			SekClose();
+
+			if (Cps == 2) {
+				SekOpen(0);
+				CpsDoMapObjectBanks(nCpsObjectBank);    // Re-Map object banks
+				SekClose();
+			}
 		}
 	}
 

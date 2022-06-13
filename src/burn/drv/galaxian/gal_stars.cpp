@@ -16,6 +16,7 @@ INT32 GalStarsScrollPos  = 0;
 INT32 GalStarsBlinkState = 0;
 INT32 GalBlinkTimerStartFrame = 0;
 static double GalBlinkEveryFrames = (0.693 * (100000 + 2.0 + 10000) * 0.00001) * (16000.0 / 132 / 2);
+INT32 GalStarsLastFrame = 0;
 
 void GalInitStars()
 {
@@ -24,6 +25,7 @@ void GalInitStars()
 	GalStarsEnable     = 0;
 	GalStarsScrollPos  = -1;
 	GalStarsBlinkState = 0;
+	GalStarsLastFrame  = 0;
 
 	nStars = 0;
 	Generator = 0;
@@ -72,10 +74,20 @@ static inline void GalPlotStar(INT32 x, INT32 y, INT32 Colour)
 	}
 }
 
+static void GalaxianScrollStars()
+{
+	INT32 CurrentFrame = GetCurrentFrame();
+
+	for (INT32 i = GalStarsLastFrame; i < CurrentFrame; i++) {
+		GalStarsScrollPos++;
+	}
+	GalStarsLastFrame = CurrentFrame;
+}
+
 void GalaxianRenderStarLayer()
 {
-	GalStarsScrollPos++;
-	
+	GalaxianScrollStars();
+
 	for (INT32 Offs = 0; Offs < 252; Offs++) {
 		INT32 x, y;
 		
@@ -93,43 +105,17 @@ void GalaxianRenderStarLayer()
 
 void JumpbugRenderStarLayer()
 {
-	if (GalCheckStarsBlinkState()) GalStarsBlinkState++;
-	
+	GalaxianScrollStars();
+
 	for (INT32 Offs = 0; Offs < 252; Offs++) {
 		INT32 x, y;
-		
-		x = Stars[Offs].x >> 1;
-		y = Stars[Offs].y >> 1;
-		
-		if ((y & 0x01) ^ ((x >> 3) & 0x01)) {
-			switch (GalStarsBlinkState & 0x03) {
-				case 0: {
-					if (!(Stars[Offs].Colour & 0x01)) continue;
-					break;
-				}
-				
-				case 1: {
-					if (!(Stars[Offs].Colour & 0x04)) continue;
-					break;
-				}
-				
-				case 2: {
-					if (!(Stars[Offs].y & 0x02)) continue;
-					break;
-				}
-				
-				case 3: {
-					break;
-				}
-			}
-			
-			x = Stars[Offs].x >> 1;
-			y = Stars[Offs].y & 0xff;
-			
-			if (x >= 240) continue;
-			
-			if (GalFlipScreenX) x = 255 - x;
-			if (GalFlipScreenY) y = 255 - y;
+
+		x = ((Stars[Offs].x + GalStarsScrollPos) & 0x01ff) >> 1;
+		y = (Stars[Offs].y + ((GalStarsScrollPos + Stars[Offs].x) >> 9)) & 0xff;
+
+		if (((y & 0x01) ^ ((x >> 3) & 0x01)) && x < 232) {
+			if (GalFlipScreenX) x = 232 - x;
+			if (GalFlipScreenY) y = 232 - y;
 			y -= 16;
 			GalPlotStar(x, y, Stars[Offs].Colour);
 		}
@@ -179,9 +165,9 @@ void ScrambleRenderStarLayer()
 void MarinerRenderStarLayer()
 {
 	UINT8 *Prom = GalProm + 0x120;
-	
-	GalStarsScrollPos++;
-	
+
+	GalaxianScrollStars();
+
 	for (INT32 Offs = 0; Offs < 252; Offs++) {
 		INT32 x, y;
 		

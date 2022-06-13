@@ -9,6 +9,7 @@
 #include "atarimo.h"
 #include "atarivad.h"
 #include "atarijsa.h"
+#include "msm6295.h"
 
 static UINT8 *AllMem;
 static UINT8 *MemEnd;
@@ -53,7 +54,7 @@ static struct BurnInputInfo BatmanInputList[] = {
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 10,	"p1 fire 2"	},
 
 	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
-	
+
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Tilt",			BIT_DIGITAL,	DrvJoy2 + 2,	"tilt"		},
 	{"Service",			BIT_DIGITAL,	DrvJoy2 + 3,	"service"	},
@@ -106,7 +107,7 @@ static void __fastcall batman_main_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address & 0xefe000) == 0x2f6000) {
-		*((UINT16*)(DrvMobRAM + (address & 0x1ffe))) = data;
+		*((UINT16*)(DrvMobRAM + (address & 0x1ffe))) = BURN_ENDIAN_SWAP_INT16(data);
 		AtariMoWrite(0, (address / 2) & 0xfff, data);
 		return;
 	}
@@ -141,7 +142,7 @@ static void __fastcall batman_main_write_byte(UINT32 address, UINT8 data)
 
 	if ((address & 0xefe000) == 0x2f6000 ) {
 		DrvMobRAM[(address & 0x1fff)^1] = data;
-		AtariMoWrite(0, (address / 2) & 0xfff, *((UINT16*)(DrvMobRAM + (address & 0x1ffe))));
+		AtariMoWrite(0, (address / 2) & 0xfff, BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvMobRAM + (address & 0x1ffe)))));
 		return;
 	}
 
@@ -259,7 +260,7 @@ static void palette_write(INT32 offset, UINT16 data)
 
 static tilemap_callback( alpha )
 {
-	UINT16 data = *((UINT16*)(DrvAlphaRAM + offs * 2));
+	UINT16 data = BURN_ENDIAN_SWAP_INT16(*((UINT16*)(DrvAlphaRAM + offs * 2)));
 	int code = (data & 0x3ff);
 	if (data & 0x400) code += alpha_tile_bank * 0x400;
 
@@ -392,12 +393,7 @@ static INT32 DrvInit()
 		NULL				/* callback routine for special entries */
 	};
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		INT32 k = 0;
@@ -449,6 +445,7 @@ static INT32 DrvInit()
 	GenericTilemapSetGfx(3, DrvGfxROM0, 2, 8, 8, 0x080000, 0x000, 0x0f);
 
 	AtariVADInit(0, 1, 0, scanline_timer, palette_write);
+	AtariVADSetXOffsets(2, 6, 1);
 	AtariVADSetPartialCB(draw_scanline);
 	AtariMoInit(0, &modesc);
 
@@ -477,13 +474,15 @@ static INT32 DrvInit()
 	for (INT32 i = 0; i < 0x20000; i+=0x1000) {
 		AtariEEPROMInstallMap(1, 0x120000 + i, 0x120fff + i);
 	}
-	AtariEEPROMLoad(Drv68KROM); // temp memory
+	AtariEEPROMLoad(Drv68KRAM); // temp memory
 
 	SekClose();
 
 	BurnWatchdogInit(DrvDoReset, 180);
 
 	AtariJSAInit(DrvM6502ROM, &update_interrupts, DrvSndROM, NULL);
+	MSM6295SetRoute(0, 0.85, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(1, 0.85, BURN_SND_ROUTE_BOTH);
 
 	DrvDoReset(1);
 
@@ -500,7 +499,7 @@ static INT32 DrvExit()
 	AtariMoExit();
 	AtariEEPROMExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -598,8 +597,9 @@ static void DrvDrawBegin()
 		DrvRecalc = 0;
 	}
 
-	if (pBurnDraw)
+	if (pBurnDraw) {
 		BurnTransferClear();
+	}
 
 	lastline = 0;
 }
@@ -660,18 +660,14 @@ static INT32 DrvFrame()
 
 		if (i == 0) AtariVADEOFUpdate(DrvEOFData);
 
-		if (atarivad_scanline_timer_enabled) {
-			if (atarivad_scanline_timer == atarivad_scanline) {
-				scanline_timer(CPU_IRQSTATUS_ACK);
-			}
-		}
+		AtariVADTimerUpdate();
 
-		nCyclesDone[0] += SekRun(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, Sek);
 
 		if (sound_cpu_halt == 0) {
-			nCyclesDone[1] += M6502Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+			CPU_RUN(1, M6502);
 		} else {
-			nCyclesDone[1] += M6502Idle(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+			CPU_IDLE(1, M6502);
 		}
 
 		if (i <= 240) {
@@ -782,7 +778,7 @@ static struct BurnRomInfo batmanRomDesc[] = {
 	{ "136085-1042.17e",			0x20000, 0x8c496986, 6 | BRF_GRA },           // 25
 	{ "136085-1043.15e",			0x20000, 0x51812d3b, 6 | BRF_GRA },           // 26
 	{ "136085-1044.12e",			0x20000, 0x5e2d7f31, 6 | BRF_GRA },           // 27
-	
+
 	{ "batman-eeprom.bin",			0x00800, 0xc859b535, 7 | BRF_PRG | BRF_ESS }, // 28 NVRAM Data
 
 	{ "gal16v8a-136085-1001.m9",	0x00117, 0x45dfc0cf, 8 | BRF_OPT },           // 29 PLDs

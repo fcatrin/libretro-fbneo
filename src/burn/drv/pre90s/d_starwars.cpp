@@ -70,7 +70,7 @@ static INT32 is_esb = 0;
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
-static UINT8 DrvDips[3];
+static UINT8 DrvDips[4];
 static UINT8 DrvInputs[2];
 static UINT8 DrvReset;
 
@@ -83,7 +83,6 @@ static INT32 irqflip = 0;
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo StarwarsInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 coin"	},
-	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p2 coin"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 fire 3"	},
@@ -92,6 +91,8 @@ static struct BurnInputInfo StarwarsInputList[] = {
 	A("P1 Stick X",     BIT_ANALOG_REL, &DrvAnalogPort0,"p1 x-axis"),
 	A("P1 Stick Y",     BIT_ANALOG_REL, &DrvAnalogPort1,"p1 y-axis"),
 
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p2 coin"	},
+
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
 	{"Service",			BIT_DIGITAL,	DrvJoy1 + 2,	"service"	},
 	{"Diag. Step",		BIT_DIGITAL,	DrvJoy2 + 2,	"service2"	},
@@ -99,148 +100,157 @@ static struct BurnInputInfo StarwarsInputList[] = {
 	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Dip D",			BIT_DIPSWITCH,	DrvDips + 3,	"dip"		},
 };
 #undef A
 
 STDINPUTINFO(Starwars)
 
-#define DO 0xc
-
 static struct BurnDIPInfo StarwarsDIPList[]=
 {
-	{DO+0, 0xff, 0xff, 0x96, NULL					},
-	{DO+1, 0xff, 0xff, 0x02, NULL					},
-	{DO+2, 0xff, 0xff, 0x10, NULL                   },
+	DIP_OFFSET(0x0c)
+	{0x00, 0xff, 0xff, 0x96, NULL					},
+	{0x01, 0xff, 0xff, 0x02, NULL					},
+	{0x02, 0xff, 0xff, 0x10, NULL                   },
+	{0x03, 0xff, 0xff, 0x00, NULL                   },
 
 	{0   , 0xfe, 0   ,    4, "Starting Shields"		},
-	{DO+0, 0x01, 0x03, 0x00, "6"					},
-	{DO+0, 0x01, 0x03, 0x01, "7"					},
-	{DO+0, 0x01, 0x03, 0x02, "8"					},
-	{DO+0, 0x01, 0x03, 0x03, "9"					},
+	{0x00, 0x01, 0x03, 0x00, "6"					},
+	{0x00, 0x01, 0x03, 0x01, "7"					},
+	{0x00, 0x01, 0x03, 0x02, "8"					},
+	{0x00, 0x01, 0x03, 0x03, "9"					},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{DO+0, 0x01, 0x0c, 0x00, "Easy"					},
-	{DO+0, 0x01, 0x0c, 0x04, "Moderate"				},
-	{DO+0, 0x01, 0x0c, 0x08, "Hard"					},
-	{DO+0, 0x01, 0x0c, 0x0c, "Hardest"				},
+	{0x00, 0x01, 0x0c, 0x00, "Easy"					},
+	{0x00, 0x01, 0x0c, 0x04, "Moderate"				},
+	{0x00, 0x01, 0x0c, 0x08, "Hard"					},
+	{0x00, 0x01, 0x0c, 0x0c, "Hardest"				},
 
 	{0   , 0xfe, 0   ,    4, "Bonus Shields"		},
-	{DO+0, 0x01, 0x30, 0x00, "0"					},
-	{DO+0, 0x01, 0x30, 0x10, "1"					},
-	{DO+0, 0x01, 0x30, 0x20, "2"					},
-	{DO+0, 0x01, 0x30, 0x30, "3"					},
+	{0x00, 0x01, 0x30, 0x00, "0"					},
+	{0x00, 0x01, 0x30, 0x10, "1"					},
+	{0x00, 0x01, 0x30, 0x20, "2"					},
+	{0x00, 0x01, 0x30, 0x30, "3"					},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
-	{DO+0, 0x01, 0x40, 0x40, "Off"					},
-	{DO+0, 0x01, 0x40, 0x00, "On"					},
+	{0x00, 0x01, 0x40, 0x40, "Off"					},
+	{0x00, 0x01, 0x40, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Freeze"				},
-	{DO+0, 0x01, 0x80, 0x80, "Off"					},
-	{DO+0, 0x01, 0x80, 0x00, "On"					},
+	{0x00, 0x01, 0x80, 0x80, "Off"					},
+	{0x00, 0x01, 0x80, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{DO+1, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
-	{DO+1, 0x01, 0x03, 0x00, "Free Play"			},
+	{0x01, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"				},
-	{DO+1, 0x01, 0x0c, 0x00, "*1"					},
-	{DO+1, 0x01, 0x0c, 0x04, "*4"					},
-	{DO+1, 0x01, 0x0c, 0x08, "*5"					},
-	{DO+1, 0x01, 0x0c, 0x0c, "*6"					},
+	{0x01, 0x01, 0x0c, 0x00, "*1"					},
+	{0x01, 0x01, 0x0c, 0x04, "*4"					},
+	{0x01, 0x01, 0x0c, 0x08, "*5"					},
+	{0x01, 0x01, 0x0c, 0x0c, "*6"					},
 
 	{0   , 0xfe, 0   ,    2, "Coin A"				},
-	{DO+1, 0x01, 0x10, 0x00, "*1"					},
-	{DO+1, 0x01, 0x10, 0x10, "*2"					},
+	{0x01, 0x01, 0x10, 0x00, "*1"					},
+	{0x01, 0x01, 0x10, 0x10, "*2"					},
 
 	{0   , 0xfe, 0   ,    6, "Bonus Coin Adder"		},
-	{DO+1, 0x01, 0xe0, 0x20, "2 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x60, "4 gives 2"			},
-	{DO+1, 0x01, 0xe0, 0xa0, "3 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x40, "4 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x80, "5 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x00, "None"					},
+	{0x01, 0x01, 0xe0, 0x20, "2 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x60, "4 gives 2"			},
+	{0x01, 0x01, 0xe0, 0xa0, "3 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x40, "4 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x80, "5 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x00, "None"					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{DO+2, 0x01, 0x10, 0x10, "Off"					},
-	{DO+2, 0x01, 0x10, 0x00, "On"					},
+	{0x02, 0x01, 0x10, 0x10, "Off"					},
+	{0x02, 0x01, 0x10, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Y Axis"   			},
-	{DO+2, 0x01, 0x01, 0x00, "Inverted"				},
-	{DO+2, 0x01, 0x01, 0x01, "Normal"				},
+	{0x02, 0x01, 0x01, 0x00, "Inverted"				},
+	{0x02, 0x01, 0x01, 0x01, "Normal"				},
+
+	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Starwars)
 
 static struct BurnDIPInfo EsbDIPList[]=
 {
-	{DO+0, 0xff, 0xff, 0xb7, NULL					},
-	{DO+1, 0xff, 0xff, 0x02, NULL					},
-	{DO+2, 0xff, 0xff, 0x10, NULL                   },
+	DIP_OFFSET(0x0c)
+	{0x00, 0xff, 0xff, 0xb7, NULL					},
+	{0x01, 0xff, 0xff, 0x02, NULL					},
+	{0x02, 0xff, 0xff, 0x10, NULL                   },
+	{0x03, 0xff, 0xff, 0x00, NULL                   },
 
 	{0   , 0xfe, 0   ,    4, "Starting Shields"		},
-	{DO+0, 0x01, 0x03, 0x00, "3"					},
-	{DO+0, 0x01, 0x03, 0x01, "2"					},
-	{DO+0, 0x01, 0x03, 0x02, "5"					},
-	{DO+0, 0x01, 0x03, 0x03, "4"					},
+	{0x00, 0x01, 0x03, 0x00, "3"					},
+	{0x00, 0x01, 0x03, 0x01, "2"					},
+	{0x00, 0x01, 0x03, 0x02, "5"					},
+	{0x00, 0x01, 0x03, 0x03, "4"					},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"			},
-	{DO+0, 0x01, 0x0c, 0x00, "Easy"					},
-	{DO+0, 0x01, 0x0c, 0x04, "Moderate"				},
-	{DO+0, 0x01, 0x0c, 0x08, "Hard"					},
-	{DO+0, 0x01, 0x0c, 0x0c, "Hardest"				},
+	{0x00, 0x01, 0x0c, 0x00, "Easy"					},
+	{0x00, 0x01, 0x0c, 0x04, "Moderate"				},
+	{0x00, 0x01, 0x0c, 0x08, "Hard"					},
+	{0x00, 0x01, 0x0c, 0x0c, "Hardest"				},
 
 	{0   , 0xfe, 0   ,    4, "Jedi-Letter Mode"		},
-	{DO+0, 0x01, 0x30, 0x00, "Level Only"			},
-	{DO+0, 0x01, 0x30, 0x10, "lEVEL"				},
-	{DO+0, 0x01, 0x30, 0x20, "Increment Only"		},
-	{DO+0, 0x01, 0x30, 0x30, "Increment"			},
+	{0x00, 0x01, 0x30, 0x00, "Level Only"			},
+	{0x00, 0x01, 0x30, 0x10, "lEVEL"				},
+	{0x00, 0x01, 0x30, 0x20, "Increment Only"		},
+	{0x00, 0x01, 0x30, 0x30, "Increment"			},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"			},
-	{DO+0, 0x01, 0x40, 0x40, "Off"					},
-	{DO+0, 0x01, 0x40, 0x00, "On"					},
+	{0x00, 0x01, 0x40, 0x40, "Off"					},
+	{0x00, 0x01, 0x40, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Freeze"				},
-	{DO+0, 0x01, 0x80, 0x80, "Off"					},
-	{DO+0, 0x01, 0x80, 0x00, "On"					},
+	{0x00, 0x01, 0x80, 0x80, "Off"					},
+	{0x00, 0x01, 0x80, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    4, "Coinage"				},
-	{DO+1, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
-	{DO+1, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
-	{DO+1, 0x01, 0x03, 0x00, "Free Play"			},
+	{0x01, 0x01, 0x03, 0x03, "2 Coins 1 Credits"	},
+	{0x01, 0x01, 0x03, 0x02, "1 Coin  1 Credits"	},
+	{0x01, 0x01, 0x03, 0x01, "1 Coin  2 Credits"	},
+	{0x01, 0x01, 0x03, 0x00, "Free Play"			},
 
 	{0   , 0xfe, 0   ,    4, "Coin B"				},
-	{DO+1, 0x01, 0x0c, 0x00, "*1"					},
-	{DO+1, 0x01, 0x0c, 0x04, "*4"					},
-	{DO+1, 0x01, 0x0c, 0x08, "*5"					},
-	{DO+1, 0x01, 0x0c, 0x0c, "*6"					},
+	{0x01, 0x01, 0x0c, 0x00, "*1"					},
+	{0x01, 0x01, 0x0c, 0x04, "*4"					},
+	{0x01, 0x01, 0x0c, 0x08, "*5"					},
+	{0x01, 0x01, 0x0c, 0x0c, "*6"					},
 
 	{0   , 0xfe, 0   ,    2, "Coin A"				},
-	{DO+1, 0x01, 0x10, 0x00, "*1"					},
-	{DO+1, 0x01, 0x10, 0x10, "*2"					},
+	{0x01, 0x01, 0x10, 0x00, "*1"					},
+	{0x01, 0x01, 0x10, 0x10, "*2"					},
 
 	{0   , 0xfe, 0   ,    6, "Bonus Coin Adder"		},
-	{DO+1, 0x01, 0xe0, 0x20, "2 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x60, "4 gives 2"			},
-	{DO+1, 0x01, 0xe0, 0xa0, "3 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x40, "4 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x80, "5 gives 1"			},
-	{DO+1, 0x01, 0xe0, 0x00, "None"					},
+	{0x01, 0x01, 0xe0, 0x20, "2 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x60, "4 gives 2"			},
+	{0x01, 0x01, 0xe0, 0xa0, "3 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x40, "4 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x80, "5 gives 1"			},
+	{0x01, 0x01, 0xe0, 0x00, "None"					},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"			},
-	{DO+2, 0x01, 0x10, 0x10, "Off"					},
-	{DO+2, 0x01, 0x10, 0x00, "On"					},
+	{0x02, 0x01, 0x10, 0x10, "Off"					},
+	{0x02, 0x01, 0x10, 0x00, "On"					},
 
 	{0   , 0xfe, 0   ,    2, "Y Axis"   			},
-	{DO+2, 0x01, 0x01, 0x00, "Inverted"				},
-	{DO+2, 0x01, 0x01, 0x01, "Normal"				},
+	{0x02, 0x01, 0x01, 0x00, "Inverted"				},
+	{0x02, 0x01, 0x01, 0x01, "Normal"				},
+
+	{0   , 0xfe, 0   ,    2, "Hires Mode"			},
+	{0x03, 0x01, 0x01, 0x00, "No"					},
+	{0x03, 0x01, 0x01, 0x01, "Yes"					},
 };
 
 STDDIPINFO(Esb)
-
-#undef DO
 
 static void check_mbox_timer()
 {
@@ -416,27 +426,19 @@ static void bankswitch(INT32 data)
 static void sync_maincpu()
 {
 	UINT32 sound_cyc = M6809TotalCycles();
-	M6809Close();
-	M6809Open(0);
-	UINT32 main_cyc = M6809TotalCycles();
+	UINT32 main_cyc = M6809TotalCycles(0);
 	INT32 cyc = sound_cyc - main_cyc;
 	if (cyc > 0)
-		M6809Run(cyc);
-	M6809Close();
-	M6809Open(1);
+		M6809Run(0, cyc);
 }
 
 static void sync_soundcpu()
 {
 	UINT32 main_cyc = M6809TotalCycles();
-	M6809Close();
-	M6809Open(1);
-	UINT32 sound_cyc = M6809TotalCycles();
+	UINT32 sound_cyc = M6809TotalCycles(1);
 	INT32 cyc = main_cyc - sound_cyc;
 	if (cyc > 0)
-		M6809Run(cyc);
-	M6809Close();
-	M6809Open(0);
+		M6809Run(1, cyc);
 }
 
 static void starwars_main_write(UINT16 address, UINT8 data)
@@ -453,11 +455,7 @@ static void starwars_main_write(UINT16 address, UINT8 data)
 		sound_data = data;
 
 		if (sound_irq_enable) {
-			M6809Close();
-			M6809Open(1);
-			M6809SetIRQLine(0, CPU_IRQSTATUS_HOLD);
-			M6809Close();
-			M6809Open(0);
+			M6809SetIRQLine(1, 0, CPU_IRQSTATUS_HOLD);
 		}
 		return;
 	}
@@ -514,11 +512,7 @@ static void starwars_main_write(UINT16 address, UINT8 data)
 	if ((address & 0xffe0) == 0x46e0) {
 		sync_soundcpu();
 		port_A &= 0x3f;
-		M6809Close();
-		M6809Open(1);
-		M6809Reset();
-		M6809Close();
-		M6809Open(0);
+		M6809Reset(1);
 		return;
 	}
 
@@ -686,6 +680,28 @@ static UINT8 starwars_sound_read(UINT16 address)
 	return 0;
 }
 
+static INT32 res_check()
+{
+	if (DrvDips[3] & 1) {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 1080) {
+			vector_rescale((1080*640/480), 1080);
+			return 1;
+		}
+	} else {
+		INT32 Width, Height;
+		BurnDrvGetVisibleSize(&Width, &Height);
+
+		if (Height != 480) {
+			vector_rescale(640, 480);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static INT32 DrvDoReset(INT32 clear_mem)
 {
 	if (clear_mem) {
@@ -737,6 +753,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 	irqcnt = 0;
 	irqflip = 0;
+
+	res_check();
 
 	return 0;
 }
@@ -801,13 +819,8 @@ static INT32 DrvInit(INT32 game_select)
 {
 	BurnSetRefreshRate(40.00);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
-	
+	BurnAllocMemIndex();
+
 	if (game_select == 0) // starwars
 	{
 		if (BurnLoadRom(DrvVectorROM + 0x00000,  0, 1)) return 1;
@@ -931,8 +944,8 @@ static INT32 DrvInit(INT32 game_select)
 	PokeyInit(1500000, 4, 0.40, 0);
 	PokeySetTotalCyclesCB(M6809TotalCycles);
 
-	tms5220_init();
-	tms5220_set_frequency(640000);
+	tms5220_init(640000);
+	tms5220_volume(0.75);
 
 	swmathbox_init();
 
@@ -987,6 +1000,8 @@ static INT32 DrvDraw()
 		DrvRecalc = 0;
 	}
 
+	if (res_check()) return 0; // resolution was changed
+
 	draw_vector(DrvPalette);
 
 	return 0;
@@ -1019,7 +1034,7 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		M6809Open(0);
-		nCyclesDone[0] += M6809Run(((i + 1) * nCyclesTotal[0] / nInterleave) - nCyclesDone[0]);
+		CPU_RUN(0, M6809);
 
 		if (irqcnt >= (41 + irqflip)) { // 6.1something irq's per frame logic
 			M6809SetIRQLine(0, CPU_IRQSTATUS_ACK);
@@ -1031,7 +1046,7 @@ static INT32 DrvFrame()
 		M6809Close();
 
 		M6809Open(1);
-		nCyclesDone[1] += M6809Run(((i + 1) * nCyclesTotal[1] / nInterleave) - nCyclesDone[1]);
+		CPU_RUN(1, M6809);
 
 		if (timer_counter > 0 && timer_counter <= M6809TotalCycles()) {
 			irq_flag |= 0x80;
@@ -1044,6 +1059,7 @@ static INT32 DrvFrame()
 
 	if (pBurnSoundOut) {
 		pokey_update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
 		tms5220_update(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -1101,6 +1117,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(mbox_B);
 		SCAN_VAR(mbox_C);
 		SCAN_VAR(mbox_ACC);
+
+		SCAN_VAR(current_bank);
 
 		SCAN_VAR(irqcnt);
 		SCAN_VAR(irqflip);
@@ -1166,10 +1184,10 @@ struct BurnDriver BurnDrvStarwars = {
 	"starwars", NULL, NULL, NULL, "1983",
 	"Star Wars (rev 1)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, starwarsRomInfo, starwarsRomName, NULL, NULL, NULL, NULL, StarwarsInputInfo, StarwarsDIPInfo,
 	StarwarsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32 * 256,
-	500, 400, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1201,10 +1219,10 @@ struct BurnDriver BurnDrvStarwars1 = {
 	"starwars1", "starwars", NULL, NULL, "1983",
 	"Star Wars (set 2)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, starwars1RomInfo, starwars1RomName, NULL, NULL, NULL, NULL, StarwarsInputInfo, StarwarsDIPInfo,
 	StarwarsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32 * 256,
-	500, 400, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1236,10 +1254,10 @@ struct BurnDriver BurnDrvStarwarso = {
 	"starwarso", "starwars", NULL, NULL, "1983",
 	"Star Wars (set 3)\0", NULL, "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, starwarsoRomInfo, starwarsoRomName, NULL, NULL, NULL, NULL, StarwarsInputInfo, StarwarsDIPInfo,
 	StarwarsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32 * 256,
-	500, 400, 4, 3
+	640, 480, 4, 3
 };
 
 
@@ -1276,7 +1294,7 @@ struct BurnDriver BurnDrvTomcatsw = {
 	"tomcatsw", "tomcat", NULL, NULL, "1983",
 	"TomCat (Star Wars hardware, prototype)\0", "No sound!", "Atari", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, tomcatswRomInfo, tomcatswRomName, NULL, NULL, NULL, NULL, StarwarsInputInfo, StarwarsDIPInfo,
 	TomcatInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32 * 256,
 	250, 280, 3, 4
@@ -1317,10 +1335,10 @@ struct BurnDriver BurnDrvEsb = {
 	"esb", NULL, NULL, NULL, "1985",
 	"The Empire Strikes Back\0", NULL, "Atari Games", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_VECTOR, 0,
 	NULL, esbRomInfo, esbRomName, NULL, NULL, NULL, NULL, StarwarsInputInfo, EsbDIPInfo,
 	EsbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 32 * 256,
-	500, 400, 4, 3
+	640, 480, 4, 3
 };
 
 

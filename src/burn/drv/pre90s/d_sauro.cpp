@@ -43,27 +43,27 @@ static UINT8 DrvInputs[2];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo TecfriInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 6,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 4,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 3,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 6,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 4,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Tecfri)
@@ -501,12 +501,7 @@ static void sauro_drq_cb(UINT8 data)
 
 static INT32 SauroInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -581,12 +576,7 @@ static INT32 SauroInit()
 
 static INT32 TrckydocInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -647,7 +637,7 @@ static INT32 DrvExit()
 	BurnYM3812Exit();
 	if (sp0256_inuse) sp0256_exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	sp0256_inuse = 0;
 
@@ -711,19 +701,7 @@ static void draw_sprites(INT32 ext_bit, INT32 color_bank, INT32 x_offset) // ext
 		if (sx < -15 || sx > nScreenWidth) continue;
 		if (sy < -15 || sy > nScreenHeight) continue;
 
-		if (flipy) {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipXY_Clip(pTransDraw, code, sx, sy - 16, color, 4, 0, 0, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_FlipY_Clip(pTransDraw, code, sx, sy - 16, color, 4, 0, 0, DrvGfxROM2);
-			}
-		} else {
-			if (flipx) {
-				Render16x16Tile_Mask_FlipX_Clip(pTransDraw, code, sx, sy - 16, color, 4, 0, 0, DrvGfxROM2);
-			} else {
-				Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy - 16, color, 4, 0, 0, DrvGfxROM2);
-			}
-		}
+		Draw16x16MaskTile(pTransDraw, code, sx, sy - 16, flipx, flipy, color, 4, 0, 0, DrvGfxROM2);
 	}
 }
 
@@ -783,8 +761,7 @@ static INT32 TrckydocDraw()
 
 static INT32 SauroFrame()
 {
-	watchdog++;
-	if (watchdog >= 120) {
+	if (++watchdog >= 120) {
 		DrvDoReset(0);
 	}
 
@@ -806,7 +783,6 @@ static INT32 SauroFrame()
 		}
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 128;
 	INT32 nCyclesTotal[2] = { 5000000 / 56, 4000000 / 56 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -814,20 +790,18 @@ static INT32 SauroFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = (nCyclesTotal[0] / nInterleave) * (i + 1);
-		nCyclesDone[0] += ZetRun(nCyclesSegment - nCyclesDone[0]);
+		CPU_RUN(0, Zet);
 		if (i == 120) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); // vblank
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		nCyclesDone[1] += BurnTimerUpdateYM3812(nCyclesSegment);
+		BurnTimerUpdateYM3812((nCyclesTotal[1] / nInterleave) * (i + 1));
 		if ((i & 0xf) == 0xf) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); // 8x per frame
 		ZetClose();
 	}
 
 	ZetOpen(1);
-	
+
 	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
@@ -836,7 +810,7 @@ static INT32 SauroFrame()
 	}
 
 	ZetClose();
-	
+
 	if (pBurnDraw) {
 		BurnDrvRedraw();
 	}
@@ -846,8 +820,7 @@ static INT32 SauroFrame()
 
 static INT32 TrckydocFrame()
 {
-	watchdog++;
-	if (watchdog >= 120) {
+	if (++watchdog >= 120) {
 		DrvDoReset(0);
 	}
 
@@ -866,28 +839,25 @@ static INT32 TrckydocFrame()
 		}
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 128;
 	INT32 nCyclesTotal[1] = { 5000000 / 56 };
-	INT32 nCyclesDone[1] = { 0 };
 
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesSegment = (nCyclesTotal[0] / nInterleave) * (i + 1);
-		nCyclesDone[0] += BurnTimerUpdateYM3812(nCyclesSegment - nCyclesDone[0]);
+		BurnTimerUpdateYM3812((nCyclesTotal[0] / nInterleave) * (i + 1));
 		if (i == 120) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); // vblank
 	}
-	
+
 	BurnTimerEndFrameYM3812(nCyclesTotal[0]);
 
-	if (pBurnSoundOut) {		
+	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();
-	
+
 	if (pBurnDraw) {
 		BurnDrvRedraw();
 	}
@@ -937,12 +907,12 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Sauro
+// Sauro (set 1)
 
 static struct BurnRomInfo sauroRomDesc[] = {
-	{ "sauro-2.bin",	0x8000, 0x19f8de25, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "sauro-1.bin",	0x8000, 0x0f8b876f, 1 | BRF_PRG | BRF_ESS }, //  1
-
+	{ "sauro-2.bin",	0x8000, 0x2e356e2d, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "sauro-1.bin",	0x8000, 0x95d03e5e, 1 | BRF_PRG | BRF_ESS }, //  1
+	
 	{ "sauro-3.bin",	0x8000, 0x0d501e1b, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
 
 	{ "sauro-6.bin",	0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
@@ -968,7 +938,7 @@ STD_ROM_FN(sauro)
 
 struct BurnDriver BurnDrvSauro = {
 	"sauro", NULL, NULL, NULL, "1987",
-	"Sauro\0", NULL, "Tecfri", "Miscellaneous",
+	"Sauro (set 1)\0", NULL, "Tecfri", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
 	NULL, sauroRomInfo, sauroRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, TecfriDIPInfo,
@@ -977,22 +947,102 @@ struct BurnDriver BurnDrvSauro = {
 };
 
 
+// Sauro (set 2)
+
+static struct BurnRomInfo sauroaRomDesc[] = {
+	{ "sauro-2.bin",	0x8000, 0x19f8de25, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "sauro-1.bin",	0x8000, 0x0f8b876f, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "sauro-3.bin",	0x8000, 0x0d501e1b, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+
+	{ "sauro-6.bin",	0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
+	{ "sauro-7.bin",	0x8000, 0x187da060, 3 | BRF_GRA },           //  4
+
+	{ "sauro-4.bin",	0x8000, 0x9b617cda, 4 | BRF_GRA },           //  5 Foreground Tiles
+	{ "sauro-5.bin",	0x8000, 0xa6e2640d, 4 | BRF_GRA },           //  6
+
+	{ "sauro-8.bin",	0x8000, 0xe08b5d5e, 5 | BRF_GRA },           //  7 Sprites
+	{ "sauro-9.bin",	0x8000, 0x7c707195, 5 | BRF_GRA },           //  8
+	{ "sauro-10.bin",	0x8000, 0xc93380d1, 5 | BRF_GRA },           //  9
+	{ "sauro-11.bin",	0x8000, 0xf47982a8, 5 | BRF_GRA },           // 10
+
+	{ "82s137-3.bin",	0x0400, 0xd52c4cd0, 6 | BRF_GRA },           // 11 Color data
+	{ "82s137-2.bin",	0x0400, 0xc3e96d5d, 6 | BRF_GRA },           // 12
+	{ "82s137-1.bin",	0x0400, 0xbdfcf00c, 6 | BRF_GRA },           // 13
+
+	{ "sp0256-al2.bin",	0x0800, 0xb504ac15, 7 | BRF_GRA },           // 14 Speech data
+};
+
+STD_ROM_PICK(sauroa)
+STD_ROM_FN(sauroa)
+
+struct BurnDriver BurnDrvSauroa = {
+	"sauroa", "sauro", NULL, NULL, "1987",
+	"Sauro (set 2)\0", NULL, "Tecfri", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	NULL, sauroaRomInfo, sauroaRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, TecfriDIPInfo,
+	SauroInit, DrvExit, SauroFrame, SauroDraw, DrvScan, &DrvRecalc, 0x400,
+	240, 224, 4, 3
+};
+
+
+// Sauro (set 3)
+
+static struct BurnRomInfo saurobRomDesc[] = {
+	{ "2 tecfri",		0x8000, 0x961567c7, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "1 tecfri",		0x8000, 0x6b564429, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "3 tecfri",		0x8000, 0x3eca1c5c, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+
+	{ "6 tecfri",		0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
+	{ "7 tecfri",		0x8000, 0x187da060, 3 | BRF_GRA },           //  4
+
+	{ "4 tecfri",		0x8000, 0x9b617cda, 4 | BRF_GRA },           //  5 Foreground Tiles
+	{ "5 tecfri",		0x8000, 0xa6e2640d, 4 | BRF_GRA },           //  6
+
+	{ "8 tecfri",		0x8000, 0xe08b5d5e, 5 | BRF_GRA },           //  7 Sprites
+	{ "9 tecfri",		0x8000, 0x7c707195, 5 | BRF_GRA },           //  8
+	{ "10 tecfri",		0x8000, 0xc93380d1, 5 | BRF_GRA },           //  9
+	{ "11 tecfri",		0x8000, 0xf47982a8, 5 | BRF_GRA },           // 10
+
+	{ "82s137-3.bin",	0x0400, 0xd52c4cd0, 6 | BRF_GRA },           // 11 Color data
+	{ "82s137-2.bin",	0x0400, 0xc3e96d5d, 6 | BRF_GRA },           // 12
+	{ "82s137-1.bin",	0x0400, 0xbdfcf00c, 6 | BRF_GRA },           // 13
+
+	{ "sp0256-al2.bin",	0x0800, 0xb504ac15, 7 | BRF_GRA },           // 14 Speech data
+};
+
+STD_ROM_PICK(saurob)
+STD_ROM_FN(saurob)
+
+struct BurnDriver BurnDrvSaurob = {
+	"saurob", "sauro", NULL, NULL, "1987",
+	"Sauro (set 3)\0", NULL, "Tecfri", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	NULL, saurobRomInfo, saurobRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, TecfriDIPInfo,
+	SauroInit, DrvExit, SauroFrame, SauroDraw, DrvScan, &DrvRecalc, 0x400,
+	240, 224, 4, 3
+};
+
+
 // Sauro (Philko license)
 
 static struct BurnRomInfo sauropRomDesc[] = {
-	{ "s2.3k",		0x8000, 0x79846222, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
-	{ "s1.3f",		0x8000, 0x3efd13ed, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "s2.3k",			0x8000, 0x79846222, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "s1.3f",			0x8000, 0x3efd13ed, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "s3.5x",		0x8000, 0x0d501e1b, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+	{ "s3.5x",			0x8000, 0x0d501e1b, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
 
-	{ "s6.7x",		0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
-	{ "s7.7z",		0x8000, 0x187da060, 3 | BRF_GRA },           //  4
+	{ "s6.7x",			0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
+	{ "s7.7z",			0x8000, 0x187da060, 3 | BRF_GRA },           //  4
 
-	{ "s4.7h",		0x8000, 0x9b617cda, 4 | BRF_GRA },           //  5 Foreground Tiles
-	{ "s5.7k",		0x8000, 0xde5cd249, 4 | BRF_GRA },           //  6
+	{ "s4.7h",			0x8000, 0x9b617cda, 4 | BRF_GRA },           //  5 Foreground Tiles
+	{ "s5.7k",			0x8000, 0xde5cd249, 4 | BRF_GRA },           //  6
 
-	{ "s8.10l",		0x8000, 0xe08b5d5e, 5 | BRF_GRA },           //  7 Sprites
-	{ "s9.10p",		0x8000, 0x7c707195, 5 | BRF_GRA },           //  8
+	{ "s8.10l",			0x8000, 0xe08b5d5e, 5 | BRF_GRA },           //  7 Sprites
+	{ "s9.10p",			0x8000, 0x7c707195, 5 | BRF_GRA },           //  8
 	{ "s10.10r",		0x8000, 0xc93380d1, 5 | BRF_GRA },           //  9
 	{ "s11.10t",		0x8000, 0xf47982a8, 5 | BRF_GRA },           // 10
 
@@ -1059,7 +1109,7 @@ struct BurnDriver BurnDrvSaurorr = {
 
 // Sauro (bootleg)
 
-static struct BurnRomInfo saurobRomDesc[] = {
+static struct BurnRomInfo sauroblRomDesc[] = {
 	{ "sauro02.7c",		0x8000, 0x72026b9a, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
 	{ "sauro01.6c",		0x8000, 0x4ff12c25, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -1083,15 +1133,57 @@ static struct BurnRomInfo saurobRomDesc[] = {
 	{ "sauropr4.16h",	0x0200, 0x5261bc11, 7 | BRF_GRA },           // 14 Unknown prom
 };
 
-STD_ROM_PICK(saurob)
-STD_ROM_FN(saurob)
+STD_ROM_PICK(saurobl)
+STD_ROM_FN(saurobl)
 
-struct BurnDriver BurnDrvSaurob = {
-	"saurob", "sauro", NULL, NULL, "1987",
+struct BurnDriver BurnDrvSaurobl = {
+	"saurobl", "sauro", NULL, NULL, "1987",
 	"Sauro (bootleg)\0", "Missing speech is normal", "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
-	NULL, saurobRomInfo, saurobRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, SaurobDIPInfo,
+	NULL, sauroblRomInfo, sauroblRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, SaurobDIPInfo,
+	SauroInit, DrvExit, SauroFrame, SauroDraw, DrvScan, &DrvRecalc, 0x400,
+	240, 224, 4, 3
+};
+
+
+// Sea Wolf (Tecfri)
+
+static struct BurnRomInfo seawolftRomDesc[] = {
+	{ "1.bin",			0x8000, 0xbd8bd328, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 #0 Code
+	{ "2.bin",			0x8000, 0x870b05ef, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "tmm24256ap.bin",	0x8000, 0x0d501e1b, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 #1 Code
+
+	{ "4.bin",			0x8000, 0x4b77cb0f, 3 | BRF_GRA },           //  3 Background Tiles
+	{ "3.bin",			0x8000, 0x883bb7d1, 3 | BRF_GRA },           //  4
+
+	{ "6.bin",			0x8000, 0x9b617cda, 4 | BRF_GRA },           //  5 Foreground Tiles
+	{ "5.bin",			0x8000, 0xa6e2640d, 4 | BRF_GRA },           //  6
+
+	{ "10.bin",			0x8000, 0xb93f5487, 5 | BRF_GRA },           //  7 Sprites
+	{ "9.bin",			0x8000, 0x0964ac95, 5 | BRF_GRA },           //  8
+	{ "8.bin",			0x8000, 0xe71726a9, 5 | BRF_GRA },           //  9
+	{ "7.bin",			0x8000, 0x8a700276, 5 | BRF_GRA },           // 10
+
+	// PROMs not dumped on this PCB
+	{ "82s137-3.bin",	0x0400, 0xd52c4cd0, 6 | BRF_GRA },           // 11 Color data
+	{ "82s137-2.bin",	0x0400, 0xc3e96d5d, 6 | BRF_GRA },           // 12
+	{ "82s137-1.bin",	0x0400, 0xbdfcf00c, 6 | BRF_GRA },           // 13
+
+	// SP0256 mask ROM, not dumped on this PCB, but it's a generic GI ROM
+	{ "sp0256-al2.bin",	0x0800, 0xb504ac15, 7 | BRF_GRA },           // 14 Speech data
+};
+
+STD_ROM_PICK(seawolft)
+STD_ROM_FN(seawolft)
+
+struct BurnDriver BurnDrvSeawolft = {
+	"seawolft", "sauro", NULL, NULL, "1987",
+	"Sea Wolf (Tecfri)\0", NULL, "Tecfri", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_HORSHOOT, 0,
+	NULL, seawolftRomInfo, seawolftRomName, NULL, NULL, NULL, NULL, TecfriInputInfo, TecfriDIPInfo,
 	SauroInit, DrvExit, SauroFrame, SauroDraw, DrvScan, &DrvRecalc, 0x400,
 	240, 224, 4, 3
 };

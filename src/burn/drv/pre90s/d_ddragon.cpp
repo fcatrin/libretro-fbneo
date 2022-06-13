@@ -192,7 +192,7 @@ static struct BurnDIPInfo Drv2DIPList[]=
 {
 	// Default Values
 	{0x14, 0xff, 0xff, 0xff, NULL                     },
-	{0x15, 0xff, 0xff, 0xff, NULL                     },
+	{0x15, 0xff, 0xff, 0x96, NULL                     },
 
 	// Dip 1
 	{0   , 0xfe, 0   , 8   , "Coin A"                 },
@@ -224,15 +224,25 @@ static struct BurnDIPInfo Drv2DIPList[]=
 	{0x14, 0x01, 0x80, 0x00, "On"                     },
 
 	// Dip 2
+	{0   , 0xfe, 0   , 4   , "Difficulty"             },
+	{0x15, 0x01, 0x03, 0x01, "Easy"                   },
+	{0x15, 0x01, 0x03, 0x03, "Medium"                 },
+	{0x15, 0x01, 0x03, 0x02, "Hard"                   },
+	{0x15, 0x01, 0x03, 0x00, "Hardest"                },
+
+	{0   , 0xfe, 0   , 2   , "Demo Sounds"            },
+	{0x15, 0x01, 0x04, 0x00, "Off"                    },
+	{0x15, 0x01, 0x04, 0x04, "On"                     },
+
 	{0   , 0xfe, 0   , 2   , "Hurricane Kick"         },
 	{0x15, 0x01, 0x08, 0x00, "Easy"                   },
 	{0x15, 0x01, 0x08, 0x08, "Normal"                 },
 
 	{0   , 0xfe, 0   , 4   , "Timer"                  },
-	{0x15, 0x01, 0x30, 0x00, "60"                     },
-	{0x15, 0x01, 0x30, 0x10, "65"                     },
-	{0x15, 0x01, 0x30, 0x30, "70"                     },
-	{0x15, 0x01, 0x30, 0x20, "80"                     },
+	{0x15, 0x01, 0x30, 0x00, "Very Fast"              },
+	{0x15, 0x01, 0x30, 0x10, "Fast"                   },
+	{0x15, 0x01, 0x30, 0x30, "Normal"                 },
+	{0x15, 0x01, 0x30, 0x20, "Slow"                   },
 
 	{0   , 0xfe, 0   , 4   , "Lives"                  },
 	{0x15, 0x01, 0xc0, 0xc0, "1"                      },
@@ -1294,7 +1304,7 @@ void DrvDdragonHD6309WriteByte(UINT16 Address, UINT8 Data)
 			DrvSoundLatch = Data;
 			if (DrvSoundCPUType == DD_CPU_TYPE_M6809) {
 				M6809Open(0);
-				M6809SetIRQLine(M6809_IRQ_LINE, CPU_IRQSTATUS_ACK);
+				M6809SetIRQLine(M6809_IRQ_LINE, CPU_IRQSTATUS_HOLD);
 				M6809Close();
 			}
 
@@ -1487,7 +1497,6 @@ UINT8 DrvDdragonM6809ReadByte(UINT16 Address)
 {
 	switch (Address) {
 		case 0x1000: {
-			M6809SetIRQLine(M6809_IRQ_LINE, CPU_IRQSTATUS_NONE);
 			return DrvSoundLatch;
 		}
 
@@ -2099,10 +2108,10 @@ static INT32 DrvMachineInit()
 		M6809SetWriteHandler(DrvDdragonM6809WriteByte);
 		M6809Close();
 
-		BurnYM2151Init(3579545);
+		BurnYM2151Init(3579545, 1);
+		BurnTimerAttachM6809(1500000);
 		BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 		BurnYM2151SetAllRoutes(0.60, BURN_SND_ROUTE_BOTH);
-		BurnYM2151SetInterleave((272/2) + 1); // "BurnYM2151Render()" called this many times per frame
 
 		MSM5205Init(0, DrvSynchroniseStream, 375000, DrvMSM5205Vck0, MSM5205_S48_4B, 1);
 		MSM5205Init(1, DrvSynchroniseStream, 375000, DrvMSM5205Vck1, MSM5205_S48_4B, 1);
@@ -2169,10 +2178,10 @@ static INT32 Drv2MachineInit()
 	ZetMapArea(0x8000, 0x87ff, 2, DrvSoundCPURam);
 	ZetClose();
 
-	BurnYM2151Init(3579545);
+	BurnYM2151Init(3579545, 1);
+	BurnTimerAttachZet(3579545);
 	BurnYM2151SetIrqHandler(&Ddragon2YM2151IrqHandler);
 	BurnYM2151SetAllRoutes(0.60, BURN_SND_ROUTE_BOTH);
-	BurnYM2151SetInterleave((272/2) + 1); // "BurnYM2151Render()" called this many times per frame
 
 	MSM6295Init(0, 1056000 / 132, 1);
 	MSM6295SetRoute(0, 0.20, BURN_SND_ROUTE_BOTH);
@@ -2632,9 +2641,8 @@ static INT32 DrvFrame()
 		if (DrvSoundCPUType == DD_CPU_TYPE_M6809) {
 			nCurrentCPU = 2;
 			M6809Open(0);
-			nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesDone[nCurrentCPU] += M6809Run(nCyclesSegment);
+			BurnTimerUpdate((i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave);
+			if (i == nInterleave - 1) BurnTimerEndFrame(nCyclesTotal[nCurrentCPU]);
 			if (DrvSoundCPUType == DD_CPU_TYPE_M6809) MSM5205UpdateScanline(i);
 			M6809Close();
 		}
@@ -2642,10 +2650,8 @@ static INT32 DrvFrame()
 		if (DrvSoundCPUType == DD_CPU_TYPE_Z80) {
 			nCurrentCPU = 2;
 			ZetOpen(1);
-			nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesSegment = ZetRun(nCyclesSegment);
-			nCyclesDone[nCurrentCPU] += nCyclesSegment;
+			BurnTimerUpdate((i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave);
+			if (i == nInterleave - 1) BurnTimerEndFrame(nCyclesTotal[nCurrentCPU]);
 			ZetClose();
 		}
 
@@ -2672,7 +2678,7 @@ static INT32 DrvFrame()
 			HD6309Close();
 		}
 
-		if (pBurnSoundOut && i&1) { // ym2151 does not like high interleave, so run it every other
+		if (pBurnSoundOut && i%8 == 7) { // ym2151 does not like high interleave, so run it every other
 			INT32 nSegmentLength = nBurnSoundLen / (nInterleave / 2);
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
@@ -2721,8 +2727,8 @@ static INT32 DrvFrame()
 		}
 	}
 
-	nExtraCycles[0] = nCyclesDone[0] - nCyclesTotal[0];
-	nExtraCycles[1] = nCyclesDone[1] - nCyclesTotal[1];
+	nExtraCycles[0] = nCyclesDone[0] - nCyclesToDo[0];
+	nExtraCycles[1] = nCyclesDone[1] - nCyclesToDo[1];
 	nExtraCycles[2] = nCyclesDone[2] - nCyclesTotal[2];
 	nExtraCycles[3] = nCyclesDone[3] - nCyclesTotal[3];
 

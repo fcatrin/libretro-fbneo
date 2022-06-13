@@ -99,8 +99,8 @@ static struct BurnInputInfo HeatbrlInputList[] = {
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 
-	{"P3 Coin",			BIT_DIGITAL,	DrvJoy4 + 3,	"p3 coin"	},
-	{"P3 Start",		BIT_DIGITAL,	DrvJoy4 + 4,	"p3 start"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy3 + 3,	"p3 coin"	},
+	{"P3 Start",		BIT_DIGITAL,	DrvJoy3 + 4,	"p3 start"	},
 	{"P3 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p3 up"		},
 	{"P3 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p3 down"	},
 	{"P3 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p3 left"	},
@@ -108,8 +108,8 @@ static struct BurnInputInfo HeatbrlInputList[] = {
 	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p3 fire 2"	},
 
-	{"P4 Coin",			BIT_DIGITAL,	DrvJoy4 + 7,	"p4 coin"	},
-	{"P4 Start",		BIT_DIGITAL,	DrvJoy4 + 5,	"p4 start"	},
+	{"P4 Coin",			BIT_DIGITAL,	DrvJoy3 + 7,	"p4 coin"	},
+	{"P4 Start",		BIT_DIGITAL,	DrvJoy3 + 5,	"p4 start"	},
 	{"P4 Up",			BIT_DIGITAL,	DrvJoy2 + 8,	"p4 up"		},
 	{"P4 Down",			BIT_DIGITAL,	DrvJoy2 + 9,	"p4 down"	},
 	{"P4 Left",			BIT_DIGITAL,	DrvJoy2 + 10,	"p4 left"	},
@@ -247,28 +247,44 @@ static struct BurnDIPInfo LegionnaDIPList[]=
 	{0x11, 0xff, 0xff, 0xff, NULL						},
 	{0x12, 0xff, 0xff, 0xff, NULL						},
 
-	{0   , 0xfe, 0   ,    20, "Coinage"					},
-	{0x11, 0x01, 0x1f, 0x15, "6 Coins 1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x17, "5 Coins 1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x19, "4 Coins 1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x1b, "3 Coins 1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x03, "8 Coins 3 Credits"		},
-	{0x11, 0x01, 0x1f, 0x1d, "2 Coins 1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x05, "5 Coins 3 Credits"		},
-	{0x11, 0x01, 0x1f, 0x07, "3 Coins 2 Credits"		},
-	{0x11, 0x01, 0x1f, 0x1f, "1 Coin  1 Credits"		},
-	{0x11, 0x01, 0x1f, 0x09, "2 Coins 3 Credits"		},
-	{0x11, 0x01, 0x1f, 0x13, "1 Coin  2 Credits"		},
-	{0x11, 0x01, 0x1f, 0x11, "1 Coin  3 Credits"		},
-	{0x11, 0x01, 0x1f, 0x0f, "1 Coin  4 Credits"		},
-	{0x11, 0x01, 0x1f, 0x0d, "1 Coin  5 Credits"		},
-	{0x11, 0x01, 0x1f, 0x0b, "1 Coin  6 Credits"		},
-	{0x11, 0x01, 0x1f, 0x1e, "A 1/1 B 1/2"				},
-	{0x11, 0x01, 0x1f, 0x14, "A 2/1 B 1/3"				},
-	{0x11, 0x01, 0x1f, 0x0a, "A 3/1 B 1/5"				},
-	{0x11, 0x01, 0x1f, 0x00, "A 5/1 B 1/6"				},
-	{0x11, 0x01, 0x1f, 0x01, "Free Play"				},
-
+	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
+	{0x11, 0x01, 0x01, 0x01, "Mode 1"					},
+	{0x11, 0x01, 0x01, 0x00, "Mode 2"					},
+	
+	{0   , 0xfe, 0   ,   16, "Coinage"					},
+	{0x11, 0x01, 0x1e, 0x1e, "1 Coin 1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x12, "1 Coin 2 Credits"			},
+	{0x11, 0x01, 0x1e, 0x10, "1 Coin 3 Credits"			},
+	{0x11, 0x01, 0x1e, 0x0e, "1 Coin 4 Credits"			},
+	{0x11, 0x01, 0x1e, 0x0c, "1 Coin 5 Credits"			},
+	{0x11, 0x01, 0x1e, 0x0a, "1 Coin 6 Credits"			},
+	{0x11, 0x01, 0x1e, 0x1c, "2 Coins 1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x08, "2 Coins 3 Credits"		},
+	{0x11, 0x01, 0x1e, 0x1a, "3 Coins 1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x06, "3 Coins 2 Credits"		},
+	{0x11, 0x01, 0x1e, 0x18, "4 Coins 1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x16, "5 Coins 1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x04, "5 Coins 3 Credits"		},
+	{0x11, 0x01, 0x1e, 0x14, "6 Coin  1 Credit"			},
+	{0x11, 0x01, 0x1e, 0x02, "8 Coins 3 Credits"		},
+	{0x11, 0x01, 0x1e, 0x00, "Free Play"				},
+	
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
+	{0x11, 0x01, 0x06, 0x06, "1 Coin 1 Credit"			},
+	{0x11, 0x01, 0x06, 0x04, "2 Coins 1 Credit"			},
+	{0x11, 0x01, 0x06, 0x02, "3 Coins 1 Credit"			},
+	{0x11, 0x01, 0x06, 0x00, "5 Coins 1 Credit"			},
+	
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
+	{0x11, 0x01, 0x18, 0x18, "1 Coin 2 Credits"			},
+	{0x11, 0x01, 0x18, 0x10, "1 Coin 3 Credits"			},
+	{0x11, 0x01, 0x18, 0x08, "1 Coin 5 Credits"			},
+	{0x11, 0x01, 0x18, 0x00, "1 Coin 6 Credits"			},
+	
+	{0   , 0xfe, 0   ,    2, "Unknown"					},
+	{0x11, 0x01, 0x20, 0x20, "Off"						},
+	{0x11, 0x01, 0x20, 0x00, "On"						},
+		
 	{0   , 0xfe, 0   ,    2, "Freeze"					},
 	{0x11, 0x01, 0x40, 0x40, "Off"						},
 	{0x11, 0x01, 0x40, 0x00, "On"						},
@@ -283,9 +299,9 @@ static struct BurnDIPInfo LegionnaDIPList[]=
 	{0x12, 0x01, 0x03, 0x01, "3"						},
 	{0x12, 0x01, 0x03, 0x00, "4"						},
 
-	{0   , 0xfe, 0   ,    2, "Extend"					},
-	{0x12, 0x01, 0x04, 0x00, "Off"						},
-	{0x12, 0x01, 0x04, 0x04, "On"						},
+	{0   , 0xfe, 0   ,    2, "Extend Play"				},
+	{0x12, 0x01, 0x04, 0x00, "No"						},
+	{0x12, 0x01, 0x04, 0x04, "Yes"						},
 
 	{0   , 0xfe, 0   ,    2, "Unknown"					},
 	{0x12, 0x01, 0x08, 0x08, "Off"						},
@@ -293,17 +309,17 @@ static struct BurnDIPInfo LegionnaDIPList[]=
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"				},
 	{0x12, 0x01, 0x30, 0x20, "Easy"						},
-	{0x12, 0x01, 0x30, 0x30, "Medium"					},
+	{0x12, 0x01, 0x30, 0x30, "Normal"					},
 	{0x12, 0x01, 0x30, 0x10, "Hard"						},
-	{0x12, 0x01, 0x30, 0x00, "Hardest"					},
+	{0x12, 0x01, 0x30, 0x00, "Very Hard"				},
 
 	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
 	{0x12, 0x01, 0x40, 0x00, "No"						},
 	{0x12, 0x01, 0x40, 0x40, "Yes"						},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x12, 0x01, 0x80, 0x00, "Off"						},
-	{0x12, 0x01, 0x80, 0x80, "On"						},
+	{0x12, 0x01, 0x80, 0x00, "No"						},
+	{0x12, 0x01, 0x80, 0x80, "Yes"						},
 };
 
 STDDIPINFO(Legionna)
@@ -311,66 +327,79 @@ STDDIPINFO(Legionna)
 
 static struct BurnDIPInfo HeatbrlDIPList[]=
 {
-	{0x21, 0xff, 0xff, 0xff, NULL						},
-	{0x22, 0xff, 0xff, 0xff, NULL						},
+	DIP_OFFSET(0x21)
+	{0x00, 0xff, 0xff, 0xff, NULL						},
+	{0x01, 0xff, 0xff, 0xff, NULL						},
 
-	{0   , 0xfe, 0   ,    20, "Coinage"					},
-	{0x21, 0x01, 0x1f, 0x15, "6 Coins 1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x17, "5 Coins 1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x19, "4 Coins 1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x1b, "3 Coins 1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x03, "8 Coins 3 Credits"		},
-	{0x21, 0x01, 0x1f, 0x1d, "2 Coins 1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x05, "5 Coins 3 Credits"		},
-	{0x21, 0x01, 0x1f, 0x07, "3 Coins 2 Credits"		},
-	{0x21, 0x01, 0x1f, 0x1f, "1 Coin  1 Credits"		},
-	{0x21, 0x01, 0x1f, 0x09, "2 Coins 3 Credits"		},
-	{0x21, 0x01, 0x1f, 0x13, "1 Coin  2 Credits"		},
-	{0x21, 0x01, 0x1f, 0x11, "1 Coin  3 Credits"		},
-	{0x21, 0x01, 0x1f, 0x0f, "1 Coin  4 Credits"		},
-	{0x21, 0x01, 0x1f, 0x0d, "1 Coin  5 Credits"		},
-	{0x21, 0x01, 0x1f, 0x0b, "1 Coin  6 Credits"		},
-	{0x21, 0x01, 0x1f, 0x1e, "A 1/1 B 1/2"				},
-	{0x21, 0x01, 0x1f, 0x14, "A 2/1 B 1/3"				},
-	{0x21, 0x01, 0x1f, 0x0a, "A 3/1 B 1/5"				},
-	{0x21, 0x01, 0x1f, 0x00, "A 5/1 B 1/6"				},
-	{0x21, 0x01, 0x1f, 0x01, "Free Play"				},
+	{0   , 0xfe, 0   ,    2, "Coin Mode"				},
+	{0x00, 0x01, 0x01, 0x01, "Mode 1"					},
+	{0x00, 0x01, 0x01, 0x00, "Mode 2"					},
+	
+	{0   , 0xfe, 0   ,   16, "Coinage"					},
+	{0x00, 0x01, 0x1e, 0x1e, "1 Coin 1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x12, "1 Coin 2 Credits"			},
+	{0x00, 0x01, 0x1e, 0x10, "1 Coin 3 Credits"			},
+	{0x00, 0x01, 0x1e, 0x0e, "1 Coin 4 Credits"			},
+	{0x00, 0x01, 0x1e, 0x0c, "1 Coin 5 Credits"			},
+	{0x00, 0x01, 0x1e, 0x0a, "1 Coin 6 Credits"			},
+	{0x00, 0x01, 0x1e, 0x1c, "2 Coins 1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x08, "2 Coins 3 Credits"		},
+	{0x00, 0x01, 0x1e, 0x1a, "3 Coins 1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x06, "3 Coins 2 Credits"		},
+	{0x00, 0x01, 0x1e, 0x18, "4 Coins 1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x16, "5 Coins 1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x04, "5 Coins 3 Credits"		},
+	{0x00, 0x01, 0x1e, 0x14, "6 Coin  1 Credit"			},
+	{0x00, 0x01, 0x1e, 0x02, "8 Coins 3 Credits"		},
+	{0x00, 0x01, 0x1e, 0x00, "Free Play"				},
+	
+	{0   , 0xfe, 0   ,    4, "Coin A"					},
+	{0x00, 0x01, 0x06, 0x06, "1 Coin 1 Credit"			},
+	{0x00, 0x01, 0x06, 0x04, "2 Coins 1 Credit"			},
+	{0x00, 0x01, 0x06, 0x02, "3 Coins 1 Credit"			},
+	{0x00, 0x01, 0x06, 0x00, "5 Coins 1 Credit"			},
+	
+	{0   , 0xfe, 0   ,    4, "Coin B"					},
+	{0x00, 0x01, 0x18, 0x18, "1 Coin 2 Credits"			},
+	{0x00, 0x01, 0x18, 0x10, "1 Coin 3 Credits"			},
+	{0x00, 0x01, 0x18, 0x08, "1 Coin 5 Credits"			},
+	{0x00, 0x01, 0x18, 0x00, "1 Coin 6 Credits"			},
 
-	{0   , 0xfe, 0   ,    2, "Players"					},
-	{0x21, 0x01, 0x20, 0x20, "2"						},
-	{0x21, 0x01, 0x20, 0x00, "4"						},
-
-	{0   , 0xfe, 0   ,    2, "Freeze"					},
-	{0x21, 0x01, 0x40, 0x40, "Off"						},
-	{0x21, 0x01, 0x40, 0x00, "On"						},
+	{0   , 0xfe, 0   ,    4, "Cabinet Setting"			},
+	{0x00, 0x01, 0x60, 0x60, "2 Players & 1 Coin Slot"	},
+	{0x00, 0x01, 0x60, 0x40, "4 Players & 1 Coin Slot"	},
+	{0x00, 0x01, 0x60, 0x20, "4 Players (2x 2P Linked) & 1-4 Coin Slots"	},
+	{0x00, 0x01, 0x60, 0x00, "4 Players & 4 Coin Slots"	},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
-	{0x21, 0x01, 0x80, 0x80, "Off"						},
-	{0x21, 0x01, 0x80, 0x00, "On"						},
+	{0x00, 0x01, 0x80, 0x80, "Off"						},
+	{0x00, 0x01, 0x80, 0x00, "On"						},
 
 	{0   , 0xfe, 0   ,    4, "Lives"					},
-	{0x22, 0x01, 0x03, 0x02, "1"						},
-	{0x22, 0x01, 0x03, 0x01, "2"						},
-	{0x22, 0x01, 0x03, 0x03, "3"						},
-	{0x22, 0x01, 0x03, 0x00, "5"						},
+	{0x01, 0x01, 0x03, 0x02, "1"						},
+	{0x01, 0x01, 0x03, 0x01, "2"						},
+	{0x01, 0x01, 0x03, 0x03, "3"						},
+	{0x01, 0x01, 0x03, 0x00, "5"						},
 
-	{0   , 0xfe, 0   ,    2, "Extend"					},
-	{0x22, 0x01, 0x04, 0x00, "Off"						},
-	{0x22, 0x01, 0x04, 0x04, "On"						},
-
+	{0   , 0xfe, 0   ,    4, "Players Start & Join"		},
+	{0x01, 0x01, 0x0c, 0x0c, "Normal"					},
+	{0x01, 0x01, 0x0c, 0x08, "2 Start, 1 Can Join"		},
+	{0x01, 0x01, 0x0c, 0x04, "2 Start, 2 Can Join"		},
+	{0x01, 0x01, 0x0c, 0x00, "1 Start, 2 Can Join"		},
+	
 	{0   , 0xfe, 0   ,    4, "Difficulty"				},
-	{0x22, 0x01, 0x30, 0x20, "Easy"						},
-	{0x22, 0x01, 0x30, 0x30, "Normal"					},
-	{0x22, 0x01, 0x30, 0x10, "Hard"						},
-	{0x22, 0x01, 0x30, 0x00, "Very Hard"				},
+	{0x01, 0x01, 0x30, 0x20, "Easy"						},
+	{0x01, 0x01, 0x30, 0x30, "Normal"					},
+	{0x01, 0x01, 0x30, 0x10, "Hard"						},
+	{0x01, 0x01, 0x30, 0x00, "Very Hard"				},
 
 	{0   , 0xfe, 0   ,    2, "Allow Continue"			},
-	{0x22, 0x01, 0x40, 0x00, "No"						},
-	{0x22, 0x01, 0x40, 0x40, "Yes"						},
+	{0x01, 0x01, 0x40, 0x00, "No"						},
+	{0x01, 0x01, 0x40, 0x40, "Yes"						},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x22, 0x01, 0x80, 0x00, "Off"						},
-	{0x22, 0x01, 0x80, 0x80, "On"						},
+	{0x01, 0x01, 0x80, 0x00, "No"						},
+	{0x01, 0x01, 0x80, 0x80, "Yes"						},
 };
 
 STDDIPINFO(Heatbrl)
@@ -381,8 +410,8 @@ static struct BurnDIPInfo GodzillaDIPList[]=
 	{0x15, 0xff, 0xff, 0xff, NULL						},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x14, 0x01, 0x01, 0x00, "Off"						},
-	{0x14, 0x01, 0x01, 0x01, "On"						},
+	{0x14, 0x01, 0x01, 0x00, "No"						},
+	{0x14, 0x01, 0x01, 0x01, "Yes"						},
 
 	{0   , 0xfe, 0   ,    2, "Flip Screen"				},
 	{0x14, 0x01, 0x10, 0x10, "Off"						},
@@ -404,7 +433,7 @@ static struct BurnDIPInfo GodzillaDIPList[]=
 
 	{0   , 0xfe, 0   ,    8, "Coin B"					},
 	{0x15, 0x01, 0x38, 0x38, "1 Coin  1 Credits"		},
-	{0x15, 0x01, 0x38, 0x00, "3 Coins/5 Credits"		},
+	{0x15, 0x01, 0x38, 0x00, "3 Coins 5 Credits"		},
 	{0x15, 0x01, 0x38, 0x10, "2 Coins 3 Credits"		},
 	{0x15, 0x01, 0x38, 0x30, "1 Coin  2 Credits"		},
 	{0x15, 0x01, 0x38, 0x08, "2 Coins 5 Credits"		},
@@ -429,8 +458,8 @@ static struct BurnDIPInfo DenjinmkDIPList[]=
 	{0x1f, 0x01, 0x10, 0x00, "On"						},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"				},
-	{0x1f, 0x01, 0x20, 0x00, "Off"						},
-	{0x1f, 0x01, 0x20, 0x20, "On"						},
+	{0x1f, 0x01, 0x20, 0x00, "No"						},
+	{0x1f, 0x01, 0x20, 0x20, "Yes"						},
 
 	{0,    0xfe, 0,       2, "Service Mode"				},
 	{0x1f, 0x01, 0x40, 0x40, "Off"                      },
@@ -444,7 +473,7 @@ static struct BurnDIPInfo DenjinmkDIPList[]=
 	{0x20, 0x01, 0x0f, 0x02, "4 Coins 1 Credits"		},
 	{0x20, 0x01, 0x0f, 0x05, "3 Coins 1 Credits"		},
 	{0x20, 0x01, 0x0f, 0x08, "2 Coins 1 Credits"		},
-	{0x20, 0x01, 0x0f, 0x06, "3 Coins / 5 Credits"		},
+	{0x20, 0x01, 0x0f, 0x06, "3 Coins 5 Credits"		},
 	{0x20, 0x01, 0x0f, 0x04, "3 Coins 2 Credits"		},
 	{0x20, 0x01, 0x0f, 0x01, "4 Coins 3 Credits"		},
 	{0x20, 0x01, 0x0f, 0x0f, "1 Coin  1 Credits"		},
@@ -462,7 +491,7 @@ static struct BurnDIPInfo DenjinmkDIPList[]=
 	{0x20, 0x01, 0xf0, 0x20, "4 Coins 1 Credits"		},
 	{0x20, 0x01, 0xf0, 0x50, "3 Coins 1 Credits"		},
 	{0x20, 0x01, 0xf0, 0x80, "2 Coins 1 Credits"		},
-	{0x20, 0x01, 0xf0, 0x60, "3 Coins / 5 Credits"		},
+	{0x20, 0x01, 0xf0, 0x60, "3 Coins 5 Credits"		},
 	{0x20, 0x01, 0xf0, 0x40, "3 Coins 2 Credits"		},
 	{0x20, 0x01, 0xf0, 0x10, "4 Coins 3 Credits"		},
 	{0x20, 0x01, 0xf0, 0xf0, "1 Coin  1 Credits"		},
@@ -490,10 +519,11 @@ static struct BurnDIPInfo GrainbowDIPList[]=
 	{0x24, 0x01, 0x03, 0x00, "5"						},
 	{0x24, 0x01, 0x03, 0x01, "4"						},
 
-	{0   , 0xfe, 0   ,    3, "Difficulty"				},
+	{0   , 0xfe, 0   ,    4, "Difficulty"				},
 	{0x24, 0x01, 0x0c, 0x0c, "2"						},
 	{0x24, 0x01, 0x0c, 0x08, "0"						},
 	{0x24, 0x01, 0x0c, 0x04, "4"						},
+	{0x24, 0x01, 0x0c, 0x00, "4"						},
 
 	{0   , 0xfe, 0   ,    16, "Coin A"					},
 	{0x24, 0x01, 0xf0, 0x00, "Free Play"				},
@@ -547,9 +577,17 @@ static inline void legionna_common_write_word(UINT32 address, UINT16 data)
 	switch (address)
 	{
 		case 0x100470: // tile bank?
-			background_bank = (data >> 2) & 0x1000;
-			foreground_bank = (data >> 1) & 0x1000;
-			midground_bank  = (data >> 3) & 0x1000;
+			if (!denjinmk_hack) {
+				// heatedbrl, etc
+				background_bank = (data >> 2) & 0x1000;
+				midground_bank  = (data >> 3) & 0x1000;
+				foreground_bank = (data >> 1) & 0x1000;
+			} else {
+				// denjinmk
+				background_bank = (data >> 1) & 0x1000;
+				midground_bank  = (data >> 2) & 0x1000;
+				foreground_bank = (data >> 3) & 0x1000;
+			}
 		break;
 
 		case 0x100680:	// irq ack?
@@ -569,7 +607,7 @@ static inline void legionna_common_write_byte(UINT32 address, UINT8 data)
 	{
 		case 0x100470:
 		case 0x100471:
-	//		bprintf (0, _T("WB: tile bank: %5.5x, %2.2x\n"), address, data);
+			//bprintf (0, _T("WB: tile bank: %5.5x, %2.2x\n"), address, data);
 		break;
 
 		case 0x100680:	// irq ack?
@@ -847,6 +885,8 @@ static INT32 DrvDoReset()
 	flipscreen = 0;
 	memset (scroll, 0, sizeof(scroll));
 	memset (coin_inserted_counter, 0, sizeof(coin_inserted_counter));
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1406,14 +1446,14 @@ static void draw_sprites(INT32 ram_offset, UINT16 *pri_masks, INT32 ext_bank, IN
 
 	for (INT32 offs = 0; offs < 0x400; offs += 4)
 	{
-		UINT16 data = spriteram[offs];
+		UINT16 data = BURN_ENDIAN_SWAP_INT16(spriteram[offs]);
 		if (!(data & 0x8000)) continue;
 
 		INT32 pri_mask = 0;
 
 		if (pri_masks == NULL)
 		{
-			UINT8 cur_pri = (spriteram[offs+1] >> 14) | ((data & 0x40) >> 4);
+			UINT8 cur_pri = (BURN_ENDIAN_SWAP_INT16(spriteram[offs+1]) >> 14) | ((data & 0x40) >> 4);
 
 			switch (cur_pri)
 			{
@@ -1427,14 +1467,14 @@ static void draw_sprites(INT32 ram_offset, UINT16 *pri_masks, INT32 ext_bank, IN
 		}
 		else
 		{
-			pri_mask = pri_masks[spriteram[offs+1] >> 14];
+			pri_mask = pri_masks[BURN_ENDIAN_SWAP_INT16(spriteram[offs+1]) >> 14];
 		}
 
-		INT32 sprite = (spriteram[offs+1] & 0x3fff);
-		if (ext_bank) sprite |= ((data & 0x0040) << 8) | (spriteram[offs+3] & 0x8000);
+		INT32 sprite = (BURN_ENDIAN_SWAP_INT16(spriteram[offs+1]) & 0x3fff);
+		if (ext_bank) sprite |= ((data & 0x0040) << 8) | (BURN_ENDIAN_SWAP_INT16(spriteram[offs+3]) & 0x8000);
 
-		INT32 y = spriteram[offs+3] & (screen_mask - 1);
-		INT32 x = spriteram[offs+2] & (screen_mask - 1);
+		INT32 y = BURN_ENDIAN_SWAP_INT16(spriteram[offs+3]) & (screen_mask - 1);
+		INT32 x = BURN_ENDIAN_SWAP_INT16(spriteram[offs+2]) & (screen_mask - 1);
 		if (x & (screen_mask / 2)) x -= screen_mask;
 		if (y & (screen_mask / 2)) y -= screen_mask;
 
@@ -1582,7 +1622,6 @@ static INT32 DenjinmkDraw()
 	if ((layer_disable & 0x0002) == 0 && (nBurnLayer & 2)) GenericTilemapDraw(1, pTransDraw, 1);
 	if ((layer_disable & 0x0004) == 0 && (nBurnLayer & 4)) GenericTilemapDraw(2, pTransDraw, 2);
 	if ((layer_disable & 0x0008) == 0 && (nBurnLayer & 8)) GenericTilemapDraw(3, pTransDraw, 4);
-
 	if ((layer_disable & 0x0010) == 0 && (nSpriteEnable & 1)) draw_sprites(0x5000-0x800, pri_masks, 1, 0, 0);
 
 	BurnTransferCopy(DrvPalette);
@@ -1817,7 +1856,7 @@ struct BurnDriver BurnDrvLegionna = {
 	"legionna", NULL, NULL, NULL, "1992",
 	"Legionnaire (World)\0", NULL, "TAD Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, legionnaRomInfo, legionnaRomName, NULL, NULL, NULL, NULL, LegionnaInputInfo, LegionnaDIPInfo,
 	LegionnaInit, DrvExit, DrvFrame, LegionnaDraw, DrvScan, &DrvRecalc, 0x801,
 	256, 224, 4, 3
@@ -1856,7 +1895,7 @@ struct BurnDriver BurnDrvLegionnaj = {
 	"legionnaj", "legionna", NULL, NULL, "1992",
 	"Legionnaire (Japan)\0", NULL, "TAD Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, legionnajRomInfo, legionnajRomName, NULL, NULL, NULL, NULL, LegionnaInputInfo, LegionnaDIPInfo,
 	LegionnaInit, DrvExit, DrvFrame, LegionnaDraw, DrvScan, &DrvRecalc, 0x801,
 	256, 224, 4, 3
@@ -1895,7 +1934,7 @@ struct BurnDriver BurnDrvLegionnau = {
 	"legionnau", "legionna", NULL, NULL, "1992",
 	"Legionnaire (US)\0", NULL, "TAD Corporation (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, legionnauRomInfo, legionnauRomName, NULL, NULL, NULL, NULL, LegionnaInputInfo, LegionnaDIPInfo,
 	LegionnaInit, DrvExit, DrvFrame, LegionnaDraw, DrvScan, &DrvRecalc, 0x801,
 	256, 224, 4, 3
@@ -2203,9 +2242,54 @@ struct BurnDriver BurnDrvGodzilla = {
 };
 
 
-// Denjin Makai
+// Denjin Makai (set 1)
 
 static struct BurnRomInfo denjinmkRomDesc[] = {
+	{ "denjin_1.u025",				0x040000, 0xb23a6e6f, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
+	{ "denjin_2.u024",				0x040000, 0x4fde59e7, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "denjin_3.u026",				0x040000, 0x4f10292b, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "denjin_4.u023",				0x040000, 0x209f1f6b, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "denjin_7.u1016",				0x010000, 0x970f36dd, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 Code
+
+	{ "denjin_6.u0620",				0x010000, 0xe1f759b1, 3 | BRF_GRA },           //  5 Characters
+	{ "denjin_5.u0615",				0x010000, 0xcc36af0d, 3 | BRF_GRA },           //  6
+
+	{ "obj-0-3.748",				0x200000, 0x67c26a67, 4 | BRF_GRA },           //  7 Sprites
+	{ "obj-4-5.756",				0x100000, 0x01f8d4e6, 4 | BRF_GRA },           //  8
+	{ "obj-6-7.743",				0x100000, 0xe5805757, 4 | BRF_GRA },           //  9
+	{ "obj-8-9.757",				0x100000, 0xc8f7e1c9, 4 | BRF_GRA },           // 10
+
+	{ "bg-1-ab.618",				0x100000, 0xeaad151a, 5 | BRF_GRA },           // 11 Background Tiles
+
+	{ "bg-2-ab.617",				0x100000, 0x40938f74, 6 | BRF_GRA },           // 12 Midground Tiles
+
+	{ "bg-3-ab.619",				0x100000, 0xde7366ee, 7 | BRF_GRA },           // 13 Foreground Tiles
+
+	{ "denjin_8.u0922",				0x040000, 0xa11adb8f, 8 | BRF_SND },           // 14 Samples
+
+	{ "copx-d2.313",				0x080000, 0x7c52581b, 9 | BRF_PRG | BRF_ESS }, // 15 COP ROM
+
+	{ "s68e08.844",					0x000200, 0x96f7646e, 0 | BRF_GRA },           // 16 Priority PROM?
+};
+
+STD_ROM_PICK(denjinmk)
+STD_ROM_FN(denjinmk)
+
+struct BurnDriver BurnDrvDenjinmk = {
+	"denjinmk", NULL, NULL, NULL, "1994",
+	"Denjin Makai (set 1)\0", NULL, "Winkysoft (Banpresto license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, denjinmkRomInfo, denjinmkRomName, NULL, NULL, NULL, NULL, DenjinmkInputInfo, DenjinmkDIPInfo,
+	DenjinmkInit, DrvExit, DrvYM2151Frame, DenjinmkDraw, DrvScan, &DrvRecalc, 0x801,
+	320, 256, 4, 3
+};
+
+
+// Denjin Makai (set 2)
+
+static struct BurnRomInfo denjinmkaRomDesc[] = {
 	{ "rom1.025",					0x040000, 0x44a648e8, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
 	{ "rom2.024",					0x040000, 0xe5ee8fe0, 1 | BRF_PRG | BRF_ESS }, //  1
 	{ "rom3.026",					0x040000, 0x781b942e, 1 | BRF_PRG | BRF_ESS }, //  2
@@ -2234,15 +2318,15 @@ static struct BurnRomInfo denjinmkRomDesc[] = {
 	{ "s68e08.844",					0x000200, 0x96f7646e, 0 | BRF_GRA },           // 16 Priority PROM?
 };
 
-STD_ROM_PICK(denjinmk)
-STD_ROM_FN(denjinmk)
+STD_ROM_PICK(denjinmka)
+STD_ROM_FN(denjinmka)
 
-struct BurnDriver BurnDrvDenjinmk = {
-	"denjinmk", NULL, NULL, NULL, "1994",
-	"Denjin Makai\0", NULL, "Winkysoft (Banpresto license)", "Miscellaneous",
+struct BurnDriver BurnDrvDenjinmka = {
+	"denjinmka", "denjinmk", NULL, NULL, "1994",
+	"Denjin Makai (set 2)\0", NULL, "Winkysoft (Banpresto license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
-	NULL, denjinmkRomInfo, denjinmkRomName, NULL, NULL, NULL, NULL, DenjinmkInputInfo, DenjinmkDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, denjinmkaRomInfo, denjinmkaRomName, NULL, NULL, NULL, NULL, DenjinmkInputInfo, DenjinmkDIPInfo,
 	DenjinmkInit, DrvExit, DrvYM2151Frame, DenjinmkDraw, DrvScan, &DrvRecalc, 0x801,
 	320, 256, 4, 3
 };

@@ -76,7 +76,7 @@
 #include "neocdlist.h"
 
 // #undef USE_SPEEDHACKS
-
+static INT32 NEO_RASTER_IRQ_TWEAK = 0; // spinmast prefers offset of 3 here.
 // #define LOG_IRQ
 // #define LOG_DRAW
 
@@ -212,6 +212,7 @@ static INT32 nSoundPrevReply;
 #endif
 
 INT32 s1945pmode = 0;
+INT32 cphdmode = 0;
 INT32 fatfury2mode = 0; // fatfury2 protection active (fatfury2, ssideki)
 INT32 vlinermode = 0;
 
@@ -264,7 +265,9 @@ UINT8 *Neo68KBIOS, *NeoZ80BIOS;
 static UINT8 *Neo68KRAM, *NeoZ80RAM, *NeoNVRAM, *NeoNVRAM2, *NeoMemoryCard;
 
 static UINT32 nSpriteSize[MAX_SLOT] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-static UINT32 nCodeSize[MAX_SLOT] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+static UINT32 nCodeSize[MAX_SLOT] = { 0, 0, 0, 0, 0, 0, 0, 0 }, nAllCodeSize = 0;
+
+static UINT32 nIpsDefine = 0, nProgSize = 0, nExtraProgSize = 0;
 
 UINT8* NeoGraphicsRAM;
 
@@ -340,6 +343,16 @@ static INT32 nNeoCDMode = 0;
 static INT32 nff0002 = 0;
 static INT32 nff0004 = 0;
 
+
+static inline INT32 NeoCurrentScanline()
+{
+	return (SekCurrentScanline() + 248) % 264;
+}
+
+static inline INT32 NeoCurrentScanlineOffset()
+{
+	return SekTotalCycles() - SekCurrentScanline() * nSekCyclesScanline;
+}
 
 bool IsNeoGeoCD() {
 	//return (nNeoSystemType & NEO_SYS_CD);
@@ -439,11 +452,11 @@ static INT32 NeoLoad68KBIOS(INT32 nNewBIOS)
 	}
 
 	if ((BurnDrvGetHardwareCode() & HARDWARE_SNK_CONTROLMASK) == HARDWARE_SNK_TRACKBALL) {
-		nNewBIOS = 34;
+		nNewBIOS = 35;
 	}
 
 	if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_DEDICATED_PCB) {
-		nNewBIOS = 35;
+		nNewBIOS = 36;
 	}
 
 	// The most recent MVS models doesn't have a Z80 BIOS
@@ -473,17 +486,6 @@ static INT32 NeoLoad68KBIOS(INT32 nNewBIOS)
 	NeoUpdateVector();
 
 	return 0;
-}
-
-static INT32 FindType(const char* pName)
-{
-	INT32 i = 0;
-
-	while (pName[i] && pName[i] != '-' && pName[i] != '_') {
-		i++;
-	}
-
-	return i + 1;
 }
 
 static INT32 FindROMs(UINT32 nType, INT32* pOffset, INT32* pNum)
@@ -534,6 +536,14 @@ static INT32 LoadRoms()
 	NeoGameInfo info;
 	NeoGameInfo* pInfo = &info;
 
+	UINT32 nSpriteRomSize = 0;
+
+	if (bDoIpsPatch) {
+		nIpsDefine = GetIpsDrvDefine();
+		nProgSize = IPS_PROG_VALUE(nIpsDefine);
+		nExtraProgSize = IPS_NEOP3_VALUE(nIpsDefine);
+	}
+
 	{
 		struct BurnRomInfo ri;
 
@@ -579,6 +589,11 @@ static INT32 LoadRoms()
 		}
 		nCodeSize[nNeoActiveSlot] = (nCodeSize[nNeoActiveSlot] + 0x0FFFFF) & ~0x0FFFFF;
 
+		// Extend the length of[nCodeSize] to fit the ips of the hack games.
+		if (bDoIpsPatch)
+			nCodeSize[nNeoActiveSlot] = (nProgSize >= nCodeSize[nNeoActiveSlot]) ? nProgSize + nExtraProgSize : nCodeSize[nNeoActiveSlot] += (0x200000 << 1);
+
+		nAllCodeSize = nCodeSize[nNeoActiveSlot];
 		nSpriteSize[nNeoActiveSlot] = 0;
 
 		if (BurnDrvGetHardwareCode() & HARDWARE_SNK_SWAPC) {
@@ -615,6 +630,12 @@ static INT32 LoadRoms()
 			nSpriteSize[nNeoActiveSlot] += ri.nLen * 2;
 		}
 
+		// Keep actual ROMs length.
+		nSpriteRomSize = nSpriteSize[nNeoActiveSlot];
+
+		// The [nSpriteSize] here corresponds to the setting of [nBuf1Len] in [neogeo.cpp].
+		if (bDoIpsPatch) nSpriteSize[nNeoActiveSlot] += (0x800000 << 2);
+
 		{
 			UINT32 nSize = nSpriteSize[nNeoActiveSlot];
 //			if (nSize > 0x4000000) {
@@ -636,54 +657,28 @@ static INT32 LoadRoms()
 		}
 
 		nYM2610ADPCMASize[nNeoActiveSlot] = nYM2610ADPCMBSize[nNeoActiveSlot] = 0;
-		if (pInfo->nADPCMOffset >= 0)	{
-			char* pName;
-			BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset);
-			BurnDrvGetRomName(&pName, pInfo->nADPCMOffset, 0);
-			nYM2610ADPCMASize[nNeoActiveSlot] = ri.nLen;
-
-			if (pInfo->nADPCMANum > 1) {
-				BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset + pInfo->nADPCMANum - 1);
-				BurnDrvGetRomName(&pName, pInfo->nADPCMOffset + pInfo->nADPCMANum - 1, 0);
-				if (pInfo->nADPCMBNum == 0) {
-					nYM2610ADPCMASize[nNeoActiveSlot] *= pName[FindType(pName) + 1] - '1';
-				} else {
-					nYM2610ADPCMASize[nNeoActiveSlot] *= pName[FindType(pName) + 2] - '1';
-				}
-				nYM2610ADPCMASize[nNeoActiveSlot] += ri.nLen;
+		if (pInfo->nADPCMOffset >= 0) {
+			// Add up the ADPCM-A & ADPCM-B roms
+			INT32 nMaxSize = 0;
+			for (INT32 i = 0; i < pInfo->nADPCMANum; i++) {
+				BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset + i);
+				if (ri.nLen > nMaxSize) nMaxSize = ri.nLen;
 			}
+			nYM2610ADPCMASize[nNeoActiveSlot] += bDoIpsPatch ? (nMaxSize << 1) * pInfo->nADPCMANum : nMaxSize * pInfo->nADPCMANum;
 
-			if (pInfo->nADPCMBNum) {
-				BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset + pInfo->nADPCMANum);
-				nYM2610ADPCMBSize[nNeoActiveSlot] = ri.nLen * (pInfo->nADPCMBNum - 1);
-				BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset + pInfo->nADPCMANum + pInfo->nADPCMBNum - 1);
+			for (INT32 i = 0; i < pInfo->nADPCMBNum; i++) {
+				BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset + pInfo->nADPCMANum + i);
 				nYM2610ADPCMBSize[nNeoActiveSlot] += ri.nLen;
 			}
-		}
-	}
+			if (bDoIpsPatch) nYM2610ADPCMBSize[nNeoActiveSlot] *= 2;
 
-	if (!strcmp("kof2k4se", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x800000;
-	if (!strcmp("cphd", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x4000000;
-	if (!strcmp("kf2k4pls", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x800000;
-	if (!strcmp("svcboot", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x400000;
-	if (!strcmp("svcplus", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x400000;
-	if (!strcmp("svcplusa", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x400000;
-	if (!strcmp("svcsplus", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] += 0x400000;
-	if (!strcmp("pbobblenb", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x380000;
-	if (!strcmp("alpham2p", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x200000;
-	if (!strcmp("burningfp", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x180000;
-	if (!strcmp("burningfpa", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x200000;
-	if (!strcmp("gpilotsp", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x180000;
-	if (!strcmp("lresortp", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x200000;
-	if (!strcmp("kotm2p", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x300000;
-	if (!strcmp("viewpoinp", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x400000;
-	if (!strcmp("sbp", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x800000;
-	if (!strcmp("lasthope", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x600000;
-	if (!strcmp("mslug5w", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x10002f0;
-	if (!strcmp("kof2k2omg", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x1000000;
-	if (!strcmp("kof2k2omg9b", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x1000000;
-	if (!strcmp("kof2k2omg9", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x1000000;
-	if (!strcmp("kof98pfe", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x1000000;
+			bprintf(0, _T("ADPCM-A Size:\t%x\n"), nYM2610ADPCMASize[nNeoActiveSlot]);
+			bprintf(0, _T("ADPCM-B Size:\t%x\n"), nYM2610ADPCMBSize[nNeoActiveSlot]);
+		}
+
+		// pbobblenb starts loading roms at @ 0x200000 (0x180000 bytes @ 0x200000)
+		if (!strcmp("pbobblenb", BurnDrvGetTextA(DRV_NAME))) nYM2610ADPCMASize[nNeoActiveSlot] = 0x380000;
+	}
 
 //	bprintf(PRINT_NORMAL, _T("%x\n"), nYM2610ADPCMASize[nNeoActiveSlot]);
 
@@ -716,7 +711,8 @@ static INT32 LoadRoms()
 	}
 
 	// Load sprite data
-	NeoLoadSprites(pInfo->nSpriteOffset, pInfo->nSpriteNum, NeoSpriteROM[nNeoActiveSlot], nSpriteSize[nNeoActiveSlot]);
+	// nSpriteRomSize - Make sure the 6C ROMs are decrypted correctly (NeoCMCDecrypt).
+	NeoLoadSprites(pInfo->nSpriteOffset, pInfo->nSpriteNum, NeoSpriteROM[nNeoActiveSlot], nSpriteRomSize);
 
 	NeoTextROM[nNeoActiveSlot] = (UINT8*)BurnMalloc(nNeoTextROMSize[nNeoActiveSlot]);
 	if (NeoTextROM[nNeoActiveSlot] == NULL) {
@@ -729,9 +725,29 @@ static INT32 LoadRoms()
 			// Load S ROM data
 			BurnLoadRom(NeoTextROM[nNeoActiveSlot], pInfo->nTextOffset, 1);
 		} else {
+			// With IPS, The true length of [nSpriteSize] will be obtained.
+			UINT32 nRealSpriteSize = nSpriteRomSize;
+
+			if (bDoIpsPatch) {
+				// If the expansion bytes of 0x800000 << 2 are all empty data,
+				// then [SpriteSize] will subtract the expansion part to ensure that [NeoTextROM] is obtained correctly.
+				for (INT32 i = 0; i < (0x800000 << 2); i += (0x800000 << 1)) {
+
+					// Move the pointer to the starting position of the capacity expansion.
+					UINT8* pFind = NeoSpriteROM[nNeoActiveSlot] + nSpriteRomSize + i;
+
+					for (INT32 j = 0; j < ((0x800000 << 1) / sizeof(UINT32)); j++) {
+						// Data has been found
+						if (0 != ((UINT32*)pFind)[j]) {
+							nRealSpriteSize += (0x800000 << 1);
+							break;
+						}
+					}
+				}
+			}
 			// Extract data from the end of C ROMS
 			BurnUpdateProgress(0.0, _T("Decrypting text layer graphics...")/*, BST_DECRYPT_TXT*/, 0);
-			NeoCMCExtractSData(NeoSpriteROM[nNeoActiveSlot], NeoTextROM[nNeoActiveSlot], nSpriteSize[nNeoActiveSlot], nNeoTextROMSize[nNeoActiveSlot]);
+			NeoCMCExtractSData(NeoSpriteROM[nNeoActiveSlot], NeoTextROM[nNeoActiveSlot], nRealSpriteSize, nNeoTextROMSize[nNeoActiveSlot]);
 
 			if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_DEDICATED_PCB) {
 				for (INT32 i = 0; i < nNeoTextROMSize[nNeoActiveSlot]; i++) {
@@ -779,7 +795,6 @@ static INT32 LoadRoms()
 	NeoDecodeSprites(NeoSpriteROM[nNeoActiveSlot], nSpriteSize[nNeoActiveSlot]);
 
 	if (pInfo->nADPCMANum) {
-		char* pName;
 		struct BurnRomInfo ri;
 		UINT8* pADPCMData;
 
@@ -791,17 +806,11 @@ static INT32 LoadRoms()
 		ri.nType = 0;
 		ri.nLen = 0;
 		BurnDrvGetRomInfo(&ri, pInfo->nADPCMOffset);
-		BurnDrvGetRomName(&pName, pInfo->nADPCMOffset, 0);
 
 		pADPCMData = YM2610ADPCMAROM[nNeoActiveSlot];
 
-		if (strcmp(BurnDrvGetTextA(DRV_NAME), "sbp") != 0) { // not for sbp!
-			// pbobblen needs this (V ROMs are v3 & v4), note aof/wh1/wh1h/kotm2 (V ROMs are v2 & v4)
-			if (pInfo->nADPCMANum == 2 && pName[FindType(pName) + 1] == '3') {
-				pADPCMData += ri.nLen * 2;
-			}
-		}
 		if (!strcmp(BurnDrvGetTextA(DRV_NAME), "pbobblenb")) {
+			// pbobblenb starts loading @ 0x200000
 			pADPCMData = YM2610ADPCMAROM[nNeoActiveSlot] + 0x200000;
  		}
 
@@ -1483,6 +1492,7 @@ INT32 NeoScan(INT32 nAction, INT32* pnMin)
 		SCAN_VAR(nNeoWatchdog);
 #endif
 
+		SCAN_VAR(bZ80BoardROMBankedIn);
 		SCAN_VAR(b68KBoardROMBankedIn);
 		if (nNeoSystemType & NEO_SYS_CART) {
 			SCAN_VAR(bBIOSTextROMEnabled);
@@ -1646,7 +1656,9 @@ INT32 NeoScan(INT32 nAction, INT32* pnMin)
 				NeoSetSystemType();
 			}
 
-			nPrevBurnCPUSpeedAdjust = -1;
+			if (~nAction & ACB_RUNAHEAD) {
+				nPrevBurnCPUSpeedAdjust = -1;
+			}
 		}
 	}
 
@@ -1821,7 +1833,7 @@ static inline void NeoIRQUpdate(UINT16 wordValue)
 {
 	nIRQAcknowledge |= (wordValue & 7);
 
-//	bprintf(PRINT_NORMAL, _T("  - IRQ Ack -> %02X (at line %3i).\n"), nIRQAcknowledge, SekCurrentScanline());
+//	bprintf(PRINT_NORMAL, _T("  - IRQ Ack -> %02X (at line %3i).\n"), nIRQAcknowledge, NeoCurrentScanline());
 
 	if ((nIRQAcknowledge & 7) == 7) {
 		SekSetIRQLine(7, CPU_IRQSTATUS_NONE);
@@ -1842,7 +1854,7 @@ static inline void NeoCDIRQUpdate(UINT8 byteValue)
 {
 	nIRQAcknowledge |= (byteValue & 0x38);
 
-//	bprintf(PRINT_NORMAL, _T("  - IRQ Ack -> %02X (CD, at line %3i).\n"), nIRQAcknowledge, SekCurrentScanline());
+//	bprintf(PRINT_NORMAL, _T("  - IRQ Ack -> %02X (CD, at line %3i).\n"), nIRQAcknowledge, NeoCurrentScanline());
 
 	if ((nIRQAcknowledge & 0x3F) == 0x3F) {
 		SekSetIRQLine(7, CPU_IRQSTATUS_NONE);
@@ -1874,6 +1886,7 @@ static inline void NeoCDIRQUpdate(UINT8 byteValue)
 
 static inline void SendSoundCommand(const UINT8 nCommand)
 {
+	if (ZetGetActive() == -1) return;
 //	bprintf(PRINT_NORMAL, _T("  - Sound command sent (0x%02X).\n"), nCommand);
 
 	neogeoSynchroniseZ80(0);
@@ -1887,7 +1900,8 @@ static inline void SendSoundCommand(const UINT8 nCommand)
 	// notes: value too high, and breaks nam1975 voice after coin up
 	// stikers 1945p: goes really slow
 	// pulstar: music/bonus count noise at end of level
-	neogeoSynchroniseZ80(0x24);
+	// cphd: ugh.
+	neogeoSynchroniseZ80((cphdmode) ? 0x64 : 0x24);
 #endif
 }
 
@@ -2069,7 +2083,9 @@ static void WriteIO1(INT32 nOffset, UINT8 byteValue)
 
 		case 0x61:											// Coin lockout chute 1 & input bank select
 //			bprintf(PRINT_NORMAL, _T("  - %sInput bank 0 selected (0x%02X).\n"), byteValue ? _T("Chute 1 coin lockout -> High / ") : _T(""), byteValue);
-			NeoInputBank = NeoInput + 0;
+			if ((nNeoControlConfig & HARDWARE_SNK_4_JOYSTICKS) == HARDWARE_SNK_4_JOYSTICKS) {
+				NeoInputBank = NeoInput + 0;
+			}
 			break;
 		case 0x63:											// Coin lockout chute 2
 //			bprintf(PRINT_NORMAL, _T("  - Chute 2 coin lockout -> High (0x%02X).\n"), byteValue);
@@ -2091,7 +2107,9 @@ static void WriteIO1(INT32 nOffset, UINT8 byteValue)
 
 		case 0xE1:
 //			bprintf(PRINT_NORMAL, _T("  - Chute 2 coin lockout -> Low / Input bank 1 selected (0x%02X).\n"), byteValue);
-			NeoInputBank = NeoInput + 8;
+			if ((nNeoControlConfig & HARDWARE_SNK_4_JOYSTICKS) == HARDWARE_SNK_4_JOYSTICKS) {
+				NeoInputBank = NeoInput + 8;
+			}
 			break;
 		case 0xE3:
 //			bprintf(PRINT_NORMAL, _T("  - Chute 2 coin lockout -> Low (0x%02X).\n"), byteValue);
@@ -2118,7 +2136,7 @@ static void WriteIO2(INT32 nOffset, UINT8 byteValue)
 			if (nNeoSystemType & NEO_SYS_CART) {
 				NeoRecalcPalette = 1;
 				bNeoDarkenPalette = (nOffset == 0x11) ? 1 : 0;
-				//bprintf(PRINT_NORMAL, _T("  - Darken Palette %X (0x%02X, at scanline %i).\n"), bNeoDarkenPalette, byteValue, SekCurrentScanline());
+				//bprintf(PRINT_NORMAL, _T("  - Darken Palette %X (0x%02X, at scanline %i).\n"), bNeoDarkenPalette, byteValue, NeoCurrentScanline());
 			}
 			break;
 
@@ -2207,7 +2225,7 @@ static void __fastcall neogeoWriteByte(UINT32 sekAddress, UINT8 byteValue)
 	switch (sekAddress & 0xFF0000) {
 		case 0x300000:
 			if ((sekAddress & 1) == 1) {
-//				bprintf(PRINT_NORMAL, "  - Watchdog timer reset (%02X, at scanline %i)\n", byteValue, SekCurrentScanline());
+//				bprintf(PRINT_NORMAL, "  - Watchdog timer reset (%02X, at scanline %i)\n", byteValue, NeoCurrentScanline());
 
 #if defined EMULATE_WATCHDOG
 				nNeoWatchdog = -SekTotalCycles();
@@ -2261,13 +2279,13 @@ static UINT16 __fastcall neogeoReadWordVideo(UINT32 sekAddress)
 			return (UINT16)(nNeoGraphicsModulo >> 1);
 
 		case 0x06:										// Display status
-//			bprintf(PRINT_NORMAL, "  - Display status read, line: %3i, anim: %i\n", SekCurrentScanline(), nNeoSpriteFrame);
+//			bprintf(PRINT_NORMAL, "  - Display status read, line: %3i, anim: %i\n", NeoCurrentScanline(), nNeoSpriteFrame);
 
 #if 1 && !defined USE_SPEEDHACKS
 			bForcePartialRender |= bForceUpdateOnStatusRead;
 #endif
 
-			return ((SekCurrentScanline() + nScanlineOffset) << 7) | 0 | (nNeoSpriteFrame & 7);
+			return ((NeoCurrentScanline() + nScanlineOffset) << 7) | 0 | (nNeoSpriteFrame & 7);
 	}
 
 	return 0;
@@ -2326,7 +2344,7 @@ static void __fastcall neogeoWriteWordVideo(UINT32 sekAddress, UINT16 wordValue)
 			if ((nIRQControl & 0x10) == 0 && wordValue & 0x10) {
 
 #if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("  - IRQ enabled  (at line %3i, IRQControl: 0x%02X).\n"), SekCurrentScanline(), wordValue & 0xFF);
+				bprintf(PRINT_NORMAL, _T("  - IRQ enabled  (at line %3i, IRQControl: 0x%02X).\n"), NeoCurrentScanline(), wordValue & 0xFF);
 #endif
 
 				if (nIRQCycles < nCyclesSegment) {
@@ -2336,13 +2354,13 @@ static void __fastcall neogeoWriteWordVideo(UINT32 sekAddress, UINT16 wordValue)
 
 #if 0 || defined LOG_IRQ
 			if (nIRQControl & 0x10 && (wordValue & 0x10) == 0) {
-				bprintf(PRINT_NORMAL, _T("  - IRQ disabled (at line %3i, IRQControl: 0x%02X).\n"), SekCurrentScanline(), wordValue & 0xFF);
+				bprintf(PRINT_NORMAL, _T("  - IRQ disabled (at line %3i, IRQControl: 0x%02X).\n"), NeoCurrentScanline(), wordValue & 0xFF);
 			}
 #endif
 
 			nIRQControl = wordValue;
 //			bprintf(PRINT_NORMAL, _T("  - Autoanim speed -> 0x%02X\n"), wordValue >> 8);
-//			bprintf(PRINT_NORMAL, _T("  - IRQ control register -> 0x%02X (at line %3i)\n"), wordValue & 0xFF, SekCurrentScanline());
+//			bprintf(PRINT_NORMAL, _T("  - IRQ control register -> 0x%02X (at line %3i)\n"), wordValue & 0xFF, NeoCurrentScanline());
 			break;
 		}
 
@@ -2357,7 +2375,7 @@ static void __fastcall neogeoWriteWordVideo(UINT32 sekAddress, UINT16 wordValue)
 			nIRQOffset = (nIRQOffset & 0xFFFF0000) | wordValue;
 
 #if 0 || defined LOG_IRQ
-			bprintf(PRINT_NORMAL, _T("  - IRQ offs -> 0x%08X (at line %3i, IRQControl: 0x%02X).\n"), nIRQOffset, SekCurrentScanline(), nIRQControl);
+			bprintf(PRINT_NORMAL, _T("  - IRQ offs -> 0x%08X (at line %3i, IRQControl: 0x%02X).\n"), nIRQOffset, NeoCurrentScanline(), nIRQControl);
 #endif
 
 			if (nIRQControl & 0x20) {
@@ -2370,7 +2388,7 @@ static void __fastcall neogeoWriteWordVideo(UINT32 sekAddress, UINT16 wordValue)
 				nIRQCycles = SekTotalCycles() + NeoConvertIRQPosition(nIRQOffset + 8);
 
 #if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("    IRQ Line -> %3i (at line %3i, relative).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
+				bprintf(PRINT_NORMAL, _T("    IRQ Line -> %3i (at line %3i, relative).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
 #endif
 
 				if (nIRQCycles < 0) {
@@ -2393,19 +2411,14 @@ static void __fastcall neogeoWriteWordVideo(UINT32 sekAddress, UINT16 wordValue)
 
 static void __fastcall neogeoWriteByteVideo(UINT32 sekAddress, UINT8 byteValue)
 {
-//	bprintf(PRINT_NORMAL, _T("  - Attempt to write byte 0x%06X ->   0x%02X\n"), sekAddress, byteValue);
+	//bprintf(PRINT_NORMAL, _T("  - Attempt to write byte 0x%06X ->   0x%02X\n"), sekAddress, byteValue);
 
-#if 1
-	if ((sekAddress & 1) == 0) {
-		neogeoWriteWordVideo(sekAddress, byteValue);
-	}
-#else
-	if (sekAddress & 1) {
-		neogeoWriteWordVideo(sekAddress, byteValue);
+	if (~sekAddress & 1) {
+		//bprintf(0, _T("neogeoWriteByteVideo(%x, %x): let's byte-smearing mode!\n"), sekAddress, byteValue);
+		neogeoWriteWordVideo(sekAddress, byteValue | (byteValue << 8));
 	} else {
-		neogeoWriteWordVideo(sekAddress, (byteValue << 8));
+		//bprintf(0, _T("neogeoWriteByteVideo(%x, %x): illegal access.\n"), sekAddress, byteValue);
 	}
-#endif
 
 #if 1 && defined USE_SPEEDHACKS
 	bForcePartialRender |= bForceUpdateOnStatusRead;
@@ -3584,7 +3597,7 @@ static UINT16 __fastcall neogeoReadWordTransfer(UINT32 sekAddress)
 
 	switch (nActiveTransferArea) {
 		case 0:							// Sprites
-			return *((UINT16*)(NeoSpriteRAM + nSpriteTransferBank + (sekAddress & 0xFFFFF)));
+			return BURN_ENDIAN_SWAP_INT16(*((UINT16*)(NeoSpriteRAM + nSpriteTransferBank + (sekAddress & 0xFFFFF))));
 			break;
 		case 1:							// ADPCM
 			return 0xFF00 | YM2610ADPCMAROM[nNeoActiveSlot][nADPCMTransferBank + ((sekAddress & 0x0FFFFF) >> 1)];
@@ -3642,7 +3655,7 @@ static void __fastcall neogeoWriteWordTransfer(UINT32 sekAddress, UINT16 wordVal
 
 	switch (nActiveTransferArea) {
 		case 0:							// Sprites
-			*((UINT16*)(NeoSpriteRAM + nSpriteTransferBank + (sekAddress & 0xFFFFF))) = wordValue;
+			*((UINT16*)(NeoSpriteRAM + nSpriteTransferBank + (sekAddress & 0xFFFFF))) = BURN_ENDIAN_SWAP_INT16(wordValue);
 			NeoCDOBJBankUpdate[nSpriteTransferBank >> 20] = true;
 			break;
 		case 1:							// ADPCM
@@ -3662,10 +3675,10 @@ static void __fastcall neogeoWriteWordTransfer(UINT32 sekAddress, UINT16 wordVal
 static UINT16 __fastcall neogeoCDReadWord68KProgram(UINT32 sekAddress)
 {
 	if (sekAddress < 0x80 && NeoCDVectorSwitch == 0) {
-		return *((UINT16*)(NeoVectorActive + sekAddress));
+		return BURN_ENDIAN_SWAP_INT16(*((UINT16*)(NeoVectorActive + sekAddress)));
 	}
 
-	return *((UINT16*)(Neo68KROMActive + sekAddress));
+	return BURN_ENDIAN_SWAP_INT16(*((UINT16*)(Neo68KROMActive + sekAddress)));
 }
 
 static UINT8 __fastcall neogeoCDReadByte68KProgram(UINT32 sekAddress)
@@ -3684,7 +3697,7 @@ static INT32 neogeoReset()
 	if (nNeoSystemType & NEO_SYS_CART) {
 		NeoLoad68KBIOS(NeoSystem & 0x3f);
 
-		if (nBIOS == -1 || nBIOS == 33) {
+		if (nBIOS == -1 || nBIOS == 34) {
 			// Write system type & region code into BIOS ROM
 			*((UINT16*)(Neo68KBIOS + 0x000400)) = BURN_ENDIAN_SWAP_INT16(((NeoSystem & 4) << 13) | (NeoSystem & 0x03));
 		}
@@ -3711,21 +3724,22 @@ static INT32 neogeoReset()
 				case 0x10: { bprintf(PRINT_IMPORTANT, _T("Emulating using AES Asia BIOS\n")); break; }
 				case 0x11: { bprintf(PRINT_IMPORTANT, _T("Emulating using Development Kit BIOS\n")); break; }
 				case 0x12: { bprintf(PRINT_IMPORTANT, _T("Emulating using Deck ver. 6 (Git Ver 1.3) BIOS\n")); break; }
-				case 0x13: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.3 BIOS\n")); break; }
-				case 0x14: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.2 BIOS\n")); break; }
-				case 0x15: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.1 BIOS\n")); break; }
-				case 0x16: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.0 BIOS\n")); break; }
-				case 0x17: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.3 BIOS\n")); break; }
-				case 0x18: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.3 (alt) BIOS\n")); break; }
-				case 0x19: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.2 BIOS\n")); break; }
-				case 0x1a: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.1 BIOS\n")); break; }
-				case 0x1b: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.0 BIOS\n")); break; }
-				case 0x1c: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.3 BIOS\n")); break; }
-				case 0x1d: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.2 BIOS\n")); break; }
-				case 0x1e: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.2 (alt) BIOS\n")); break; }
-				case 0x1f: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.1 BIOS\n")); break; }
-				case 0x20: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.0 BIOS\n")); break; }
-				case 0x21: { bprintf(PRINT_IMPORTANT, _T("Emulating using NeoOpen BIOS v0.1 beta BIOS\n")); break; }
+				case 0x13: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 4.0 BIOS\n")); break; }
+				case 0x14: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.3 BIOS\n")); break; }
+				case 0x15: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.2 BIOS\n")); break; }
+				case 0x16: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.1 BIOS\n")); break; }
+				case 0x17: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 3.0 BIOS\n")); break; }
+				case 0x18: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.3 BIOS\n")); break; }
+				case 0x19: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.3 (alt) BIOS\n")); break; }
+				case 0x1a: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.2 BIOS\n")); break; }
+				case 0x1b: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.1 BIOS\n")); break; }
+				case 0x1c: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 2.0 BIOS\n")); break; }
+				case 0x1d: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.3 BIOS\n")); break; }
+				case 0x1e: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.2 BIOS\n")); break; }
+				case 0x1f: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.2 (alt) BIOS\n")); break; }
+				case 0x20: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.1 BIOS\n")); break; }
+				case 0x21: { bprintf(PRINT_IMPORTANT, _T("Emulating using Universe BIOS ver. 1.0 BIOS\n")); break; }
+				case 0x22: { bprintf(PRINT_IMPORTANT, _T("Emulating using NeoOpen BIOS v0.1 beta BIOS\n")); break; }
 			}
 		}
 
@@ -4066,6 +4080,10 @@ static INT32 NeoInitCommon()
 		}
 	}
 
+	// Mapping extra rom.
+	if (bDoIpsPatch && ((nProgSize + nExtraProgSize) == nAllCodeSize))
+		SekMapMemory(Neo68KROMActive + nProgSize, 0x900000, 0x900000 + nExtraProgSize - 1, MAP_ROM);
+
 	ZetClose();
 	SekClose();
 
@@ -4078,6 +4096,8 @@ static INT32 NeoInitCommon()
 #if defined RASTER_KLUDGE
 	nScanlineOffset = 0xF8;									// correct as verified on MVS hardware
 #endif
+
+	NEO_RASTER_IRQ_TWEAK = 0;
 
 	// These games rely on reading the line counter for synchronising raster effects
 	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "mosyougi")) {
@@ -4093,6 +4113,12 @@ static INT32 NeoInitCommon()
 	}
 	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "zedblade")) {
 		bRenderLineByLine = true;
+	}
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "crswd2bl")) {
+		bRenderLineByLine = true;
+	}
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "spinmast")) {
+		NEO_RASTER_IRQ_TWEAK = 3; // fix glitches along the bottom of screen in the water level.
 	}
 
 	//if (!strcmp(BurnDrvGetTextA(DRV_NAME), "neocdz")) {
@@ -4289,25 +4315,25 @@ INT32 NeoInit()
 	}
 
 	if (nNeoSystemType & NEO_SYS_PCB) {
-		BurnLoadRom(Neo68KBIOS, 0x00080 +     35, 1);
+		BurnLoadRom(Neo68KBIOS, 0x00080 +     36, 1);
 	}
 
 	if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_MVS) {
-		BurnLoadRom(NeoZ80BIOS,		0x00000 + 36, 1);
-		BurnLoadRom(NeoTextROMBIOS,	0x00000 + 37, 1);
-		BurnLoadRom(NeoZoomROM,		0x00000 + 38, 1);
+		BurnLoadRom(NeoZ80BIOS,		0x00000 + 37, 1);
+		BurnLoadRom(NeoTextROMBIOS,	0x00000 + 38, 1);
+		BurnLoadRom(NeoZoomROM,		0x00000 + 39, 1);
 	} else {
 
 		// Still load the Z80 BIOS & text layer data for AES systems, since it might be switched to MVS later
 
 		if (nNeoSystemType & NEO_SYS_PCB) {
 			bZ80BIOS = false;
-			BurnLoadRom(NeoTextROMBIOS,	0x00080 + 37, 1);
-			BurnLoadRom(NeoZoomROM,		0x00080 + 38, 1);
+			BurnLoadRom(NeoTextROMBIOS,	0x00080 + 38, 1);
+			BurnLoadRom(NeoZoomROM,		0x00080 + 39, 1);
 		} else {
-			BurnLoadRom(NeoZ80BIOS,		0x00080 + 36, 1);
-			BurnLoadRom(NeoTextROMBIOS,	0x00080 + 37, 1);
-			BurnLoadRom(NeoZoomROM,		0x00080 + 38, 1);
+			BurnLoadRom(NeoZ80BIOS,		0x00080 + 37, 1);
+			BurnLoadRom(NeoTextROMBIOS,	0x00080 + 38, 1);
+			BurnLoadRom(NeoZoomROM,		0x00080 + 39, 1);
 		}
 	}
 	BurnUpdateProgress(0.0, _T("Preprocessing text layer graphics...")/*, BST_PROCESS_TXT*/, 0);
@@ -4471,6 +4497,7 @@ INT32 NeoExit()
 	NeoCDInfo_Exit();
 
 	s1945pmode = 0;
+	cphdmode = 0;
 	fatfury2mode = 0;
 	vlinermode = 0;
 
@@ -4794,12 +4821,6 @@ INT32 NeoFrame()
 	bRenderImage = false;
 	bForceUpdateOnStatusRead = false;
 
-	if (pBurnDraw) {
-		NeoUpdatePalette();											// Update the palette
-		NeoClearScreen();
-	}
-	nSliceEnd = 0x10;
-
 	SekNewFrame();
 	ZetNewFrame();
 
@@ -4813,7 +4834,8 @@ INT32 NeoFrame()
 	nuPD4990ATicks = nCyclesExtra[0];
 
 	// Run 68000
-	nCyclesSegment = nSekCyclesScanline * 24;
+	// Do scanlines: [248, 263] == [248, 264)
+	nCyclesSegment = nSekCyclesScanline * 16;
 	while (SekTotalCycles() < nCyclesSegment) {
 
 		if ((nIRQControl & 0x10) && (nIRQCycles < NO_IRQ_PENDING) && (SekTotalCycles() >= nIRQCycles)) {
@@ -4822,14 +4844,51 @@ INT32 NeoFrame()
 			SekSetIRQLine(nScanlineIRQ, CPU_IRQSTATUS_ACK);
 
 #if 0 || defined LOG_IRQ
-			bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), SekCurrentScanline(), SekTotalCycles() - SekCurrentScanline() * nSekCyclesScanline);
+			bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), NeoCurrentScanline(), NeoCurrentScanlineOffset());
 #endif
 
 			if (nIRQControl & 0x80) {
 				nIRQCycles += NeoConvertIRQPosition(nIRQOffset + 1);
 
 #if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
+				bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
+#endif
+
+			}
+		}
+
+		if (nCyclesSegment < nIRQCycles || SekTotalCycles() >= nIRQCycles) {
+			NeoSekRun(nCyclesSegment - SekTotalCycles());
+		} else {
+			NeoSekRun(nIRQCycles - SekTotalCycles());
+		}
+	}
+
+	if ((nIRQControl & 8) == 0) {
+		if (++nSpriteFrameTimer > nSpriteFrameSpeed) {
+			nSpriteFrameTimer = 0;
+			nNeoSpriteFrame++;
+		}
+	}
+
+	// Do scanlines: [  0,  23] == [  0,  24)
+	nCyclesSegment = nSekCyclesScanline * (16 + 24);
+	while (SekTotalCycles() < nCyclesSegment) {
+
+		if ((nIRQControl & 0x10) && (nIRQCycles < NO_IRQ_PENDING) && (SekTotalCycles() >= nIRQCycles)) {
+
+			nIRQAcknowledge &= ~2;
+			SekSetIRQLine(nScanlineIRQ, CPU_IRQSTATUS_ACK);
+
+#if 0 || defined LOG_IRQ
+			bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), NeoCurrentScanline(), NeoCurrentScanlineOffset());
+#endif
+
+			if (nIRQControl & 0x80) {
+				nIRQCycles += NeoConvertIRQPosition(nIRQOffset + 1);
+
+#if 0 || defined LOG_IRQ
+				bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
 #endif
 
 			}
@@ -4852,7 +4911,7 @@ INT32 NeoFrame()
 			case 0x0061: bRenderMode = 1; break; // ssideki2 (cd)
 			case 0x0200: bRenderMode = 1; break; // turfmasters (cd)
 		}
-		bRenderLineByLine = (!bNeoCDIRQEnabled) && bRenderMode;
+		bRenderLineByLine = /*(!bNeoCDIRQEnabled) &&*/ bRenderMode;
 	}
 
 	bRenderImage = pBurnDraw != NULL && bNeoEnableGraphics;
@@ -4860,8 +4919,14 @@ INT32 NeoFrame()
 	bForcePartialRender = false;
 
 	// Display starts here
+	if (pBurnDraw) {
+		NeoUpdatePalette();											// Update the palette
+		NeoClearScreen();
+	}
+	nSliceEnd = 0x10;
 
-	nCyclesVBlank = nSekCyclesScanline * 248;
+	// Do scanlines: [ 24, 247] == [ 24, 248)
+	nCyclesVBlank = nCyclesTotal[0];
 	if (bRenderLineByLine) {
 		INT32 nLastIRQ = nIRQCycles - 1;
 		while (SekTotalCycles() < nCyclesVBlank) {
@@ -4871,13 +4936,13 @@ INT32 NeoFrame()
 				nIRQAcknowledge &= ~2;
 				SekSetIRQLine(nScanlineIRQ, CPU_IRQSTATUS_ACK);
 #if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), SekCurrentScanline(), SekTotalCycles() - SekCurrentScanline() * nSekCyclesScanline);
+				bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), NeoCurrentScanline(), NeoCurrentScanlineOffset());
 #endif
 
 				if (nIRQControl & 0x80) {
 					nIRQCycles += NeoConvertIRQPosition(nIRQOffset + 1);
 #if 0 || defined LOG_IRQ
-					bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
+					bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
 #endif
 
 				}
@@ -4885,12 +4950,12 @@ INT32 NeoFrame()
 				bForcePartialRender = bRenderImage;
 				if (bForcePartialRender) {
 					nSliceStart = nSliceEnd;
-					nSliceEnd = SekCurrentScanline() - 5;
+					nSliceEnd = NeoCurrentScanline() - 5 + NEO_RASTER_IRQ_TWEAK;
 				}
 			} else {
 				if (bForcePartialRender) {
 					nSliceStart = nSliceEnd;
-					nSliceEnd = SekCurrentScanline() - 6;
+					nSliceEnd = NeoCurrentScanline() - 6 + NEO_RASTER_IRQ_TWEAK;
 				}
 			}
 
@@ -4930,14 +4995,14 @@ INT32 NeoFrame()
 				SekSetIRQLine(nScanlineIRQ, CPU_IRQSTATUS_ACK);
 
 #if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), SekCurrentScanline(), SekTotalCycles() - SekCurrentScanline() * nSekCyclesScanline);
+				bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), NeoCurrentScanline(), NeoCurrentScanlineOffset());
 #endif
 
 				if (nIRQControl & 0x80) {
 					nIRQCycles += NeoConvertIRQPosition(nIRQOffset + 1);
 
 #if 0 || defined LOG_IRQ
-					bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
+					bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
 #endif
 
 				}
@@ -4951,7 +5016,7 @@ INT32 NeoFrame()
 				if (bForcePartialRender) {
 
 					nSliceStart = nSliceEnd;
-					nSliceEnd = SekCurrentScanline() - 5;
+					nSliceEnd = NeoCurrentScanline() - 5 + NEO_RASTER_IRQ_TWEAK;
 
 					if (nSliceEnd > 240) {
 						nSliceEnd = 240;
@@ -5011,37 +5076,9 @@ INT32 NeoFrame()
 		}
 
 #if 0 || defined LOG_IRQ
-		bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, VBlank).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
+		bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, VBlank).\n"), nIRQCycles / nSekCyclesScanline, NeoCurrentScanline());
 #endif
 
-	}
-
-	nCyclesSegment = nCyclesTotal[0];
-	while (SekTotalCycles() < nCyclesSegment) {
-
-		if ((nIRQControl & 0x10) && (nIRQCycles < NO_IRQ_PENDING) && (SekTotalCycles() >= nIRQCycles)) {
-			nIRQAcknowledge &= ~2;
-			SekSetIRQLine(nScanlineIRQ, CPU_IRQSTATUS_ACK);
-
-#if 0 || defined LOG_IRQ
-			bprintf(PRINT_NORMAL, _T("  - IRQ triggered (line %3i + %3i cycles).\n"), SekCurrentScanline(), SekTotalCycles() - SekCurrentScanline() * nSekCyclesScanline);
-#endif
-
-			if (nIRQControl & 0x80) {
-				nIRQCycles += NeoConvertIRQPosition(nIRQOffset + 1);
-
-#if 0 || defined LOG_IRQ
-				bprintf(PRINT_NORMAL, _T("  - IRQ Line -> %3i (at line %3i, autoload).\n"), nIRQCycles / nSekCyclesScanline, SekCurrentScanline());
-#endif
-
-			}
-		}
-
-		if (nCyclesSegment < nIRQCycles || SekTotalCycles() >= nIRQCycles) {
-			NeoSekRun(nCyclesSegment - SekTotalCycles());
-		} else {
-			NeoSekRun(nIRQCycles - SekTotalCycles());
-		}
 	}
 
 	if (nIRQCycles < NO_IRQ_PENDING) {
@@ -5104,13 +5141,6 @@ INT32 NeoFrame()
 
 	ZetClose();
 	SekClose();
-
-	if ((nIRQControl & 8) == 0) {
-		if (++nSpriteFrameTimer > nSpriteFrameSpeed) {
-			nSpriteFrameTimer = 0;
-			nNeoSpriteFrame++;
-		}
-	}
 
 	if (pBurnSoundOut) {
 		if ((nNeoSystemType & NEO_SYS_CD) && !(LC8951RegistersW[10] & 4))

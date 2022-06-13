@@ -63,11 +63,13 @@ static INT32 DrvReset()
 		*((UINT16*)(CpsReg + 0x4E)) = BURN_ENDIAN_SWAP_INT16(0x0200);
 		*((UINT16*)(CpsReg + 0x50)) = BURN_ENDIAN_SWAP_INT16(nCpsNumScanlines);
 		*((UINT16*)(CpsReg + 0x52)) = BURN_ENDIAN_SWAP_INT16(nCpsNumScanlines);
+
+		// CPS-2 uses Object Banks
+		SekOpen(0);
+		CpsMapObjectBanks(0);
+		SekClose();
 	}
 
-	SekOpen(0);
-	CpsMapObjectBanks(0);
-	SekClose();
 
 	nCpsCyclesExtra = 0;
 
@@ -358,8 +360,9 @@ INT32 Cps1Frame()
 		QsndEndFrame();
 	} else {
 		if (!Cps1DisablePSnd) {
-			PsndSyncZ80(nCpsZ80Cycles);
-			PsmUpdate(nBurnSoundLen);
+			PsndSyncZ80(nCpsZ80Cycles); // sync z80
+			PsndEndFrame();             // end frame (BurnTimer: z80)
+			PsmUpdateEnd();             // render msm6295, ym2151
 			ZetClose();
 		}
 	}
