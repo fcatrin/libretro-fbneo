@@ -4,6 +4,7 @@
 
 /.vs
 /projectfiles/visualstudio-2019/enc_temp_folder
+/.idea
 
 # libretro
 *.so
