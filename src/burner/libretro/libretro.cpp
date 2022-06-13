@@ -117,6 +117,7 @@ INT32 nFireButtons = 0;
 char g_driver_name[128];
 char g_rom_dir[MAX_PATH];
 char g_rom_parent_dir[MAX_PATH];
+char g_samples_dir[MAX_PATH];
 char g_save_dir[MAX_PATH];
 char g_system_dir[MAX_PATH];
 char g_autofs_path[MAX_PATH];

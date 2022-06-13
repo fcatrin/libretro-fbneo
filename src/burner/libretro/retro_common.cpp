@@ -365,10 +365,13 @@ static const struct retro_core_option_v2_definition var_fbneo_neogeo_mode = {
 	"DIPSWITCH"
 };
 
-static const struct retro_core_option_definition var_fbneo_samples_path = {
+static const struct retro_core_option_v2_definition var_fbneo_samples_path = {
 	"fbneo-samples-path",
 	"Samples path",
+	NULL,
 	"Load samples from specific path",
+	NULL,
+	NULL,
 	{
 		{ "default", "Use original samples path" },
 		{ "retrox", "Use RetroX provided samples path" },
