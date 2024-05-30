@@ -26,6 +26,7 @@ extern void BurnGunDrawTarget(INT32 num, INT32 x, INT32 y);
 extern void BurnGunMakeInputs(INT32 num, INT16 x, INT16 y);
 void BurnGunDrawTargets(); // call this after BurnTransferCopy();
 INT32 BurnGunIsActive(); // is the gun system active?
+void BurnGunSetBox(INT32 num, INT32 xmin, INT32 xmax, INT32 ymin, INT32 ymax);
 void BurnGunSetCoords(INT32 player, INT32 x, INT32 y); // manually set the gun coords, for libretro's lightgun emulation
 
 // NOTE: *depreciated* BurnPaddle is now the lowlevel code for BurnTrackball!
@@ -34,7 +35,7 @@ void BurnGunSetCoords(INT32 player, INT32 x, INT32 y); // manually set the gun c
 void BurnPaddleReturn(BurnDialINF &dial, INT32 num, INT32 isB);
 void BurnPaddleGetDial(BurnDialINF &dial, INT32 num, INT32 isB);
 void BurnPaddleSetWrap(INT32 num, INT32 xmin, INT32 xmax, INT32 ymin, INT32 ymax);
-void BurnPaddleMakeInputs(INT32 num, BurnDialINF &dial, INT16 x, INT16 y);
+void BurnPaddleMakeInputs(INT32 num, BurnDialINF &dial, INT32 x, INT32 y);
 #define BurnPaddleInit BurnTrackballInit
 #define BurnPaddleExit BurnGunExit
 #define BurnPaddleScan BurnGunScan
@@ -43,12 +44,13 @@ void BurnPaddleMakeInputs(INT32 num, BurnDialINF &dial, INT16 x, INT16 y);
 // see d_millipede.cpp, d_cabal or d_tempest.cpp for hook-up examples
 
 void BurnTrackballInit(INT32 nNumPlayers);
+void BurnTrackballInit(INT32 nNumPlayers, INT32 nDefault);
 
 #define AXIS_NORMAL 0
 #define AXIS_REVERSED 1
 
 // BurnTrackballFrame() is called at the beginning of a frame.  updates the analog positional status, etc.
-void BurnTrackballFrame(INT32 dev, INT16 PortA, INT16 PortB, INT32 VelocityStart, INT32 VelocityMax);
+void BurnTrackballFrame(INT32 dev, INT32 PortA, INT32 PortB, INT32 VelocityStart, INT32 VelocityMax, INT32 MaxScanlines = -1);
 
 // BurnTrackballUpdate() is called once per frame, sometimes more to translate the velocity to movement (Tempest uses this)
 void BurnTrackballUpdate(INT32 dev);
@@ -72,6 +74,11 @@ UINT16 BurnTrackballReadWord(INT32 dev, INT32 isB);
 UINT16 BurnTrackballReadWord(INT32 dev);
 INT32 BurnTrackballReadSigned(INT32 dev, INT32 isB);
 INT32 BurnTrackballReadSigned(INT32 dev);
+
+// Read scanline-interpolated value (
+UINT8 BurnTrackballReadInterpolated(INT32 dev, INT32 scanline);
+UINT8 BurnTrackballReadInterpolated(INT32 dev, INT32 isB, INT32 scanline);
+
 INT32 BurnTrackballGetDirection(INT32 num, INT32 isB); // -1 backwards (left, down), +1 forward (right, up), 0 idle
 INT32 BurnTrackballGetDirection(INT32 dev);
 INT32 BurnTrackballGetVelocity(INT32 num, INT32 isB);
@@ -81,6 +88,7 @@ INT32 BurnTrackballGetVelocity(INT32 dev);
 void BurnTrackballReadReset(); // all devices
 void BurnTrackballReadReset(INT32 num, INT32 isB);
 void BurnTrackballReadReset(INT32 dev);
+void BurnTrackballSetResetDefault(INT32 nDefault); // default is 0
 
 #define BurnTrackballExit BurnGunExit
 #define BurnTrackballScan BurnGunScan

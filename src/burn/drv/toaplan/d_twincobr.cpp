@@ -229,6 +229,65 @@ STDDIPINFO(Twincobru)
 
 static struct BurnDIPInfo KtigerDIPList[]=
 {
+	{0x13, 0xff, 0xff, 0x00, NULL			},
+	{0x14, 0xff, 0xff, 0x00, NULL			},
+	
+	{0   , 0xfe, 0   ,    2, "Invulnerability"	},
+	{0x13, 0x01, 0x01, 0x01, "On"			},
+	{0x13, 0x01, 0x01, 0x00, "Off"			},
+
+	{0   , 0xfe, 0   ,    2, "Flip Screen"		},
+	{0x13, 0x01, 0x02, 0x00, "Off"			},
+	{0x13, 0x01, 0x02, 0x02, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x13, 0x01, 0x04, 0x00, "Off"			},
+	{0x13, 0x01, 0x04, 0x04, "On"			},
+
+	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
+	{0x13, 0x01, 0x08, 0x08, "Off"			},
+	{0x13, 0x01, 0x08, 0x00, "On"			},
+
+	{0   , 0xfe, 0   ,    4, "Coin A"		},
+	{0x13, 0x01, 0x30, 0x20, "2 Coins 1 Credits"	},
+	{0x13, 0x01, 0x30, 0x00, "1 Coin  1 Credits"	},
+	{0x13, 0x01, 0x30, 0x30, "2 Coins 3 Credits"	},
+	{0x13, 0x01, 0x30, 0x10, "1 Coin  2 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Coin B"		},
+	{0x13, 0x01, 0xc0, 0x80, "2 Coins 1 Credits"	},
+	{0x13, 0x01, 0xc0, 0x00, "1 Coin  1 Credits"	},
+	{0x13, 0x01, 0xc0, 0xc0, "2 Coins 3 Credits"	},
+	{0x13, 0x01, 0xc0, 0x40, "1 Coin  2 Credits"	},
+
+	{0   , 0xfe, 0   ,    4, "Difficulty"		},
+	{0x14, 0x01, 0x03, 0x01, "Easy"			},
+	{0x14, 0x01, 0x03, 0x00, "Normal"		},
+	{0x14, 0x01, 0x03, 0x02, "Hard"			},
+	{0x14, 0x01, 0x03, 0x03, "Very Hard"		},
+
+	{0   , 0xfe, 0   ,    4, "Bonus Life"		},
+	{0x14, 0x01, 0x0c, 0x00, "50k 200k 150k+"	},
+	{0x14, 0x01, 0x0c, 0x04, "70k 270k 200k+"	},
+	{0x14, 0x01, 0x0c, 0x08, "50k Only"		},
+	{0x14, 0x01, 0x0c, 0x0c, "100k Only"		},
+
+	{0   , 0xfe, 0   ,    4, "Lives"		},
+	{0x14, 0x01, 0x30, 0x30, "2"			},
+	{0x14, 0x01, 0x30, 0x00, "3"			},
+	{0x14, 0x01, 0x30, 0x20, "4"			},
+	{0x14, 0x01, 0x30, 0x10, "5"			},
+
+	{0   , 0xfe, 0   ,    2, "Dip Switch Display"	},
+	{0x14, 0x01, 0x40, 0x00, "Off"			},
+	{0x14, 0x01, 0x40, 0x40, "On"			},
+};
+
+STDDIPINFO(Ktiger)
+
+
+static struct BurnDIPInfo KtigeraDIPList[]=
+{
 	{0x13, 0xff, 0xff, 0x01, NULL			},
 	{0x14, 0xff, 0xff, 0x80, NULL			},
 
@@ -287,7 +346,7 @@ static struct BurnDIPInfo KtigerDIPList[]=
 	{0x14, 0x01, 0x80, 0x80, "Yes"			},
 };
 
-STDDIPINFO(Ktiger)
+STDDIPINFO(Ktigera)
 
 
 static struct BurnDIPInfo FsharkDIPList[]=
@@ -853,6 +912,8 @@ static INT32 DrvDoReset()
 
 	fsharkbt_8741 = -1;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -1036,7 +1097,7 @@ static INT32 DrvInit(INT32 game_select, INT32 nibble_mcu)
 		if (BurnLoadRom(DrvGfxROM3 + 0x20000, k++, 1)) return 1;
 		if (BurnLoadRom(DrvGfxROM3 + 0x30000, k++, 1)) return 1;
 	}
-	else if (game_select == 2 || game_select == 3) // gulfwar2, fsharkbt
+	else if (game_select == 2 || game_select == 3 || game_select == 4) // gulfwar2, fsharkbt, fnshark
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x00001,  0, 2)) return 1;
 		if (BurnLoadRom(Drv68KROM  + 0x00000,  1, 2)) return 1;
@@ -1046,9 +1107,24 @@ static INT32 DrvInit(INT32 game_select, INT32 nibble_mcu)
 		if (BurnLoadRom(DrvMCUROM  + 0x00001,  3, 2)) return 1;
 		if (BurnLoadRom(DrvMCUROM  + 0x00000,  4, 2)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM0 + 0x00000,  5, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x04000,  6, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x08000,  7, 1)) return 1;
+		if (game_select == 4)
+		{
+			// first half of those roms is empty
+			UINT8 *tmp = (UINT8*)BurnMalloc(0x08000 * sizeof(UINT8));
+			if (BurnLoadRom(tmp,  5, 1)) return 1;
+			memcpy(DrvGfxROM0 + 0x00000, tmp + 0x04000, 0x04000);
+			if (BurnLoadRom(tmp,  6, 1)) return 1;
+			memcpy(DrvGfxROM0 + 0x04000, tmp + 0x04000, 0x04000);
+			if (BurnLoadRom(tmp,  7, 1)) return 1;
+			memcpy(DrvGfxROM0 + 0x08000, tmp + 0x04000, 0x04000);
+			BurnFree(tmp);
+		}
+		else
+		{
+			if (BurnLoadRom(DrvGfxROM0 + 0x00000,  5, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x04000,  6, 1)) return 1;
+			if (BurnLoadRom(DrvGfxROM0 + 0x08000,  7, 1)) return 1;
+		}
 
 		if (BurnLoadRom(DrvGfxROM1 + 0x00000,  8, 1)) return 1;
 		if (BurnLoadRom(DrvGfxROM1 + 0x10000,  9, 1)) return 1;
@@ -1100,7 +1176,7 @@ static INT32 DrvInit(INT32 game_select, INT32 nibble_mcu)
 	tms32010_rom = (UINT16*)DrvMCUROM;
 
 	BurnYM3812Init(1, 3500000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 3500000);
+	BurnTimerAttach(&ZetConfig, 3500000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	DrvDoReset();
@@ -1319,7 +1395,7 @@ static INT32 DrvFrame()
 			CPU_RUN(2, tms32010);
 		}
 
-		BurnTimerUpdateYM3812((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 
 		if (i == 240) {
 			if (pBurnDraw) {
@@ -1329,14 +1405,12 @@ static INT32 DrvFrame()
 		}
 	}
 
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
+	ZetClose();
+	SekClose();
 
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	SekClose();
 
 	memcpy (DrvSprBuf, DrvSprRAM, 0x1000);
 
@@ -1441,7 +1515,7 @@ struct BurnDriver BurnDrvTwincobr = {
 	"twincobr", NULL, NULL, NULL, "1987",
 	"Twin Cobra (World)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, twincobrRomInfo, twincobrRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, TwincobrDIPInfo,
 	twincobrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -1494,20 +1568,20 @@ struct BurnDriver BurnDrvTwincobru = {
 	"twincobru", "twincobr", NULL, NULL, "1987",
 	"Twin Cobra (US)\0", NULL, "Toaplan / Taito America Corporation (Romstar license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, twincobruRomInfo, twincobruRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, TwincobruDIPInfo,
 	twincobrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
 };
 
 
-// Kyukyoku Tiger (Japan)
+// Kyukyoku Tiger (Japan, 2 player cooperative)
 
 static struct BurnRomInfo ktigerRomDesc[] = {
 	{ "b30_01.7j",		0x10000, 0x07f64d13, 1 | BRF_PRG | BRF_ESS }, //  0 68k code
 	{ "b30_03.7h",		0x10000, 0x41be6978, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "b30_02.8j",		0x08000, 0x1d63e9c4, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "b30_04.8h",		0x08000, 0x03957a30, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "b30_02.8j",		0x08000, 0x321e2be6, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "b30_04.8h",		0x08000, 0xc3f960ff, 1 | BRF_PRG | BRF_ESS }, //  3
 
 	{ "b30_05.4f",		0x08000, 0x1a8f1e10, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 code
 
@@ -1548,23 +1622,23 @@ static INT32 ktigerInit()
 }
 
 struct BurnDriver BurnDrvKtiger = {
-	"ktiger", "twincobr", NULL, NULL, "1987",
-	"Kyukyoku Tiger (Japan)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
+	"ktiger", "twincobr", NULL, NULL, "1989",
+	"Kyukyoku Tiger (Japan, 2 player cooperative)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, ktigerRomInfo, ktigerRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, KtigerDIPInfo,
 	ktigerInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
 };
 
 
-// Kyukyoku Tiger (Japan, 2 Players)
+// Kyukyoku Tiger (Japan, 2 player alternate)
 
-static struct BurnRomInfo ktiger2pRomDesc[] = {
+static struct BurnRomInfo ktigeraRomDesc[] = {
 	{ "b30_01.7j",		0x10000, 0x07f64d13, 1 | BRF_PRG | BRF_ESS }, //  0 68k code
 	{ "b30_03.7h",		0x10000, 0x41be6978, 1 | BRF_PRG | BRF_ESS }, //  1
-	{ "b30_02_2p.8j",	0x08000, 0x321e2be6, 1 | BRF_PRG | BRF_ESS }, //  2
-	{ "b30_04_2p.8h",	0x08000, 0xc3f960ff, 1 | BRF_PRG | BRF_ESS }, //  3
+	{ "b30_02.8j",		0x08000, 0x1d63e9c4, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "b30_04.8h",		0x08000, 0x03957a30, 1 | BRF_PRG | BRF_ESS }, //  3
 
 	{ "b30_05.4f",		0x08000, 0x1a8f1e10, 2 | BRF_PRG | BRF_ESS }, //  4 Z80 code
 
@@ -1596,15 +1670,15 @@ static struct BurnRomInfo ktiger2pRomDesc[] = {
 	{ "82s123.b24",		0x00020, 0x4fb5df2a, 0 | BRF_OPT },           // 25
 };
 
-STD_ROM_PICK(ktiger2p)
-STD_ROM_FN(ktiger2p)
+STD_ROM_PICK(ktigera)
+STD_ROM_FN(ktigera)
 
-struct BurnDriver BurnDrvktiger2p = {
-	"ktiger2p", "twincobr", NULL, NULL, "2021",
-	"Kyukyoku Tiger (Japan, 2 Players)\0", NULL, "M2 Co., Ltd.", "Miscellaneous",
+struct BurnDriver BurnDrvKtigera = {
+	"ktigera", "twincobr", NULL, NULL, "1987",
+	"Kyukyoku Tiger (Japan, 2 player alternate)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
-	NULL, ktiger2pRomInfo, ktiger2pRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, TwincobruDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	NULL, ktigeraRomInfo, ktigeraRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, KtigeraDIPInfo,
 	ktigerInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
 };
@@ -1643,7 +1717,7 @@ static struct BurnRomInfo fsharkRomDesc[] = {
 	{ "b02-21.b5",		0x00100, 0xa50cef09, 0 | BRF_OPT },           // 20
 	{ "b02-19.b2",		0x00020, 0xf72482db, 0 | BRF_OPT },           // 21
 	{ "b02-22.c21",		0x00020, 0xbc88cced, 0 | BRF_OPT },           // 22
-	{ "b02-23.f28",		0x00020, 0x4fb5df2a, 0 | BRF_OPT },           // 33
+	{ "b02-23.f28",		0x00020, 0x4fb5df2a, 0 | BRF_OPT },           // 23
 };
 
 STD_ROM_PICK(fshark)
@@ -1663,7 +1737,7 @@ struct BurnDriver BurnDrvFshark = {
 	"fshark", NULL, NULL, NULL, "1987",
 	"Flying Shark (World)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, fsharkRomInfo, fsharkRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, FsharkDIPInfo,
 	fsharkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -1713,7 +1787,7 @@ struct BurnDriver BurnDrvSkyshark = {
 	"skyshark", "fshark", NULL, NULL, "1987",
 	"Sky Shark (US, set 1)\0", NULL, "Toaplan / Taito America Corporation (Romstar license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, skysharkRomInfo, skysharkRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, SkysharkDIPInfo,
 	fsharkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -1763,7 +1837,7 @@ struct BurnDriver BurnDrvSkysharka = {
 	"skysharka", "fshark", NULL, NULL, "1987",
 	"Sky Shark (US, set 2)\0", NULL, "Toaplan / Taito America Corporation (Romstar license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, skysharkaRomInfo, skysharkaRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, SkysharkDIPInfo,
 	fsharkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -1813,9 +1887,125 @@ struct BurnDriver BurnDrvHishouza = {
 	"hishouza", "fshark", NULL, NULL, "1987",
 	"Hishou Zame (Japan)\0", NULL, "Toaplan / Taito Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, hishouzaRomInfo, hishouzaRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, HishouzaDIPInfo,
 	fsharkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
+	240, 320, 3, 4
+};
+
+
+// Flying Shark (World, bootleg)
+// the ROM contents of the bootleg are the same of the original, the difference is the TMS320C10 code which is in external PROMs instead of internal
+
+static struct BurnRomInfo fsharkbRomDesc[] = {
+	{ "b02_18-1.m8",	0x10000, 0x04739e02, 1 | BRF_PRG | BRF_ESS }, //  0 68k code
+	{ "b02_17-1.p8",	0x10000, 0xfd6ef7a8, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "b02_16.l5",		0x08000, 0xcdd1a153, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 code
+
+	{ "82s137-1.mcu",	0x00400, 0xcc5b3f53, 3 | BRF_PRG | BRF_ESS }, //  5 tms32010 code
+	{ "82s137-2.mcu",	0x00400, 0x47351d55, 3 | BRF_PRG | BRF_ESS }, //  6
+	{ "82s137-3.mcu",	0x00400, 0x70b537b9, 3 | BRF_PRG | BRF_ESS }, //  7
+	{ "82s137-4.mcu",	0x00400, 0x6edb2de8, 3 | BRF_PRG | BRF_ESS }, //  8
+	{ "82s137-5.mcu",	0x00400, 0xf35b978a, 3 | BRF_PRG | BRF_ESS }, //  9
+	{ "82s137-6.mcu",	0x00400, 0x0459e51b, 3 | BRF_PRG | BRF_ESS }, // 10
+	{ "82s137-7.mcu",	0x00400, 0xcbf3184b, 3 | BRF_PRG | BRF_ESS }, // 11
+	{ "82s137-8.mcu",	0x00400, 0x8246a05c, 3 | BRF_PRG | BRF_ESS }, // 12
+
+	{ "b02_07-1.h11",	0x04000, 0xe669f80e, 4 | BRF_GRA },           // 13 Text characters
+	{ "b02_06-1.h10",	0x04000, 0x5e53ae47, 4 | BRF_GRA },           // 14
+	{ "b02_05-1.h8",	0x04000, 0xa8b05bd0, 4 | BRF_GRA },           // 15
+
+	{ "b02_12.h20",		0x08000, 0x733b9997, 5 | BRF_GRA },           // 16 Background tiles
+	{ "b02_15.h24",		0x08000, 0x8b70ef32, 5 | BRF_GRA },           // 17
+	{ "b02_14.h23",		0x08000, 0xf711ba7d, 5 | BRF_GRA },           // 18
+	{ "b02_13.h21",		0x08000, 0x62532cd3, 5 | BRF_GRA },           // 19
+
+	{ "b02_08.h13",		0x08000, 0xef0cf49c, 6 | BRF_GRA },           // 20 Foreground tiles
+	{ "b02_11.h18",		0x08000, 0xf5799422, 6 | BRF_GRA },           // 21
+	{ "b02_10.h16",		0x08000, 0x4bd099ff, 6 | BRF_GRA },           // 22
+	{ "b02_09.h15",		0x08000, 0x230f1582, 6 | BRF_GRA },           // 23
+
+	{ "b02_01.d15",		0x10000, 0x2234b424, 7 | BRF_GRA },           // 24 Sprites
+	{ "b02_02.d16",		0x10000, 0x30d4c9a8, 7 | BRF_GRA },           // 25
+	{ "b02_03.d17",		0x10000, 0x64f3d88f, 7 | BRF_GRA },           // 26
+	{ "b02_04.d20",		0x10000, 0x3b23a9fc, 7 | BRF_GRA },           // 27
+
+	{ "b02-20.b4",		0x00100, 0x24e7d62f, 0 | BRF_OPT },           // 28 Proms (not used)
+	{ "b02-21.b5",		0x00100, 0xa50cef09, 0 | BRF_OPT },           // 29
+	{ "b02-19.b2",		0x00020, 0xf72482db, 0 | BRF_OPT },           // 30
+	{ "b02-22.c21",		0x00020, 0xbc88cced, 0 | BRF_OPT },           // 31
+	{ "b02-23.f28",		0x00020, 0x4fb5df2a, 0 | BRF_OPT },           // 32
+};
+
+STD_ROM_PICK(fsharkb)
+STD_ROM_FN(fsharkb)
+
+struct BurnDriver BurnDrvFsharkb = {
+	"fsharkb", "fshark", NULL, NULL, "1987",
+	"Flying Shark (World, bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	NULL, fsharkbRomInfo, fsharkbRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, FsharkDIPInfo,
+	fsharknibInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
+	240, 320, 3, 4
+};
+
+
+// Hishou Zame (Japan, bootleg)
+// The ROM contents of the bootleg are the same of the original, the difference is the TMS320C10 code which is in external PROMs instead of internal
+
+static struct BurnRomInfo hishouzabRomDesc[] = {
+	{ "b02_18.m8",		0x10000, 0x4444bb94, 1 | BRF_PRG | BRF_ESS }, //  0 68k code
+	{ "b02_17.p8",		0x10000, 0xcdac7228, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "b02_16.l5",		0x08000, 0xcdd1a153, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 code
+
+	{ "dsp-a1.bpr",		0x00400, 0x45d4d1b1, 3 | BRF_PRG | BRF_ESS }, //  3 TMS32010 code
+	{ "dsp-a2.bpr",		0x00400, 0xedd227fa, 3 | BRF_PRG | BRF_ESS }, //  4
+	{ "dsp-a3.bpr",		0x00400, 0xdf88e79b, 3 | BRF_PRG | BRF_ESS }, //  5
+	{ "dsp-a4.bpr",		0x00400, 0xa2094a7f, 3 | BRF_PRG | BRF_ESS }, //  6
+	{ "dsp-b5.bpr",		0x00400, 0x85ca5d47, 3 | BRF_PRG | BRF_ESS }, //  7
+	{ "dsp-b6.bpr",		0x00400, 0x81816b2c, 3 | BRF_PRG | BRF_ESS }, //  8
+	{ "dsp-b7.bpr",		0x00400, 0xe87540cd, 3 | BRF_PRG | BRF_ESS }, //  9
+	{ "dsp-b8.bpr",		0x00400, 0xd3c16c5c, 3 | BRF_PRG | BRF_ESS }, // 10
+
+	{ "b02-07.h11",		0x04000, 0xc13a775e, 4 | BRF_GRA },           //  4 Text characters
+	{ "b02-06.h10",		0x04000, 0xad5f1371, 4 | BRF_GRA },           //  5
+	{ "b02-05.h8",		0x04000, 0x85a7bff6, 4 | BRF_GRA },           //  6
+
+	{ "b02_12.h20",		0x08000, 0x733b9997, 5 | BRF_GRA },           //  7 Background tiles
+	{ "b02_15.h24",		0x08000, 0x8b70ef32, 5 | BRF_GRA },           //  8
+	{ "b02_14.h23",		0x08000, 0xf711ba7d, 5 | BRF_GRA },           //  9
+	{ "b02_13.h21",		0x08000, 0x62532cd3, 5 | BRF_GRA },           // 10
+
+	{ "b02_08.h13",		0x08000, 0xef0cf49c, 6 | BRF_GRA },           // 11 Foreground tiles
+	{ "b02_11.h18",		0x08000, 0xf5799422, 6 | BRF_GRA },           // 12
+	{ "b02_10.h16",		0x08000, 0x4bd099ff, 6 | BRF_GRA },           // 13
+	{ "b02_09.h15",		0x08000, 0x230f1582, 6 | BRF_GRA },           // 14
+
+	{ "b02_01.d15",		0x10000, 0x2234b424, 7 | BRF_GRA },           // 15 Sprites
+	{ "b02_02.d16",		0x10000, 0x30d4c9a8, 7 | BRF_GRA },           // 16
+	{ "b02_03.d17",		0x10000, 0x64f3d88f, 7 | BRF_GRA },           // 17
+	{ "b02_04.d20",		0x10000, 0x3b23a9fc, 7 | BRF_GRA },           // 18
+
+	{ "b02-20.b4",		0x00100, 0x24e7d62f, 0 | BRF_OPT },           // 19 Proms (not used)
+	{ "b02-21.b5",		0x00100, 0xa50cef09, 0 | BRF_OPT },           // 20
+	{ "b02-19.b2",		0x00020, 0xf72482db, 0 | BRF_OPT },           // 21
+	{ "b02-22.c21",		0x00020, 0xbc88cced, 0 | BRF_OPT },           // 22
+	{ "b02-23.f28",		0x00020, 0x4fb5df2a, 0 | BRF_OPT },           // 23
+};
+
+STD_ROM_PICK(hishouzab)
+STD_ROM_FN(hishouzab)
+
+struct BurnDriver BurnDrvHishouzab = {
+	"hishouzab", "fshark", NULL, NULL, "1987",
+	"Hishou Zame (Japan, bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	NULL, hishouzabRomInfo, hishouzabRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, HishouzaDIPInfo,
+	fsharknibInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
 };
 
@@ -1870,7 +2060,7 @@ struct BurnDriver BurnDrvFsharkbt = {
 	"fsharkbt", "fshark", NULL, NULL, "1987",
 	"Flying Shark (bootleg with 8741)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, fsharkbtRomInfo, fsharkbtRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, SkysharkDIPInfo,
 	fsharknibInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -1888,9 +2078,9 @@ static struct BurnRomInfo fnsharkRomDesc[] = {
 	{ "82s191_r.bin",	0x00800, 0x5b96ae3f, 7 | BRF_PRG | BRF_ESS }, //  3 TMS32010 code
 	{ "82s191_l.bin",	0x00800, 0xd5dfc8dd, 7 | BRF_PRG | BRF_ESS }, //  4
 
-	{ "7.ic119",		0x04000, 0xa0f8890d, 3 | BRF_GRA },           //  5 Text characters
-	{ "6.ic120",		0x04000, 0xc5bfca95, 3 | BRF_GRA },           //  6
-	{ "5.ic121",		0x04000, 0xb8c370bc, 3 | BRF_GRA },           //  7
+	{ "7.bin",			0x08000, 0xd2b05463, 3 | BRF_GRA },           //  5 Text characters
+	{ "6.bin",			0x08000, 0xb7f717fb, 3 | BRF_GRA },           //  6
+	{ "5.bin",			0x08000, 0xca8badd2, 3 | BRF_GRA },           //  7
 
 	{ "b.ic114",		0x08000, 0x733b9997, 4 | BRF_GRA },           //  8 Background tiles
 	{ "e.ic111",		0x08000, 0x8b70ef32, 4 | BRF_GRA },           //  9
@@ -1917,18 +2107,18 @@ static struct BurnRomInfo fnsharkRomDesc[] = {
 STD_ROM_PICK(fnshark)
 STD_ROM_FN(fnshark)
 
-static INT32 bootInit()
+static INT32 fnsharkInit()
 {
-	return DrvInit(3, 1);
+	return DrvInit(4, 0);
 }
 
 struct BurnDriver BurnDrvFnshark = {
 	"fnshark", "fshark", NULL, NULL, "1987",
 	"Flyin' Shark (bootleg of Hishou Zame)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, fnsharkRomInfo, fnsharkRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, HishouzaDIPInfo,
-	bootInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
+	fnsharkInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
 };
 
@@ -1975,11 +2165,16 @@ static struct BurnRomInfo skysharkbRomDesc[] = {
 STD_ROM_PICK(skysharkb)
 STD_ROM_FN(skysharkb)
 
+static INT32 bootInit()
+{
+	return DrvInit(3, 1);
+}
+
 struct BurnDriver BurnDrvSkysharkb = {
 	"skysharkb", "fshark", NULL, NULL, "1987",
 	"Sky Shark (bootleg)\0", NULL, "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, skysharkbRomInfo, skysharkbRomName, NULL, NULL, NULL, NULL, FsharkInputInfo, HishouzaDIPInfo,
 	bootInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -2035,7 +2230,7 @@ struct BurnDriver BurnDrvGulfwar2 = {
 	"gulfwar2", NULL, NULL, NULL, "1991",
 	"Gulf War II (set 1)\0", NULL, "Comad", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, gulfwar2RomInfo, gulfwar2RomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, TwincobrDIPInfo,
 	gulfwar2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x700,
 	240, 320, 3, 4
@@ -2086,7 +2281,7 @@ struct BurnDriver BurnDrvGulfwar2a = {
 	"gulfwar2a", "gulfwar2", NULL, NULL, "1991",
 	"Gulf War II (set 2)\0", NULL, "Comad", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TOAPLAN_MISC, GBF_VERSHOOT, 0,
 	NULL, gulfwar2aRomInfo, gulfwar2aRomName, NULL, NULL, NULL, NULL, TwincobrInputInfo, TwincobrDIPInfo,
 	gulfwar2Init, DrvExit, DrvFrame, DrvDraw, NULL, &DrvRecalc, 0x700,
 	240, 320, 3, 4

@@ -115,6 +115,7 @@ extern bool bAlwaysCreateSupportFolders;
 extern bool bAutoLoadGameList;
 
 extern bool bQuietLoading;
+extern bool bShonkyProfileMode;
 
 extern bool bNoChangeNumLock;
 extern bool bMonitorAutoCheck;
@@ -132,6 +133,7 @@ char *utf8_from_astring(const CHAR *s);
 
 WCHAR *wstring_from_utf8(const char *s);
 char *utf8_from_wstring(const WCHAR *s);
+void tcharstrreplace(TCHAR *pszSRBuffer, const TCHAR *pszFind, const TCHAR *pszReplace);
 
 #ifdef _UNICODE
 #define tstring_from_utf8 wstring_from_utf8
@@ -171,6 +173,8 @@ void BurnerDoGameListLocalisation();
 void BurnerExitGameListLocalisation();
 int FBALocaliseGamelistLoadTemplate();
 int FBALocaliseGamelistCreateTemplate();
+
+INT32 BurnDrvSetFullNameW(TCHAR* szName, INT32 i);
 
 // popup_win32.cpp
 enum FBAPopupType { MT_NONE = 0, MT_ERROR, MT_WARNING, MT_INFO };
@@ -238,8 +242,14 @@ extern bool bBurnGunDrawReticles;
 extern int bRunPause;
 extern int bAltPause;
 extern int bAlwaysDrawFrames;
+extern int nSlowMo;
 //extern INT32 bRunAhead;  // in burn.h! (partially platform agnostic feature)
 extern int kNetGame;
+extern int k_player_id;
+extern int k_numplayers;
+extern int k_bLoadNetgame;
+extern char k_game_str[255];
+
 int RunIdle();
 int RunFrame(int bDraw, int bPause);
 int RunMessageLoop();
@@ -266,11 +276,12 @@ void SetPauseMode(bool bPause);
 int ActivateChat();
 void DeActivateChat();
 int BurnerLoadDriver(TCHAR *szDriverName);
-int StartFromReset(TCHAR *szDriverName);
+int StartFromReset(TCHAR *szDriverName, bool bLoadSram);
 void PausedRedraw(void);
 INT32 is_netgame_or_recording();
 void ScrnInitLua();
 void ScrnExitLua();
+char* DecorateKailleraGameName(UINT32 nBurnDrv);
 
 // menu.cpp
 #define UM_DISPLAYPOPUP (WM_USER + 0x0100)
@@ -301,6 +312,8 @@ void MenuDestroy();
 int SetMenuPriority();
 void MenuUpdate();
 void MenuUpdateVolume();
+void MenuUpdateSlowMo();
+
 void CreateArcaderesItem();
 void MenuEnableItems();
 bool MenuHandleKeyboard(MSG*);
@@ -344,8 +357,8 @@ extern TCHAR szNeoCDGamesDir[MAX_PATH];
 
 HBITMAP ImageToBitmap(HWND hwnd, IMAGE* img);
 HBITMAP PNGLoadBitmap(HWND hWnd, FILE* fp, int nWidth, int nHeight, int nPreset);
-HBITMAP PNGLoadBitmapBuffer(HWND hWnd, unsigned char* buffer, int bufferLength, int nWidth, int nHeight, int nPreset);
 HBITMAP LoadBitmap(HWND hWnd, FILE* fp, int nWidth, int nHeight, int nPreset);
+int NeoCDList_CheckISO(TCHAR* pszFile, void (*pfEntryCallBack)(INT32, TCHAR*));
 
 // cona.cpp
 extern int nIniVersion;
@@ -488,12 +501,11 @@ int DebugCreate();
 int PaletteViewerDialogCreate(HWND hParentWND);
 
 // ips_manager.cpp
-extern int nIpsSelectedLanguage;
-int GetIpsNumPatches();
+extern INT32 nIpsSelectedLanguage;
+INT32 GetIpsNumPatches();
 void LoadIpsActivePatches();
-int GetIpsNumActivePatches();
-int IpsManagerCreate(HWND hParentWND);
-void IpsPatchExit();
+INT32 GetIpsNumActivePatches();
+INT32 IpsManagerCreate(HWND hParentWND);
 
 // localise_download.cpp
 int LocaliseDownloadCreate(HWND hParentWND);

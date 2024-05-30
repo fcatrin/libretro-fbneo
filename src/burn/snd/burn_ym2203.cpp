@@ -30,25 +30,9 @@ static double YM2203RightVolumes[4 * MAX_YM2203];
 
 INT32 bYM2203UseSeperateVolumes; // support custom Taito panning hardware
 
-static void stupid_timer_hack()
+static void increment_timer_frame()
 {
-	// only 1 person knows the reasoning behind this hack, and we fired him.
-	// TOFIX/TODO: figure out what's going on here.
-
 	dTime += 100.0 / nBurnFPS;
-}
-
-// ----------------------------------------------------------------------------
-// Dummy functions
-
-static void YM2203UpdateDummy(INT16*, INT32)
-{
-	return;
-}
-
-static INT32 YM2203StreamCallbackDummy(INT32)
-{
-	return 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -315,7 +299,7 @@ static void YM2203UpdateResample(INT16* pSoundBuf, INT32 nSegmentEnd)
 		nYM2203Position = nExtraSamples;
 		nAY8910Position = nExtraSamples;
 
-		stupid_timer_hack();
+		increment_timer_frame();
 	}
 }
 
@@ -531,7 +515,7 @@ static void YM2203UpdateNormal(INT16* pSoundBuf, INT32 nSegmentEnd)
 		nYM2203Position = nExtraSamples;
 		nAY8910Position = nExtraSamples;
 
-		stupid_timer_hack();
+		increment_timer_frame();
 	}
 }
 
@@ -609,18 +593,7 @@ INT32 BurnYM2203Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback
 	
 	if (num > MAX_YM2203) num = MAX_YM2203;
 	
-	BurnTimerInit(&YM2203TimerOver, GetTimeCallback);
-	if (nBurnSoundRate <= 0) {
-		BurnYM2203StreamCallback = YM2203StreamCallbackDummy;
-
-		BurnYM2203Update = YM2203UpdateDummy;
-
-		for (INT32 i = 0; i < num; i++) {
-			AY8910InitYM(i, nClockFrequency, 11025, NULL, NULL, NULL, NULL, BurnAY8910UpdateRequest);
-		}
-		YM2203Init(num, nClockFrequency, 11025, &BurnOPNTimerCallback, IRQCallback);
-		return 0;
-	}
+	INT32 timer_chipbase = BurnTimerInit(&YM2203TimerOver, GetTimeCallback, num);
 
 	BurnYM2203StreamCallback = StreamCallback;
 
@@ -636,18 +609,20 @@ INT32 BurnYM2203Init(INT32 num, INT32 nClockFrequency, FM_IRQHANDLER IRQCallback
 			nBurnYM2203SoundRate = nBurnSoundRate;
 
 		BurnYM2203Update = YM2203UpdateResample;
-		nSampleSize = (UINT32)nBurnYM2203SoundRate * (1 << 16) / nBurnSoundRate;
+		if (nBurnSoundRate) nSampleSize = (UINT32)nBurnYM2203SoundRate * (1 << 16) / nBurnSoundRate;
 
     } else {
 		nBurnYM2203SoundRate = nBurnSoundRate;
 		BurnYM2203Update = YM2203UpdateNormal;
 	}
 
+	if (!nBurnYM2203SoundRate) nBurnYM2203SoundRate = 44100;
+
 	for (INT32 i = 0; i < num; i++) {
 		AY8910InitYM(i, nClockFrequency, nBurnYM2203SoundRate, NULL, NULL, NULL, NULL, BurnAY8910UpdateRequest);
 	}
 	
-	YM2203Init(num, nClockFrequency, nBurnYM2203SoundRate, &BurnOPNTimerCallback, IRQCallback);
+	YM2203Init(num, timer_chipbase, nClockFrequency, nBurnYM2203SoundRate, &BurnOPNTimerCallback, IRQCallback);
 
 	pBuffer = (INT16*)BurnMalloc(4096 * 4 * num * sizeof(INT16));
 	memset(pBuffer, 0, 4096 * 4 * num * sizeof(INT16));

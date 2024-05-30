@@ -56,9 +56,10 @@
 #include "tms32010.h"
 
 
-#ifndef INLINE
-#define INLINE static inline
+#ifdef INLINE
+#undef INLINE
 #endif
+#define INLINE static inline
 
 static INT32 addr_mask;
 
@@ -905,6 +906,13 @@ int tms32010Run(int cycles)
 
 	R.cycles_start = 0;
 	R.icount = 0;
+
+	return cycles;
+}
+
+int tms32010Idle(int cycles)
+{
+	R.total_cycles + cycles;
 
 	return cycles;
 }

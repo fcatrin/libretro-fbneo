@@ -1,11 +1,9 @@
-// FB Alpha Metro driver module
+// FB Neo Metro driver module
 // Based on MAME driver by Luca Elia and David Haywood
 
 /*
 	Tofix:
- 		Sky alert priorities
- 		blzntrnd roz offset
-
+		?
 
  	Needs porting:
 		dokyusei	(ym2413+msm6295 sound)
@@ -68,6 +66,7 @@ static INT32 vblank_bit = 0;
 static INT32 irq_line = 1;
 static INT32 blitter_bit = 0;
 static INT32 main_cpu_cycles = 12000000 / 60;
+static INT32 main_cpu_hz = 12000000;
 static INT32 ymf278bint = 0;
 static INT32 has_zoom = 0;
 
@@ -3046,19 +3045,6 @@ static void __fastcall vmetal_write_word(UINT32 address, UINT16 data)
 	bprintf(0, _T("ww %x  %x\n"), address, data);
 }
 
-
-static UINT8 __fastcall vmetal_read_byte(UINT32 address)
-{
-	switch (address)
-	{
-		case 0x400001:
-			return MSM6295Read(0);
-	}
-	bprintf(0, _T("rb %x\n"), address);
-
-	return 0;
-}
-
 #define read_dip(dip) (((DrvDips[0] & (1 << (dip-1))) ? 0x40 : 0) | ((DrvDips[1] & (1 << (dip-1))) ? 0x80 : 0))
 
 static UINT16 __fastcall vmetal_read_word(UINT32 address)
@@ -3109,6 +3095,16 @@ static UINT16 __fastcall vmetal_read_word(UINT32 address)
 
 		case 0x31fffc:
 			return read_dip(1);
+
+		case 0x30fffe:
+		case 0x317ffe:
+		case 0x31bffe:
+		case 0x31dffe:
+		case 0x31effe:
+		case 0x31f7fe:
+		case 0x31fbfe:
+		case 0x31fdfe:
+			return 0xffff;
 	}
 
 	bprintf(0, _T("rw %x\n"), address);
@@ -3117,6 +3113,21 @@ static UINT16 __fastcall vmetal_read_word(UINT32 address)
 }
 
 #undef read_dip
+
+static UINT8 __fastcall vmetal_read_byte(UINT32 address)
+{
+	switch (address)
+	{
+		case 0x400001:
+			return MSM6295Read(0);
+	}
+
+	return vmetal_read_word(address & ~1) >> ((~address & 1) * 8);
+
+	bprintf(0, _T("rb %x\n"), address);
+
+	return 0;
+}
 
 static void z80_bankswitch(INT32 data)
 {
@@ -3181,7 +3192,7 @@ static void pGstrik2_roz_callback(INT32 , UINT16 *ram, INT32 *code, INT32 *color
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
 {
 	SekSetIRQLine(2, nStatus ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
-	SekRun(100); // lame hack for overlapped irq's causing the ymf278b timer to die
+	SekRun(1); // lame hack for overlapped irq's causing the ymf278b timer to die (msgogo intro)
 }
 
 static void blzntrndFMIRQHandler(INT32, INT32 nStatus)
@@ -3259,6 +3270,8 @@ static INT32 DrvDoReset()
 	updportA_data = 0;
 	updportB_data = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -3300,7 +3313,7 @@ static INT32 MemIndex()
 
 static void metro_common_map_ram(UINT32 chip_address, INT32 main_ram_address, INT32 has_8bpp, INT32 has_16x16)
 {
-	i4x00_init(chip_address, DrvGfxROM, DrvGfxROM0, graphics_length, metro_irqcause_w, metro_irqcause_r, metro_soundlatch_w, has_8bpp, has_16x16);
+	i4x00_init(main_cpu_hz, chip_address, DrvGfxROM, DrvGfxROM0, graphics_length, metro_irqcause_w, metro_irqcause_r, metro_soundlatch_w, has_8bpp, has_16x16);
 
 	if (main_ram_address == -1) return;
 
@@ -3415,8 +3428,9 @@ static INT32 blzntrndInit()
 	K053936Init(0, DrvK053936RAM, 0x40000, 256 * 8, 512 * 8, pBlzntrnd_roz_callback);
 	K053936SetOffset(0, -69-8, -21);
 
-	i4x00_set_offsets(8, 8, 8);
+	i4x00_set_offsets(0, 0, 0);
 	i4x00_set_extrachip_callback(blzntrnd_zoomchip_draw);
+	i4x00_set_blazing();
 
 	vblank_bit = 0;
 	irq_line = 1;
@@ -3790,7 +3804,7 @@ static INT32 common_type1_init(INT32 video_type, INT32 gfx_len, INT32 load_roms,
 	}
 	SekClose();
 
-	sound_system = sound_type;
+	sound_system = sound_type & 0x0f;
 
 	if (sound_system == 2)
 	{
@@ -3803,10 +3817,10 @@ static INT32 common_type1_init(INT32 video_type, INT32 gfx_len, INT32 load_roms,
 		upd7810SetWritePortHandler(metro_upd7810_write_port);
 
 		BurnYM2413Init(3579545);
-		BurnYM2413SetAllRoutes(1.40, BURN_SND_ROUTE_BOTH);
+		BurnYM2413SetAllRoutes((sound_type & 0x10) ? 10.80 : 4.80, BURN_SND_ROUTE_BOTH);
 
 		MSM6295Init(0, 1056000 / 132, 1);
-		MSM6295SetRoute(0, 0.25, BURN_SND_ROUTE_BOTH);
+		MSM6295SetRoute(0, 0.50, BURN_SND_ROUTE_BOTH);
 	}
 
 	if (sound_system == 5)
@@ -3925,6 +3939,7 @@ static void lastfortMapCallback()
 static INT32 lastfortInit()
 {
 	main_cpu_cycles = 12000000 / 58;
+	main_cpu_hz = 12000000;
 
 	return common_type1_init(4100, 0x200000, 1, lastfortMapCallback, NULL, 2/*udp*/);
 }
@@ -3941,6 +3956,7 @@ static void lastforgMapCallback()
 static INT32 lastforgInit()
 {
 	main_cpu_cycles = 12000000 / 58;
+	main_cpu_hz = 12000000;
 
 	return common_type1_init(4100, 0x200000, 2, lastforgMapCallback, NULL, 2/*udp*/);
 }
@@ -3965,7 +3981,7 @@ static void dharmaRomCallback()
 
 static INT32 dharmaInit()
 {
-	return common_type1_init(4200, 0x200000, 2, dharmaMapCallback, dharmaRomCallback, 2/*udp*/);
+	return common_type1_init(4200, 0x200000, 2, dharmaMapCallback, dharmaRomCallback, 2 | 0x10/*udp*/);
 }
 
 static INT32 dharmajInit()
@@ -3984,6 +4000,9 @@ static void pururunMapCallback()
 
 static INT32 pururunInit()
 {
+	main_cpu_cycles = (INT32)((double)12000000 / 58.2328);
+	main_cpu_hz = 12000000;
+
 	return common_type1_init(4200, 0x200000, 2, pururunMapCallback, NULL, 5/*udp + ym2151*/);
 }
 
@@ -4037,6 +4056,7 @@ static void daitoridMapCallback()
 static INT32 daitoridInit()
 {
 	main_cpu_cycles = 16000000 / 58;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x200000, 2, daitoridMapCallback, NULL, 5/*udp + ym2151*/);
 
@@ -4048,6 +4068,7 @@ static INT32 daitoridInit()
 static INT32 puzzliaInit()
 {
 	main_cpu_cycles = 16000000 / 58;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x200000, 2, pururunMapCallback, NULL, 5/*udp + ym2151*/);
 
@@ -4090,6 +4111,7 @@ static void balcubeRomCallback()
 static INT32 msgogoInit()
 {
 	main_cpu_cycles = 16000000 / 60;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x200000, 4, msgogoMapCallback, balcubeRomCallback, 3/*ymf278b*/);
 
@@ -4121,6 +4143,7 @@ static void balcubeMapCallback()
 static INT32 balcubeInit()
 {
 	main_cpu_cycles = 16000000 / 60;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x200000, 4, balcubeMapCallback, balcubeRomCallback, 3/*ymf278b*/);
 
@@ -4143,6 +4166,7 @@ static void bangballMapCallback()
 static INT32 bangballInit()
 {
 	main_cpu_cycles = 16000000 / 60;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x400000, 4, bangballMapCallback, balcubeRomCallback, 3/*ymf278b*/);
 
@@ -4174,6 +4198,7 @@ static void batlbublRomCallback()
 static INT32 batlbublInit()
 {
 	main_cpu_cycles = 16000000 / 60;
+	main_cpu_hz = 16000000;
 
 	INT32 nRet = common_type1_init(4200, 0x800000, 4, batlbublMapCallback, batlbublRomCallback, 3/*ymf278b*/);
 
@@ -4252,6 +4277,7 @@ static INT32 DrvExit()
 	sound_system = 0;
 	has_zoom = 0;
 	main_cpu_cycles = 12000000 / 60;
+	main_cpu_hz = 12000000;
 	ymf278bint = 0;
 	bangballmode = 0;
 
@@ -4280,7 +4306,7 @@ static INT32 Z80Frame()
 	SekNewFrame();
 	ZetNewFrame();
 
-	INT32 nInterleave = 240;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 16000000 / 58, 8000000 / 58 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -4292,17 +4318,19 @@ static INT32 Z80Frame()
 		INT32 previous_cycles = SekTotalCycles();
 		CPU_RUN(0, Sek);
 
-		if ((i % 28) == 26) {
+		if ((i % 32) == 0) {
 			requested_int[4] = 1;
 			update_irq_state();
 		}
 
-		if (i == 236) {
+		if (i == 37) { // (16000000 / 1000000) * 2500 / (16000000/58/256)
+			requested_int[5] = 0;
+		}
+
+		if (i == nInterleave-1) {
 			requested_int[vblank_bit] = 1;
 			requested_int[5] = 1;
 			update_irq_state();
-			SekRun(500);
-			requested_int[5] = 0;
 		}
 
 		if (i4x00_blitter_timer > 0) {
@@ -4315,8 +4343,6 @@ static INT32 Z80Frame()
 
 		CPU_RUN_TIMER(1);
 	}
-
-	BurnTimerEndFrame(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
 		BurnYM2610Update(pBurnSoundOut, nBurnSoundLen);
@@ -4354,7 +4380,7 @@ static INT32 NoZ80Frame()
 	if (sound_system == 2 || sound_system == 5) upd7810NewFrame();
 
 	INT32 nSoundBufferPos = 0;
-	INT32 nInterleave = 240;
+	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { main_cpu_cycles, main_cpu_cycles };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -4366,20 +4392,19 @@ static INT32 NoZ80Frame()
 		CPU_RUN(0, Sek);
 
 		if (sound_system == 2 || sound_system == 5) {
-			upd7810Run((nCyclesTotal[1] / nInterleave));
+			CPU_RUN(1, upd7810);
 		}
 
-		if (i == 0 && requested_int[5] == 1) {
+		if (i == 37 && requested_int[5] == 1) {
 			requested_int[5] = 0;
 		}
 
-		if ((i % 28) == 0) {
+		if ((i % 32) == 0) {
 			requested_int[4] = 1;
 			update_irq_state();
 		}
 
-		if (i == 236)
-		{
+		if (i == nInterleave-1) {
 			requested_int[vblank_bit] = 1;
 			requested_int[5] = 1;
 			update_irq_state();
@@ -4468,7 +4493,7 @@ static INT32 YMF278bFrame()
 
 	SekNewFrame();
 
-	INT32 nInterleave = 240;
+	INT32 nInterleave = 240; // msgogo borks at 256
 	INT32 nCyclesTotal[1] = { main_cpu_cycles };
 
 	SekOpen(0);
@@ -4504,8 +4529,6 @@ static INT32 YMF278bFrame()
 			}
 		}
 	}
-
-	BurnTimerEndFrame(nCyclesTotal[0]);
 
 	if (pBurnSoundOut) {
 		BurnYMF278BUpdate(nBurnSoundLen);
@@ -4672,7 +4695,7 @@ struct BurnDriver BurnDrvBlzntrnd = {
 	"blzntrnd", NULL, NULL, NULL, "1994",
 	"Blazing Tornado\0", NULL, "Human Amusement", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SPORTSMISC, 0,
 	NULL, blzntrndRomInfo, blzntrndRomName, NULL, NULL, NULL, NULL, BlzntrndInputInfo, BlzntrndDIPInfo,
 	blzntrndInit, DrvExit, Z80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -4712,7 +4735,7 @@ struct BurnDriver BurnDrvGstrik2 = {
 	"gstrik2", NULL, NULL, NULL, "1996",
 	"Grand Striker 2 (Europe and Oceania)\0", "ROZ layer broken", "Human Amusement", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SPORTSFOOTBALL, 0,
 	NULL, gstrik2RomInfo, gstrik2RomName, NULL, NULL, NULL, NULL, Gstrik2InputInfo, Gstrik2DIPInfo,
 	gstrik2Init, DrvExit, Z80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -4752,7 +4775,7 @@ struct BurnDriverD BurnDrvGstrik2j = {
 	"gstrik2j", "gstrik2", NULL, NULL, "1996",
 	"Grand Striker 2 (Japan)\0", "ROZ layer broken", "Human Amusement", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SPORTSFOOTBALL, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SPORTSFOOTBALL, 0,
 	NULL, gstrik2jRomInfo, gstrik2jRomName, NULL, NULL, NULL, NULL, Gstrik2InputInfo, Gstrik2DIPInfo,
 	gstrik2Init, DrvExit, Z80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -4786,7 +4809,7 @@ struct BurnDriver BurnDrvSkyalert = {
 	"skyalert", NULL, NULL, NULL, "1992",
 	"Sky Alert\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, skyalertRomInfo, skyalertRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, SkyalertDIPInfo,
 	skyalertInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	224, 360, 3, 4
@@ -4820,7 +4843,7 @@ struct BurnDriver BurnDrvPangpoms = {
 	"pangpoms", NULL, NULL, NULL, "1992",
 	"Pang Pom's\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, pangpomsRomInfo, pangpomsRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, PangpomsDIPInfo,
 	pangpomsInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -4854,7 +4877,7 @@ struct BurnDriver BurnDrvPangpomsm = {
 	"pangpomsm", "pangpoms", NULL, NULL, "1992",
 	"Pang Pom's (Mitchell)\0", NULL, "Metro (Mitchell license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, pangpomsmRomInfo, pangpomsmRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, PangpomsDIPInfo,
 	pangpomsInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -4888,14 +4911,14 @@ struct BurnDriver BurnDrvPangpomsn = {
 	"pangpomsn", "pangpoms", NULL, NULL, "1992",
 	"Pang Pom's (Nova)\0", NULL, "Nova", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, pangpomsnRomInfo, pangpomsnRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, PangpomsDIPInfo,
 	pangpomsInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
 };
 
 
-// Poitto!
+// Poitto! (revision D)
 
 static struct BurnRomInfo poittoRomDesc[] = {
 	{ "pt-jd05.20e",			0x020000, 0x6b1be034, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -4916,9 +4939,9 @@ STD_ROM_FN(poitto)
 
 struct BurnDriver BurnDrvPoitto = {
 	"poitto", NULL, NULL, NULL, "1993",
-	"Poitto!\0", NULL, "Metro / Able Corp.", "Miscellaneous",
+	"Poitto! (revision D)\0", NULL, "Metro / Able Corp.", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, poittoRomInfo, poittoRomName, NULL, NULL, NULL, NULL, PururunInputInfo, PoittoDIPInfo,
 	poittoInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -4983,7 +5006,7 @@ struct BurnDriver BurnDrvLastfort = {
 	"lastfort", NULL, NULL, NULL, "1994",
 	"Last Fortress - Toride (Japan, VG420 PCB)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastfortRomInfo, lastfortRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, LastfortDIPInfo,
 	lastfortInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -5014,14 +5037,14 @@ struct BurnDriver BurnDrvLastfortj = {
 	"lastfortj", "lastfort", NULL, NULL, "1994",
 	"Last Fortress - Toride (Japan, VG460 PCB)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastfortjRomInfo, lastfortjRomName, NULL, NULL, NULL, NULL, LadykillInputInfo, LadykillDIPInfo,
 	lastforgInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
 };
 
 
-// Last Fortress - Toride (German)
+// Last Fortress - Toride (Germany)
 
 static struct BurnRomInfo lastfortgRomDesc[] = {
 	{ "tr_ma02.8g",				0x020000, 0xe6f40918, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -5042,16 +5065,16 @@ STD_ROM_FN(lastfortg)
 
 struct BurnDriver BurnDrvLastfortg = {
 	"lastfortg", "lastfort", NULL, NULL, "1994",
-	"Last Fortress - Toride (German)\0", NULL, "Metro", "Miscellaneous",
+	"Last Fortress - Toride (Germany)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastfortgRomInfo, lastfortgRomName, NULL, NULL, NULL, NULL, LadykillInputInfo, LadykillDIPInfo,
 	lastforgInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
 };
 
 
-// Last Fortress - Toride (Erotic, Rev C)
+// Last Fortress - Toride (China, Rev C)
 
 static struct BurnRomInfo lastforteRomDesc[] = {
 	{ "tr_hc09",				0x020000, 0x32f43390, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -5076,16 +5099,16 @@ STD_ROM_FN(lastforte)
 
 struct BurnDriver BurnDrvLastforte = {
 	"lastforte", "lastfort", NULL, NULL, "1994",
-	"Last Fortress - Toride (Erotic, Rev C)\0", NULL, "Metro", "Miscellaneous",
+	"Last Fortress - Toride (China, Rev C)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastforteRomInfo, lastforteRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, LastferoDIPInfo,
 	lastfortInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
 };
 
 
-// Last Fortress - Toride (Erotic, Rev A)
+// Last Fortress - Toride (China, Rev A)
 
 static struct BurnRomInfo lastforteaRomDesc[] = {
 	{ "tr_ha09",				0x020000, 0x61fe8fb2, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
@@ -5110,9 +5133,9 @@ STD_ROM_FN(lastfortea)
 
 struct BurnDriver BurnDrvLastfortea = {
 	"lastfortea", "lastfort", NULL, NULL, "1994",
-	"Last Fortress - Toride (Erotic, Rev A)\0", NULL, "Metro", "Miscellaneous",
+	"Last Fortress - Toride (China, Rev A)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastforteaRomInfo, lastforteaRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, LastferoDIPInfo,
 	lastfortInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -5146,7 +5169,7 @@ struct BurnDriver BurnDrvLastfortk = {
 	"lastfortk", "lastfort", NULL, NULL, "1994",
 	"Last Fortress - Toride (Korea)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, lastfortkRomInfo, lastfortkRomName, NULL, NULL, NULL, NULL, SkyalertInputInfo, LastferoDIPInfo,
 	lastfortInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	360, 224, 4, 3
@@ -5176,7 +5199,7 @@ struct BurnDriver BurnDrvDharma = {
 	"dharma", NULL, NULL, NULL, "1994",
 	"Dharma Doujou\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, dharmaRomInfo, dharmaRomName, NULL, NULL, NULL, NULL, PururunInputInfo, DharmaDIPInfo,
 	dharmaInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5206,7 +5229,7 @@ struct BurnDriver BurnDrvDharmag = {
 	"dharmag", "dharma", NULL, NULL, "1994",
 	"Dharma Doujou (Germany)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, dharmagRomInfo, dharmagRomName, NULL, NULL, NULL, NULL, PururunInputInfo, DharmaDIPInfo,
 	dharmaInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5236,7 +5259,7 @@ struct BurnDriver BurnDrvDharmaj = {
 	"dharmaj", "dharma", NULL, NULL, "1994",
 	"Dharma Doujou (Japan)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, dharmajRomInfo, dharmajRomName, NULL, NULL, NULL, NULL, PururunInputInfo, DharmaDIPInfo,
 	dharmajInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5266,16 +5289,46 @@ struct BurnDriver BurnDrvDharmak = {
 	"dharmak", "dharma", NULL, NULL, "1994",
 	"Dharma Doujou (Korea)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, dharmakRomInfo, dharmakRomName, NULL, NULL, NULL, NULL, PururunInputInfo, DharmaDIPInfo,
 	dharmaInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
 };
 
 
-// Pururun
+// Pururun (set 1)
 
 static struct BurnRomInfo pururunRomDesc[] = {
+	{ "pu_ja-5.20e",			0x020000, 0xc15ae3db, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
+	{ "pu_ja-6.20c",			0x020000, 0x2e21328a, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "pu_ja-8.3i",				0x020000, 0xedc3830b, 2 | BRF_PRG | BRF_ESS }, //  2 uPD7810 Code
+
+	{ "pu_ja-2.14i",			0x080000, 0x93a9dbed, 3 | BRF_GRA },           //  3 Graphics
+	{ "pu_ja-4.18i",			0x080000, 0x47d82187, 3 | BRF_GRA },           //  4
+	{ "pu_ja-1.12i",			0x080000, 0x436096c6, 3 | BRF_GRA },           //  5
+	{ "pu_ja-3.16i",			0x080000, 0x80619e1a, 3 | BRF_GRA },           //  6
+
+	{ "pu_ja-7.3g",				0x040000, 0x51ae4926, 4 | BRF_SND },           //  7 MSM6295 Samples
+};
+
+STD_ROM_PICK(pururun)
+STD_ROM_FN(pururun)
+
+struct BurnDriver BurnDrvPururun = {
+	"pururun", NULL, NULL, NULL, "1995",
+	"Pururun (set 1)\0", NULL, "Metro / Banpresto", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, pururunRomInfo, pururunRomName, NULL, NULL, NULL, NULL, PururunInputInfo, PururunDIPInfo,
+	pururunInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
+	320, 224, 4, 3
+};
+
+
+// Pururun (set 2)
+
+static struct BurnRomInfo pururunaRomDesc[] = {
 	{ "pu9-19-5.20e",			0x020000, 0x5a466a1b, 1 | BRF_PRG | BRF_ESS }, //  0 68k Code
 	{ "pu9-19-6.20c",			0x020000, 0xd155a53c, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -5289,15 +5342,15 @@ static struct BurnRomInfo pururunRomDesc[] = {
 	{ "pu9-19-7.3g",			0x040000, 0x51ae4926, 4 | BRF_SND },           //  7 MSM6295 Samples
 };
 
-STD_ROM_PICK(pururun)
-STD_ROM_FN(pururun)
+STD_ROM_PICK(pururuna)
+STD_ROM_FN(pururuna)
 
-struct BurnDriver BurnDrvPururun = {
-	"pururun", NULL, NULL, NULL, "1995",
-	"Pururun\0", NULL, "Metro / Banpresto", "Miscellaneous",
+struct BurnDriver BurnDrvPururuna = {
+	"pururuna", "pururun", NULL, NULL, "1995",
+	"Pururun (set 2)\0", NULL, "Metro / Banpresto", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
-	NULL, pururunRomInfo, pururunRomName, NULL, NULL, NULL, NULL, PururunInputInfo, PururunDIPInfo,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	NULL, pururunaRomInfo, pururunaRomName, NULL, NULL, NULL, NULL, PururunInputInfo, PururunDIPInfo,
 	pururunInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
 };
@@ -5326,7 +5379,7 @@ struct BurnDriver BurnDrvKaratour = {
 	"karatour", NULL, NULL, NULL, "1992",
 	"The Karate Tournament\0", NULL, "Mitchell", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, karatourRomInfo, karatourRomName, NULL, NULL, NULL, NULL, KaratourInputInfo, KaratourDIPInfo,
 	karatourInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 240, 4, 3
@@ -5385,7 +5438,7 @@ struct BurnDriver BurnDrvLadykill = {
 	"ladykill", NULL, NULL, NULL, "1993",
 	"Lady Killer\0", "Imperfect graphics", "Yanyaka (Mitchell license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, ladykillRomInfo, ladykillRomName, NULL, NULL, NULL, NULL, LadykillInputInfo, LadykillDIPInfo,
 	karatourInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	240, 320, 3, 4
@@ -5415,7 +5468,7 @@ struct BurnDriver BurnDrvMoegonta = {
 	"moegonta", "ladykill", NULL, NULL, "1993",
 	"Moeyo Gonta!! (Japan)\0", NULL, "Yanyaka", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, moegontaRomInfo, moegontaRomName, NULL, NULL, NULL, NULL, LadykillInputInfo, LadykillDIPInfo,
 	karatourInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	240, 320, 3, 4
@@ -5445,7 +5498,7 @@ struct BurnDriver BurnDrvDaitorid = {
 	"daitorid", NULL, NULL, NULL, "1995",
 	"Daitoride\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, daitoridRomInfo, daitoridRomName, NULL, NULL, NULL, NULL, DaitoridInputInfo, DaitoridDIPInfo,
 	daitoridInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5474,7 +5527,7 @@ struct BurnDriver BurnDrvDaitorida = {
 	"daitorida", "daitorid", NULL, NULL, "1996",
 	"Daitoride (YMF278B version)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, daitoridaRomInfo, daitoridaRomName, NULL, NULL, NULL, NULL, DaitoridInputInfo, DaitoridDIPInfo,
 	daitoridaInit, DrvExit, YMF278bFrame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5504,7 +5557,7 @@ struct BurnDriver BurnDrvGunmast = {
 	"gunmast", NULL, NULL, NULL, "1994",
 	"Gun Master\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, gunmastRomInfo, gunmastRomName, NULL, NULL, NULL, NULL, GunmastInputInfo, GunmastDIPInfo,
 	pururunInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5564,7 +5617,7 @@ struct BurnDriver BurnDrvPuzzli = {
 	"puzzli", NULL, NULL, NULL, "1995",
 	"Puzzli (revision B)\0", NULL, "Metro / Banpresto", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, puzzliRomInfo, puzzliRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, PuzzliDIPInfo,
 	daitoridInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5594,7 +5647,7 @@ struct BurnDriver BurnDrvPuzzlia = {
 	"puzzlia", "puzzli", NULL, NULL, "1995",
 	"Puzzli (revision A)\0", NULL, "Metro / Banpresto", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, puzzliaRomInfo, puzzliaRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, PuzzliDIPInfo,
 	puzzliaInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5624,7 +5677,7 @@ struct BurnDriver BurnDrvToride2g = {
 	"toride2g", NULL, NULL, NULL, "1994",
 	"Toride II Adauchi Gaiden\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, toride2gRomInfo, toride2gRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, Toride2gDIPInfo,
 	toride2gInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5654,7 +5707,7 @@ struct BurnDriver BurnDrvToride2gg = {
 	"toride2gg", "toride2g", NULL, NULL, "1994",
 	"Toride II Adauchi Gaiden (German)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, toride2ggRomInfo, toride2ggRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, Toride2gDIPInfo,
 	toride2gInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5684,7 +5737,7 @@ struct BurnDriver BurnDrvToride2gk = {
 	"toride2gk", "toride2g", NULL, NULL, "1994",
 	"Toride II Bok Su Oi Jeon Adauchi Gaiden (Korea)\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, toride2gkRomInfo, toride2gkRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, Toride2gDIPInfo,
 	toride2gInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5714,7 +5767,7 @@ struct BurnDriver BurnDrvToride2j = {
 	"toride2j", "toride2g", NULL, NULL, "1994",
 	"Toride II (Japan)\0", "No sound", "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAHJONG, 0,
 	NULL, toride2jRomInfo, toride2jRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, Toride2gDIPInfo,
 	toride2gInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5743,7 +5796,7 @@ struct BurnDriver BurnDrvMsgogo = {
 	"msgogo", NULL, NULL, NULL, "1995",
 	"Mouse Shooter GoGo\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, msgogoRomInfo, msgogoRomName, NULL, NULL, NULL, NULL, PuzzliInputInfo, MsgogoDIPInfo,
 	msgogoInit, DrvExit, YMF278bFrame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5772,7 +5825,7 @@ struct BurnDriver BurnDrvBalcube = {
 	"balcube", NULL, NULL, NULL, "1996",
 	"Bal Cube\0", NULL, "Metro", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, balcubeRomInfo, balcubeRomName, NULL, NULL, NULL, NULL, BalcubeInputInfo, BalcubeDIPInfo,
 	balcubeInit, DrvExit, YMF278bFrame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5801,7 +5854,7 @@ struct BurnDriver BurnDrvBangball = {
 	"bangball", NULL, NULL, NULL, "1996",
 	"Bang Bang Ball (v1.05)\0", NULL, "Banpresto / Kunihiko Tashiro+Goodhouse", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, bangballRomInfo, bangballRomName, NULL, NULL, NULL, NULL, BalcubeInputInfo, BangballDIPInfo,
 	bangballInit, DrvExit, YMF278bFrame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5830,7 +5883,7 @@ struct BurnDriver BurnDrvBatlbubl = {
 	"batlbubl", "bangball", NULL, NULL, "1999",
 	"Battle Bubble (v2.00)\0", NULL, "Banpresto (Limenko license?)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, batlbublRomInfo, batlbublRomName, NULL, NULL, NULL, NULL, BalcubeInputInfo, BatlbublDIPInfo,
 	batlbublInit, DrvExit, YMF278bFrame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	320, 224, 4, 3
@@ -5859,7 +5912,7 @@ struct BurnDriver BurnDrvVmetal = {
 	"vmetal", NULL, NULL, NULL, "1995",
 	"Varia Metal\0", NULL, "Excellent System", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, vmetalRomInfo, vmetalRomName, NULL, NULL, NULL, NULL, vmetalInputInfo, vmetalDIPInfo,
 	vmetalInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	224, 320, 3, 4
@@ -5889,7 +5942,7 @@ struct BurnDriver BurnDrvVmetaln = {
 	"vmetaln", "vmetal", NULL, NULL, "1995",
 	"Varia Metal (New Ways Trading Co.)\0", NULL, "Excellent System (New Ways Trading Co. license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, vmetalnRomInfo, vmetalnRomName, NULL, NULL, NULL, NULL, vmetalInputInfo, vmetalDIPInfo,
 	vmetalInit, DrvExit, NoZ80Frame, i4x00_draw, DrvScan, &DrvRecalc, 0x1000,
 	224, 320, 3, 4

@@ -2161,7 +2161,6 @@ static INT32 MachineInit()
 	BurnYM2203SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
 
 	BurnYM3526Init(3000000, NULL, 1);
-	BurnTimerAttachYM3526(&ZetConfig, 6000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 0.50, BURN_SND_ROUTE_BOTH);
 
 	if (BublboblCallbackFunction()) return 1;
@@ -2884,14 +2883,15 @@ static INT32 DrvFrame()
 	INT32 nCyclesDone[4] = { 0, 0, 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
+		INT32 j = (i+224) % nInterleave;
 		ZetOpen(0);
-		CPU_RUN_TIMER_YM3526(0);
-		if (i == 224 && !DrvMCUInUse) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		CPU_RUN(0, Zet);
+		if (j == 224 && !DrvMCUInUse) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
 		CPU_RUN(1, Zet);
-		if (i == 224) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		if (j == 224) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(2);
@@ -2905,12 +2905,12 @@ static INT32 DrvFrame()
 		if (DrvMCUInUse && DrvMCUActive) {
 			if (DrvMCUInUse == 2) {
 				CPU_RUN(3, m6805);
-				if (i == 125) m68705SetIrqLine(0, 1); // fidgety bootleg mcu..
-				if (i == 224) m68705SetIrqLine(0, 0);
+				if (j == 125) m68705SetIrqLine(0, 1); // fidgety bootleg mcu..
+				if (j == 224) m68705SetIrqLine(0, 0);
 			} else {
 				M6801Open(0);
 				CPU_RUN(3, M6801);
-				if (i == 224) M6801SetIRQLine(0, CPU_IRQSTATUS_HOLD);
+				if (j == 224) M6801SetIRQLine(0, CPU_IRQSTATUS_HOLD);
 				M6801Close();
 			}
 		}
@@ -2934,19 +2934,19 @@ static INT32 TokioFrame()
 
 	BublboblMakeInputs();
 
-	INT32 nInterleave = 256;
-	INT32 nCyclesTotal[4] = { 6000000 / 60, 6000000 / 60, 3000000 / 60, 4000000 / 60 };
+	INT32 nInterleave = 264*8;
+	INT32 nCyclesTotal[4] = { 6000000 / 60, 6000000 / 60, 3000000 / 60, 3000000 / 60 };
 	INT32 nCyclesDone[4] = { 0, 0, 0, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		ZetOpen(0);
 		CPU_RUN(0, Zet);
-		if (i == 224) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		if (i == 240*8) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
 		CPU_RUN(1, Zet);
-		if (i == 224) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
+		if (i == 240*8) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(2);
@@ -2961,7 +2961,7 @@ static INT32 TokioFrame()
 			CPU_RUN(3, m6805);
 		}
 
-		if (i == 224 && pBurnDraw) DrvDraw();
+		if (i == 240*8 && pBurnDraw) DrvDraw();
 	}
 
 	if (pBurnSoundOut) {
@@ -3097,7 +3097,7 @@ struct BurnDriver BurnDrvBoblbobl = {
 
 struct BurnDriver BurnDrvBbredux = {
 	"bbredux", "bublbobl", NULL, NULL, "2013",
-	"Bobble Bobble ('bootleg redux' hack for Bobble Bobble PCB)\0", NULL, "bootleg (Punji)", "Taito Misc",
+	"Bubble Bobble ('bootleg redux' hack for Bobble Bobble PCB)\0", NULL, "bootleg (Punji)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, BbreduxRomInfo, BbreduxRomName, NULL, NULL, NULL, NULL, BoblboblInputInfo, BoblboblDIPInfo,
@@ -3147,7 +3147,7 @@ struct BurnDriver BurnDrvSboblboblb = {
 
 struct BurnDriver BurnDrvSboblboblc = {
 	"sboblboblc", "bublbobl", NULL, NULL, "1986",
-	"Super Bobble Bobble (bootleg)\0", NULL, "bootleg", "Taito Misc",
+	"Super Bubble Bobble (bootleg)\0", NULL, "bootleg", "Taito Misc",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, SboblboblcRomInfo, SboblboblcRomName, NULL, NULL, NULL, NULL, BoblboblInputInfo, SboblbobDIPInfo,
@@ -3187,7 +3187,7 @@ struct BurnDriver BurnDrvSboblboblf = {
 
 struct BurnDriver BurnDrvBub68705 = {
 	"bub68705", "bublbobl", NULL, NULL, "1986",
-	"Bubble Bobble (boolteg with 68705, set 1)\0", NULL, "bootleg", "Taito Misc",
+	"Bubble Bobble (bootleg with 68705)\0", NULL, "bootleg", "Taito Misc",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, Bub68705RomInfo, Bub68705RomName, NULL, NULL, NULL, NULL, BublboblInputInfo, BublboblDIPInfo,
@@ -3219,7 +3219,7 @@ struct BurnDriver BurnDrvBublcave = {
 	"bublcave", "bublbobl", NULL, NULL, "2013",
 	"Bubble Bobble: Lost Cave V1.2\0", NULL, "hack (Bisboch and Aladar)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HOMEBREW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, BublcaveRomInfo, BublcaveRomName, NULL, NULL, NULL, NULL, BublboblInputInfo, BublboblDIPInfo,
 	BublboblInit, BublboblExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x100, 256, 224, 4, 3
@@ -3229,27 +3229,27 @@ struct BurnDriver BurnDrvBoblcave = {
 	"boblcave", "bublbobl", NULL, NULL, "2013",
 	"Bubble Bobble: Lost Cave V1.2 (for Bobble Bobble PCB)\0", NULL, "hack (Bisboch and Aladar)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, BoblcaveRomInfo, BoblcaveRomName, NULL, NULL, NULL, NULL, BoblboblInputInfo, BoblcaveDIPInfo,
 	BoblboblInit, BublboblExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x100, 256, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvBublcave11 = {
-	"bublcave11", "bublbobl", NULL, NULL, "2013",
+	"bublcave11", "bublbobl", NULL, NULL, "2012",
 	"Bubble Bobble: Lost Cave V1.1\0", NULL, "hack (Bisboch and Aladar)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HOMEBREW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, Bublcave11RomInfo, Bublcave11RomName, NULL, NULL, NULL, NULL, BublboblInputInfo, BublboblDIPInfo,
 	BublboblInit, BublboblExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x100, 256, 224, 4, 3
 };
 
 struct BurnDriver BurnDrvBublcave10 = {
-	"bublcave10", "bublbobl", NULL, NULL, "2013",
+	"bublcave10", "bublbobl", NULL, NULL, "2012",
 	"Bubble Bobble: Lost Cave V1.0\0", NULL, "hack (Bisboch and Aladar)", "Taito Misc",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_HOMEBREW | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PLATFORM, 0,
 	NULL, Bublcave10RomInfo, Bublcave10RomName, NULL, NULL, NULL, NULL, BublboblInputInfo, BublboblDIPInfo,
 	BublboblInit, BublboblExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x100, 256, 224, 4, 3

@@ -15,6 +15,7 @@ static UINT8* NeoTileAttrib[MAX_SLOT] = { NULL, };
 static UINT8* NeoTileAttribActive;
 
 INT32 nSliceStart, nSliceEnd, nSliceSize;
+static INT32 nNeoEnforceSpriteLimit[MAX_SLOT] = { 0, };
 
 static UINT32* pTileData;
 static UINT32* pTilePalette;
@@ -32,7 +33,11 @@ static INT32 nLastBPP = -1;
 typedef void (*RenderBankFunction)();
 static RenderBankFunction* RenderBank;
 
-static 	UINT16 BankAttrib01, BankAttrib02, BankAttrib03;
+static const INT32 MAX_SPRITEBANK = 0x17d;
+static const INT32 MAX_SPRITEBANK_LINE = 0x60;
+static INT32 nMaxSpriteBank;
+
+static UINT16 BankAttrib01, BankAttrib02, BankAttrib03;
 
 static inline UINT32 alpha_blend(UINT32 d, UINT32 s, UINT32 p)
 {
@@ -42,8 +47,44 @@ static inline UINT32 alpha_blend(UINT32 d, UINT32 s, UINT32 p)
 		((((s & 0x00ff00) * p) + ((d & 0x00ff00) * a)) & 0x00ff0000)) >> 8;
 }
 
+void NeoSpriteCalcLimit()
+{
+	if (nNeoEnforceSpriteLimit[nNeoActiveSlot] == 0) {
+		nMaxSpriteBank = MAX_SPRITEBANK; // no limit!
+		return;
+	}
+
+	nMaxSpriteBank = 0;
+
+	for (INT32 nYLine = 0; nYLine < 240; nYLine++) {
+		INT32 nYCount = 0;
+		for (INT32 nBank = 0; nBank < MAX_SPRITEBANK; nBank++) {
+			BankAttrib02 = *((UINT16*)(NeoGraphicsRAM + 0x010400 + (nBank << 1)));
+
+			if (~BankAttrib02 & 0x40) {
+				nBankYPos = (0x0200 - (BankAttrib02 >> 7)) & 0x01FF;
+
+				nBankSize  = BankAttrib02 & 0x3F;
+			}
+
+			if (nBankSize && (nBankSize >= 0x20 || ((nYLine - nBankYPos) & 0x1ff) < (nBankSize << 4))) {
+				nYCount++;
+
+				if (nBank >= nMaxSpriteBank) {
+					nMaxSpriteBank = nBank + 1;
+				}
+				if (nYCount >= MAX_SPRITEBANK_LINE) {
+					break;
+				}
+			}
+		}
+	}
+}
+
 // Include the tile rendering functions
 #include "neo_sprite_func.h"
+
+static UINT8 nSpriteDisableLut[0x200];
 
 INT32 NeoRenderSprites()
 {
@@ -76,8 +117,46 @@ INT32 NeoRenderSprites()
 		}
 	}
 
-	for (INT32 nBank = 0; nBank < 0x17D; nBank++) {
-		INT32 zBank = (nBank + nStart) % 0x17d;
+	if ((nSpriteEnable != 0xff) || (nBurnLayer & 0x04) == 0)
+	{
+		memset (nSpriteDisableLut, 0xff, sizeof(nSpriteDisableLut));
+
+		INT32 nDisableSelect = 0;
+		UINT16 *SizeAttribute = (UINT16*)(NeoGraphicsRAM + 0x010400);
+
+		for (INT32 nBank = 0; nBank < nMaxSpriteBank; nBank++)
+		{
+			if (SizeAttribute[nBank] & 0x40) continue;
+
+			if (SizeAttribute[nBank] & 0x3f)
+			{
+				INT32 nWidth = 1;
+
+				for (INT32 nOffset = 1; nOffset < 0x20; nOffset++)
+				{
+					if (SizeAttribute[nBank+nOffset] & 0x40)
+					{
+						nWidth++;
+					}
+					else break;
+				}
+
+				if (nWidth >= 4)
+				{
+			//		bprintf (0, _T("Found: %d [%d]\n"), nBank, nDisableSelect);
+
+					for (INT32 nOffset = 0; nOffset < nWidth; nOffset++) {
+						nSpriteDisableLut[nBank + nOffset] = nDisableSelect;
+					}
+
+					nDisableSelect++;
+				}
+			}
+		}
+	}
+
+	for (INT32 nBank = 0; nBank < nMaxSpriteBank; nBank++) {
+		INT32 zBank = (nBank + nStart) % MAX_SPRITEBANK;
 		BankAttrib01 = *((UINT16*)(NeoGraphicsRAM + 0x010000 + (zBank << 1)));
 		BankAttrib02 = *((UINT16*)(NeoGraphicsRAM + 0x010400 + (zBank << 1)));
 		BankAttrib03 = *((UINT16*)(NeoGraphicsRAM + 0x010800 + (zBank << 1)));
@@ -97,6 +176,27 @@ INT32 NeoRenderSprites()
 			nBankSize  = BankAttrib02 & 0x3F;
 
 //			if (nBankSize > 0x10 && nSliceStart == 0x10) bprintf(PRINT_NORMAL, _T("bank: %04X, x: %04X, y: %04X, zoom: %02X, size: %02X.\n"), zBank, nBankXPos, nBankYPos, nBankYZoom, nBankSize);
+		}
+
+		if (nSpriteEnable != 0xff)
+		{
+			if (nSpriteDisableLut[nBank] < 8)
+			{
+				if ((nSpriteEnable & (1 << nSpriteDisableLut[nBank])) == 0)
+				{
+		//			bprintf (0, _T("Bank Type1 %d [%d] disabled\n"), nBank, nSpriteDisableLut[nBank]);
+					continue;
+				}
+			}
+		}
+
+		if ((nBurnLayer & 0x04) == 0)
+		{
+			if (nSpriteDisableLut[nBank] == 0xff)
+			{
+		//		bprintf (0, _T("Bank Type2 %d [%d] disabled\n"), nBank, nSpriteDisableLut[nBank]);
+				continue;
+			}
 		}
 
 		if (nBankSize) {
@@ -233,6 +333,12 @@ INT32 NeoInitSprites(INT32 nSlot)
 	NeoSpriteROMActive  = NeoSpriteROM[nSlot];
 	nNeoTileMaskActive  = nNeoTileMask[nSlot];
 	nNeoMaxTileActive   = nNeoMaxTile[nSlot];
+
+	nNeoEnforceSpriteLimit[nSlot] = 0; // off by default
+
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "bstars") || !strcmp(BurnDrvGetTextA(DRV_NAME), "bstarsh")) {
+		nNeoEnforceSpriteLimit[nSlot] = 1; // bstars needs this for proper homerun cutscene
+	}
 
 	return 0;
 }

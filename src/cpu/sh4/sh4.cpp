@@ -161,6 +161,7 @@ static int	   m_pm_divider; // clock divider of timer unit
 // see notes in Sh3SetClockCV1k
 #define ratio_multi 100000 // float -> int, format ii.fffff  (for speed)
 static int     m_ratio;
+static int     m_ratio_rev;
 
 static int     m_fpu_sz;
 static int     m_fpu_pr;
@@ -234,7 +235,7 @@ void Sh3SetTimerGranularity(INT32 timergransh)
 
 //-- timer jibbajabba --------------------+1
 // simple timer system -dink 2019, v2 (2022-upgreydde ver.)
-struct dtimer
+struct dtimer2
 {
 	INT32 running;
 	UINT32 time_trig;
@@ -351,9 +352,9 @@ struct dtimer
 	}
 };
 
-static dtimer m_timer[3];
-static dtimer m_dma_timer[4];
-static dtimer cave_blitter_delay;
+static dtimer2 m_timer[3];
+static dtimer2 m_dma_timer[4];
+static dtimer2 cave_blitter_delay;
 
 static void sh4_run_timers(INT32 cycles) {
 	m_timer[0].run_prescale(cycles);
@@ -396,6 +397,7 @@ void Sh3SetClockCV1k(INT32 clock)
 	// scale-up using integer representing floating point (ii.fffff, 1 = 100000 (ratio_multi))
 	//m_ratio_needed = m_pm_divider * ratio_multi;
 	m_ratio = ((double)(12800000 * 8) / clock) * ratio_multi;
+	m_ratio_rev = ((double)clock / (12800000 * 8)) * ratio_multi;
 }
 
 INT32 sh4_get_cpu_speed() {
@@ -819,6 +821,8 @@ cpu_core_config sh3Config =
 	Sh3Run,
 	Sh3RunEnd,
 	Sh3Reset,
+	Sh3Scan,
+	Sh3Exit,
 	0x1000000,
 	0
 };

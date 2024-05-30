@@ -45,7 +45,7 @@ static INT32 active_cpu = -1;
 static INT32 total_cpus = 0;
 static INT32 context_size = 0;
 
-static UINT16 default_read(UINT32 address) { return ~0; }
+static UINT16 default_read(UINT32 address) { return 0; }
 static void default_write(UINT32 address, UINT16 value) {}
 static void default_shift_op(UINT32,UINT16*){}
 
@@ -119,8 +119,10 @@ cpu_core_config TMS34010Config =
 	TMS34010Run,
 	TMS34010RunEnd,
 	TMS34010Reset,
+	TMS34010Scan,
+	TMS34010Exit,
 	0x100000000ULL,
-	0
+	MB_CHEAT_ENDI_SWAP | 16 // LE (16bit databus) but needs address swap when writing multibyte cheats
 };
 // end cheat-engine hook-up
 
@@ -251,13 +253,15 @@ void TMS34010RunEnd()
 	tms34010_stop();
 }
 
-void TMS34010Scan(INT32 nAction)
+INT32 TMS34010Scan(INT32 nAction)
 {
 	for (INT32 i = 0; i < total_cpus; i++) {
 		TMS34010Open(i);
 		tms34010_scan(nAction);
 		TMS34010Close();
 	}
+
+	return 0;
 }
 
 UINT32 TMS34010GetPC()

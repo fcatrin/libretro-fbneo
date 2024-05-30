@@ -56,6 +56,8 @@ static UINT8 DrvDips[3];
 static UINT8 DrvReset;
 static UINT16 DrvInputs[3];
 
+static INT32 nCyclesExtra[2];
+
 static INT32 global_y = 8;
 static INT32 main_cpu_clock = 8000000;
 
@@ -389,7 +391,7 @@ static struct BurnDIPInfo PolluxDIPList[]=
 	{0x13, 0x01, 0x0c, 0x04, "Hard"			},
 	{0x13, 0x01, 0x0c, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    0, "Allow Continue"	},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
 	{0x13, 0x01, 0x80, 0x00, "No"			},
 	{0x13, 0x01, 0x80, 0x80, "Yes"			},
 };
@@ -489,7 +491,7 @@ static struct BurnDIPInfo BluehawkDIPList[]=
 	{0x13, 0x01, 0x0c, 0x04, "Hard"			},
 	{0x13, 0x01, 0x0c, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    0, "Allow Continue"	},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
 	{0x13, 0x01, 0x80, 0x00, "No"			},
 	{0x13, 0x01, 0x80, 0x80, "Yes"			},
 };
@@ -641,7 +643,7 @@ static struct BurnDIPInfo RsharkDIPList[]=
 	{0x17, 0x01, 0x0c, 0x04, "Hard"			},
 	{0x17, 0x01, 0x0c, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    0, "Allow Continue"	},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
 	{0x17, 0x01, 0x80, 0x00, "No"			},
 	{0x17, 0x01, 0x80, 0x80, "Yes"			},
 };
@@ -685,7 +687,7 @@ static struct BurnDIPInfo SuperxDIPList[]=
 	{0x17, 0x01, 0x0c, 0x04, "Hard"			},
 	{0x17, 0x01, 0x0c, 0x00, "Hardest"		},
 
-	{0   , 0xfe, 0   ,    0, "Allow Continue"	},
+	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
 	{0x17, 0x01, 0x80, 0x00, "No"			},
 	{0x17, 0x01, 0x80, 0x80, "Yes"			},
 };
@@ -1343,6 +1345,10 @@ static INT32 Z80YM2203DoReset()
 	priority_select = 0;
 	text_layer_enable = 0;
 
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -1365,6 +1371,8 @@ static INT32 Z80YM2151DoReset()
 	soundlatch = 0;
 	priority_select = 0;
 	text_layer_enable = 0;
+
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
 
 	HiscoreReset();
 
@@ -1390,6 +1398,10 @@ static INT32 Drv68KDoReset()
 	soundlatch = 0;
 	priority_select = 0;
 	text_layer_enable = 0;
+
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1785,8 +1797,8 @@ static INT32 PolluxInit()
 
 	BurnYM2203Init(2, 1500000, &DrvYM2203IRQHandler, 0);
 	BurnTimerAttachZet(8000000);
-	BurnYM2203SetAllRoutes(0, 0.40, BURN_SND_ROUTE_BOTH);
-	BurnYM2203SetAllRoutes(1, 0.40, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetAllRoutes(0, 0.25, BURN_SND_ROUTE_BOTH);
+	BurnYM2203SetAllRoutes(1, 0.25, BURN_SND_ROUTE_BOTH);
 
 	main_cpu_clock = 8000000;
 
@@ -2054,7 +2066,7 @@ static INT32 PrimellaCommonInit(INT32 game_select)
 
 	return 0;
 }
-	
+
 static INT32 RsharkCommonInit(INT32 game_select)
 {
 	AllMem = NULL;
@@ -2796,7 +2808,7 @@ static INT32 LastdayFrame()
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { main_cpu_clock / 60, 8000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	vblank = 1;
 
@@ -2818,6 +2830,8 @@ static INT32 LastdayFrame()
 		CPU_RUN_TIMER(1);
 		ZetClose();
 	}
+
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
 		ZetOpen(1);
@@ -2855,7 +2869,7 @@ static INT32 FlytigerFrame()
 	INT32 nInterleave = 100;
 	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 8000000 / 60, 4000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
@@ -2876,6 +2890,8 @@ static INT32 FlytigerFrame()
 		}
 		ZetClose();
 	}
+
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
 	ZetOpen(1);
 
@@ -2936,18 +2952,18 @@ static INT32 RsharkFrame()
 	INT32 nInterleave = 256;
 	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { main_cpu_clock / 60, 4000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	SekOpen(0);
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Sek);
 		if (i == 250) SekSetIRQLine(5, CPU_IRQSTATUS_AUTO);
 		if (i == 120) SekSetIRQLine(6, CPU_IRQSTATUS_AUTO);
 
-		nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
+		CPU_RUN(1, Zet);
 
 		if (pBurnSoundOut) {
 			nSegment = nBurnSoundLen / nInterleave;
@@ -2958,6 +2974,8 @@ static INT32 RsharkFrame()
 			nSoundBufferPos += nSegment;
 		}
 	}
+
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
 		nSegment = nBurnSoundLen - nSoundBufferPos;
@@ -2979,7 +2997,7 @@ static INT32 RsharkFrame()
 	return 0;
 }
 
-static INT32 Z80YM2203Scan(INT32 nAction,INT32 *pnMin)
+static INT32 Z80YM2203Scan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -2987,7 +3005,7 @@ static INT32 Z80YM2203Scan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029707;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -3003,6 +3021,8 @@ static INT32 Z80YM2203Scan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(priority_select);
 		SCAN_VAR(text_layer_enable);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -3014,7 +3034,7 @@ static INT32 Z80YM2203Scan(INT32 nAction,INT32 *pnMin)
 	return 0;
 }
 
-static INT32 Z80YM2151Scan(INT32 nAction,INT32 *pnMin)
+static INT32 Z80YM2151Scan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -3022,7 +3042,7 @@ static INT32 Z80YM2151Scan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029707;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -3039,6 +3059,8 @@ static INT32 Z80YM2151Scan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(priority_select);
 		SCAN_VAR(text_layer_enable);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -3050,7 +3072,7 @@ static INT32 Z80YM2151Scan(INT32 nAction,INT32 *pnMin)
 	return 0;
 }
 
-static INT32 Drv68KScan(INT32 nAction,INT32 *pnMin)
+static INT32 Drv68KScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
 
@@ -3058,7 +3080,7 @@ static INT32 Drv68KScan(INT32 nAction,INT32 *pnMin)
 		*pnMin = 0x029707;
 	}
 
-	if (nAction & ACB_VOLATILE) {		
+	if (nAction & ACB_VOLATILE) {
 		memset(&ba, 0, sizeof(ba));
 
 		ba.Data	  = AllRam;
@@ -3076,6 +3098,8 @@ static INT32 Drv68KScan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(soundlatch);
 		SCAN_VAR(priority_select);
 		SCAN_VAR(text_layer_enable);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	return 0;
@@ -3117,7 +3141,7 @@ struct BurnDriver BurnDrvLastday = {
 	"lastday", NULL, NULL, NULL, "1990",
 	"The Last Day (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, lastdayRomInfo, lastdayRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3159,7 +3183,7 @@ struct BurnDriver BurnDrvLastdaya = {
 	"lastdaya", "lastday", NULL, NULL, "1990",
 	"The Last Day (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, lastdayaRomInfo, lastdayaRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3201,7 +3225,7 @@ struct BurnDriver BurnDrvDdaydoo = {
 	"ddaydoo", "lastday", NULL, NULL, "1990",
 	"Chulgyeok D-Day (Korea)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, ddaydooRomInfo, ddaydooRomName, NULL, NULL, NULL, NULL, LastdayInputInfo, LastdayDIPInfo,
 	LastdayInit, Z80YM2203Exit, LastdayFrame, LastdayDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3244,7 +3268,7 @@ struct BurnDriver BurnDrvGulfstrm = {
 	"gulfstrm", NULL, NULL, NULL, "1991",
 	"Gulf Storm (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gulfstrmRomInfo, gulfstrmRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3287,7 +3311,7 @@ struct BurnDriver BurnDrvGulfstrma = {
 	"gulfstrma", "gulfstrm", NULL, NULL, "1991",
 	"Gulf Storm (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gulfstrmaRomInfo, gulfstrmaRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3330,7 +3354,7 @@ struct BurnDriver BurnDrvGulfstrmb = {
 	"gulfstrmb", "gulfstrm", NULL, NULL, "1991",
 	"Gulf Storm (set 3)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gulfstrmbRomInfo, gulfstrmbRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3373,7 +3397,7 @@ struct BurnDriver BurnDrvGulfstrmm = {
 	"gulfstrmm", "gulfstrm", NULL, NULL, "1991",
 	"Gulf Storm (Media Shoji)\0", NULL, "Dooyong (Media Shoji license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gulfstrmmRomInfo, gulfstrmmRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3416,7 +3440,7 @@ struct BurnDriver BurnDrvGulfstrmk = {
 	"gulfstrmk", "gulfstrm", NULL, NULL, "1991",
 	"Gulf Storm (Korea)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gulfstrmkRomInfo, gulfstrmkRomName, NULL, NULL, NULL, NULL, GulfstrmInputInfo, GulfstrmDIPInfo,
 	GulfstrmInit, Z80YM2203Exit, LastdayFrame, GulfstrmDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3453,7 +3477,7 @@ struct BurnDriver BurnDrvPollux = {
 	"pollux", NULL, NULL, NULL, "1991",
 	"Pollux (set 1)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, polluxRomInfo, polluxRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3490,7 +3514,7 @@ struct BurnDriver BurnDrvPolluxa = {
 	"polluxa", "pollux", NULL, NULL, "1991",
 	"Pollux (set 2)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, polluxaRomInfo, polluxaRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3527,7 +3551,7 @@ struct BurnDriver BurnDrvPolluxa2 = {
 	"polluxa2", "pollux", NULL, NULL, "1991",
 	"Pollux (set 3)\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, polluxa2RomInfo, polluxa2RomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3564,7 +3588,7 @@ struct BurnDriver BurnDrvPolluxn = {
 	"polluxn", "pollux", NULL, NULL, "1991",
 	"Pollux (Japan, NTC license)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, polluxnRomInfo, polluxnRomName, NULL, NULL, NULL, NULL, PolluxInputInfo, PolluxDIPInfo,
 	PolluxInit, Z80YM2203Exit, LastdayFrame, PolluxDraw, Z80YM2203Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3685,7 +3709,7 @@ struct BurnDriver BurnDrvBluehawk = {
 	"bluehawk", NULL, NULL, NULL, "1993",
 	"Blue Hawk\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, bluehawkRomInfo, bluehawkRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
 	BluehawkInit, Z80YM2151Exit, FlytigerFrame, BluehawkDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3720,7 +3744,7 @@ struct BurnDriver BurnDrvBluehawkn = {
 	"bluehawkn", "bluehawk", NULL, NULL, "1993",
 	"Blue Hawk (NTC)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, bluehawknRomInfo, bluehawknRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, BluehawkDIPInfo,
 	BluehawkInit, Z80YM2151Exit, FlytigerFrame, BluehawkDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	240, 384, 3, 4
@@ -3761,7 +3785,7 @@ struct BurnDriver BurnDrvSadari = {
 	"sadari", NULL, NULL, NULL, "1993",
 	"Sadari\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, sadariRomInfo, sadariRomName, NULL, NULL, NULL, NULL, SadariInputInfo, SadariDIPInfo,
 	SadariInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
@@ -3803,7 +3827,7 @@ struct BurnDriver BurnDrvGundl94 = {
 	"gundl94", NULL, NULL, NULL, "1994",
 	"Gun Dealer '94\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, gundl94RomInfo, gundl94RomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
 	PrimellaInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
@@ -3835,7 +3859,7 @@ struct BurnDriver BurnDrvPrimella = {
 	"primella", "gundl94", NULL, NULL, "1994",
 	"Primella\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, primellaRomInfo, primellaRomName, NULL, NULL, NULL, NULL, BluehawkInputInfo, PrimellaDIPInfo,
 	PrimellaInit, Z80YM2151Exit, FlytigerFrame, PrimellaDraw, Z80YM2151Scan, &DrvRecalc, 0x400,
 	384, 256, 4, 3
@@ -3881,7 +3905,7 @@ struct BurnDriver BurnDrvSuperx = {
 	"superx", NULL, NULL, NULL, "1994",
 	"Super-X (NTC)\0", NULL, "Dooyong (NTC license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, superxRomInfo, superxRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
 	SuperxInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
@@ -3922,7 +3946,7 @@ struct BurnDriver BurnDrvSuperxm = {
 	"superxm", "superx", NULL, NULL, "1994",
 	"Super-X (Mitchell)\0", NULL, "Dooyong (Mitchell license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, superxmRomInfo, superxmRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, SuperxDIPInfo,
 	SuperxInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
@@ -3975,7 +3999,7 @@ struct BurnDriver BurnDrvRshark = {
 	"rshark", NULL, NULL, NULL, "1995",
 	"R-Shark\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, rsharkRomInfo, rsharkRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, RsharkDIPInfo,
 	RsharkInit, Drv68KExit, RsharkFrame, RsharkDraw, Drv68KScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
@@ -4013,7 +4037,7 @@ struct BurnDriver BurnDrvPopbingo = {
 	"popbingo", NULL, NULL, NULL, "1996",
 	"Pop Bingo\0", NULL, "Dooyong", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, popbingoRomInfo, popbingoRomName, NULL, NULL, NULL, NULL, RsharkInputInfo, PopbingoDIPInfo,
 	PopbingoInit, Drv68KExit, RsharkFrame, PopbingoDraw, Drv68KScan, &DrvRecalc, 0x800,
 	384, 240, 4, 3

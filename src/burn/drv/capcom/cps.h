@@ -6,6 +6,7 @@
 #include "msm6295.h"
 #include "eeprom.h"
 #include "timer.h"
+#include "samples.h"
 
 // Maximum number of beam-synchronized interrupts to check
 #define MAX_RASTER 10
@@ -39,7 +40,6 @@ INT32 CpsLoadTilesByte(UINT8 *Tile,INT32 nStart);
 INT32 CpsLoadTilesForgottn(INT32 nStart);
 INT32 CpsLoadTilesForgottna(INT32 nStart);
 INT32 CpsLoadTilesForgottnu(INT32 nStart);
-INT32 CpsLoadTilesPang(UINT8 *Tile,INT32 nStart);
 INT32 CpsLoadTilesSf2ebbl(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2b(UINT8 *Tile, INT32 nStart);
 INT32 CpsLoadTilesSf2koryuExtra(UINT8 *Tile, INT32 nStart);
@@ -63,7 +63,12 @@ INT32 CpsLoadTilesDinopic5(INT32 nStart);
 INT32 CpsLoadTilesSlampic(INT32 nStart);
 INT32 CpsLoadTilesKodb(INT32 nStart);
 INT32 CpsLoadTilesWonder3b(INT32 nStart);
+INT32 CpsLoadTilesPang3(INT32 nStart);
 INT32 CpsLoadTilesPang3r1a(INT32 nStart);
+INT32 CpsLoadTilesPang3b2(INT32 nStart);
+INT32 CpsLoadTilesPang3b4(INT32 nStart);
+INT32 CpsLoadTilesPang3b5(INT32 nStart);
+INT32 CpsLoadTilesGulunpa(INT32 nStart);
 INT32 CpsLoadTilesPunisherb(INT32 nStart);
 INT32 CpsLoadTilesKnightsb2(INT32 nStart);
 INT32 CpsLoadTilesMtwinsb(INT32 nStart);
@@ -160,6 +165,11 @@ INT32 Cps2LoadTilesGigaman2(UINT8 *Tile, UINT8 *pSrc);
 #define mapper_pokon		42
 #define mapper_KNM10B		43
 #define mapper_gulun		44
+#define mapper_SFZ63B		mapper_RCM63B
+#define mapper_CP1B1F		45
+#define mapper_CP1B1F_boot	46
+#define mapper_pang3b4		47
+#define mapper_TKSGZB		48
 extern void SetGfxMapper(INT32 MapperId);
 extern INT32 GfxRomBankMapper(INT32 Type, INT32 Code);
 extern void SetCpsBId(INT32 CpsBId, INT32 bStars);
@@ -254,7 +264,7 @@ CPSINPEX
 
 // For the Forgotten Worlds analog controls
 extern UINT16 CpsInp055, CpsInp05d;
-extern UINT16 CpsInpPaddle1, CpsInpPaddle2;
+extern INT16 CpsInpPaddle1, CpsInpPaddle2;
 extern UINT8 CpsDigUD[4];
 
 extern INT32 PangEEP;
@@ -265,16 +275,21 @@ extern INT32 Cawingb;
 extern INT32 Wofh;
 extern INT32 Sf2thndr;
 extern INT32 Pzloop2;
+extern INT32 Hkittymp;
 extern INT32 Sfa2ObjHack;
 extern INT32 Ssf2tb;
 extern INT32 Dinohunt;
 extern INT32 Port6SoundWrite;
 extern INT32 CpsBootlegEEPROM;
+extern INT32 Cps2Turbo;
+
+extern ClearOpposite<4, UINT8> clear_opposite;
 
 extern UINT8* CpsEncZRom;
 
 INT32 CpsRwInit();
 INT32 CpsRwExit();
+void CpsRwScan();
 INT32 CpsRwGetInp();
 void CpsWritePort(const UINT32 ia, UINT8 d);
 UINT8 __fastcall CpsReadByte(UINT32 a);
@@ -303,6 +318,10 @@ extern INT32 CpsDisableRowScroll;
 extern INT32 Cps1OverrideLayers;
 extern INT32 nCps1Layers[4];
 extern INT32 nCps1LayerOffs[3];
+extern INT32 nCpsScreenWidth;
+extern INT32 nCpsScreenHeight;
+extern INT32 nCpsGlobalXOffset;
+extern INT32 nCpsGlobalYOffset;
 void DrawFnInit();
 INT32  CpsDraw();
 INT32  CpsRedraw();
@@ -433,7 +452,7 @@ struct CpsrLineInfo {
 	INT16 Rows[16];									// 16 row scroll values for this line
 	INT32 nMaxLeft, nMaxRight;						// Maximum row shifts left and right
 };
-extern struct CpsrLineInfo CpsrLineInfo[15];
+extern struct CpsrLineInfo CpsrLineInfo[32];
 INT32 Cps1rPrepare();
 INT32 Cps2rPrepare();
 
@@ -514,3 +533,4 @@ extern UINT16 Cps2VolumeStates[40];
 extern INT32 Cps2DisableDigitalVolume;
 extern UINT8 Cps2VolUp;
 extern UINT8 Cps2VolDwn;
+extern UINT8 AspectDIP;

@@ -1,10 +1,13 @@
-// Warp Warp emu-layer for FB Alpha by dink, based on Mirko & Chris Hardy's MAME driver & sound core code by Juergen Buchmueller
+// Warp Warp emu-layer for FB Neo by dink, based on Mirko & Chris Hardy's MAME driver & sound core code by Juergen Buchmueller
+
+// todo: fix coctail mode
 
 #include "tiles_generic.h"
 #include "driver.h"
 #include "z80_intf.h"
 #include "bitswap.h"
 #include "resnet.h"
+#include "burn_gun.h" // paddle
 #include <math.h>
 
 static UINT8 *AllMem;
@@ -31,7 +34,7 @@ static UINT8 DrvJoy4[8];
 static UINT8 DrvDip[2] = {0, 0};
 static UINT8 DrvInput[5];
 static UINT8 use_paddle = 0;
-static UINT8 Paddle = 0;
+static INT16 Analog[2];
 static UINT8 DrvReset;
 
 static UINT32 rockola = 0;
@@ -67,7 +70,7 @@ STDINPUTINFO(Warpwarp)
 static struct BurnDIPInfo WarpwarpDIPList[]=
 {
 	{0x0a, 0xff, 0xff, 0x85, NULL		        },
-	{0x0b, 0xff, 0xff, 0x20, NULL		        },
+	{0x0b, 0xff, 0xff, 0xe0, NULL		        },
 
 	{0   , 0xfe, 0   ,    4, "Coinage"		    },
 	{0x0a, 0x01, 0x03, 0x03, "2 Coins 1 Credit" },
@@ -105,7 +108,7 @@ STDDIPINFO(Warpwarp)
 static struct BurnDIPInfo WarpwarprDIPList[]=
 {
 	{0x0a, 0xff, 0xff, 0x05, NULL		        },
-	{0x0b, 0xff, 0xff, 0xa0, NULL		        },
+	{0x0b, 0xff, 0xff, 0xe0, NULL		        },
 
 	{0   , 0xfe, 0   ,    4, "Coinage"		    },
 	{0x0a, 0x01, 0x03, 0x03, "2 Coins 1 Credit" },
@@ -140,116 +143,123 @@ static struct BurnDIPInfo WarpwarprDIPList[]=
 
 STDDIPINFO(Warpwarpr)
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo GeebeeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
 	{"P1 Left",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 left"   },
 	{"P1 Right",	BIT_DIGITAL,	DrvJoy4 + 1,	"p1 right"  },
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	A("P1 Paddle",  BIT_ANALOG_REL, &Analog[0],		"p1 x-axis"),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	"dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,		"dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
-
+#undef A
 STDINPUTINFO(Geebee)
 
 
 static struct BurnDIPInfo GeebeeDIPList[]=
 {
-	{0x06, 0xff, 0xff, 0xd0, NULL		},
+	{0x07, 0xff, 0xff, 0xd0, NULL					},
+	{0x08, 0xff, 0xff, 0x20, NULL					},
 
-	{0   , 0xfe, 0   ,    2, "Lives"		},
-	{0x06, 0x01, 0x02, 0x00, "3"		},
-	{0x06, 0x01, 0x02, 0x02, "5"		},
+	{0   , 0xfe, 0   ,    2, "Lives"				},
+	{0x07, 0x01, 0x02, 0x00, "3"					},
+	{0x07, 0x01, 0x02, 0x02, "5"					},
 
-	{0   , 0xfe, 0   ,    4, "Coinage"		},
-	{0x06, 0x01, 0x0c, 0x08, "2 Coins 1 Credits"		},
-	{0x06, 0x01, 0x0c, 0x00, "1 Coin  1 Credits"		},
-	{0x06, 0x01, 0x0c, 0x04, "1 Coin  2 Credits"		},
-	{0x06, 0x01, 0x0c, 0x0c, "Free Play"		},
+	{0   , 0xfe, 0   ,    4, "Coinage"				},
+	{0x07, 0x01, 0x0c, 0x08, "2 Coins 1 Credits"	},
+	{0x07, 0x01, 0x0c, 0x00, "1 Coin  1 Credits"	},
+	{0x07, 0x01, 0x0c, 0x04, "1 Coin  2 Credits"	},
+	{0x07, 0x01, 0x0c, 0x0c, "Free Play"			},
 
-	{0   , 0xfe, 0   ,    8, "Replay"		},
-	{0x06, 0x01, 0x30, 0x10, "40k 80k"		},
-	{0x06, 0x01, 0x30, 0x20, "70k 140k"		},
-	{0x06, 0x01, 0x30, 0x30, "100k 200k"		},
-	{0x06, 0x01, 0x30, 0x00, "None"		},
-	{0x06, 0x01, 0x30, 0x10, "60k 120k"		},
-	{0x06, 0x01, 0x30, 0x20, "100k 200k"		},
-	{0x06, 0x01, 0x30, 0x30, "150k 300k"		},
-	{0x06, 0x01, 0x30, 0x00, "None"		},
+	{0   , 0xfe, 0   ,    8, "Replay"				},
+	{0x07, 0x01, 0x30, 0x10, "40k 80k"				},
+	{0x07, 0x01, 0x30, 0x20, "70k 140k"				},
+	{0x07, 0x01, 0x30, 0x30, "100k 200k"			},
+	{0x07, 0x01, 0x30, 0x00, "None"					},
+	{0x07, 0x01, 0x30, 0x10, "60k 120k"				},
+	{0x07, 0x01, 0x30, 0x20, "100k 200k"			},
+	{0x07, 0x01, 0x30, 0x30, "150k 300k"			},
+	{0x07, 0x01, 0x30, 0x00, "None"					},
 };
 
 STDDIPINFO(Geebee)
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo BombbeeInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 left"   },
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy4 + 1,	"p1 right"  },
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy4 + 1,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	A("P1 Paddle",  BIT_ANALOG_REL, &Analog[0],		"p1 x-axis"),
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 7,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"		},
+	{"Service",		BIT_DIGITAL,	DrvJoy1 + 7,	"service"	},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
-
+#undef A
 STDINPUTINFO(Bombbee)
 
 
 static struct BurnDIPInfo BombbeeDIPList[]=
 {
-	{0x07, 0xff, 0xff, 0x03, NULL		            },
-	{0x08, 0xff, 0xff, 0x20, NULL		            },
+	{0x08, 0xff, 0xff, 0x03, NULL		            },
+	{0x09, 0xff, 0xff, 0x20, NULL		            },
 
 	{0   , 0xfe, 0   ,    4, "Coinage"		        },
-	{0x07, 0x01, 0x03, 0x02, "2 Coins 1 Credit"		},
-	{0x07, 0x01, 0x03, 0x03, "1 Coin 1 Credit"		},
-	{0x07, 0x01, 0x03, 0x01, "1 Coin 2 Credits"		},
-	{0x07, 0x01, 0x03, 0x00, "Free Play"		    },
+	{0x08, 0x01, 0x03, 0x02, "2 Coins 1 Credit"		},
+	{0x08, 0x01, 0x03, 0x03, "1 Coin 1 Credit"		},
+	{0x08, 0x01, 0x03, 0x01, "1 Coin 2 Credits"		},
+	{0x08, 0x01, 0x03, 0x00, "Free Play"		    },
 
 	{0   , 0xfe, 0   ,    3, "Lives"		        },
-	{0x07, 0x01, 0x0c, 0x00, "3"		            },
-	{0x07, 0x01, 0x0c, 0x04, "4"		            },
-	{0x07, 0x01, 0x0c, 0x0c, "5"		            },
+	{0x08, 0x01, 0x0c, 0x00, "3"		            },
+	{0x08, 0x01, 0x0c, 0x04, "4"		            },
+	{0x08, 0x01, 0x0c, 0x0c, "5"		            },
 
 	{0   , 0xfe, 0   ,    2, "Unused"		        },
-	{0x07, 0x01, 0x10, 0x10, "Off"		            },
-	{0x07, 0x01, 0x10, 0x00, "On"		            },
+	{0x08, 0x01, 0x10, 0x10, "Off"		            },
+	{0x08, 0x01, 0x10, 0x00, "On"		            },
 
 	{0   , 0xfe, 0   ,    8, "Replay"		        },
-	{0x07, 0x01, 0xe0, 0x00, "50000"		        },
-	{0x07, 0x01, 0xe0, 0x20, "60000"		        },
-	{0x07, 0x01, 0xe0, 0x40, "70000"		        },
-	{0x07, 0x01, 0xe0, 0x60, "80000"		        },
-	{0x07, 0x01, 0xe0, 0x80, "100000"		        },
-	{0x07, 0x01, 0xe0, 0xa0, "120000"		        },
-	{0x07, 0x01, 0xe0, 0xc0, "150000"		        },
-	{0x07, 0x01, 0xe0, 0xe0, "None"		            },
+	{0x08, 0x01, 0xe0, 0x00, "50000"		        },
+	{0x08, 0x01, 0xe0, 0x20, "60000"		        },
+	{0x08, 0x01, 0xe0, 0x40, "70000"		        },
+	{0x08, 0x01, 0xe0, 0x60, "80000"		        },
+	{0x08, 0x01, 0xe0, 0x80, "100000"		        },
+	{0x08, 0x01, 0xe0, 0xa0, "120000"		        },
+	{0x08, 0x01, 0xe0, 0xc0, "150000"		        },
+	{0x08, 0x01, 0xe0, 0xe0, "None"		            },
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"     },
-	{0x08, 0x01, 0x20, 0x20, "Off"		        },
-	{0x08, 0x01, 0x20, 0x00, "On"		        },
+	{0   , 0xfe, 0   ,    2, "Service Mode"     	},
+	{0x09, 0x01, 0x20, 0x20, "Off"		        	},
+	{0x09, 0x01, 0x20, 0x00, "On"		        	},
 
 };
 
 STDDIPINFO(Bombbee)
 
 static struct BurnInputInfo NavaroneInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"P2 Start",	BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy4 + 2,	"p2 left"},
-	{"P2 Right",	BIT_DIGITAL,	DrvJoy4 + 3,	"p2 right"},
-	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 1"},
+	{"P2 Start",	BIT_DIGITAL,	DrvJoy1 + 3,	"p2 start"	},
+	{"P2 Left",		BIT_DIGITAL,	DrvJoy4 + 2,	"p2 left"	},
+	{"P2 Right",	BIT_DIGITAL,	DrvJoy4 + 3,	"p2 right"	},
+	{"P2 Button 1",	BIT_DIGITAL,	DrvJoy1 + 1,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"		},
+	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
 
 STDINPUTINFO(Navarone)
@@ -258,6 +268,7 @@ STDINPUTINFO(Navarone)
 static struct BurnDIPInfo NavaroneDIPList[]=
 {
 	{0x0b, 0xff, 0xff, 0x16, NULL		        },
+	{0x0c, 0xff, 0xff, 0x20, NULL		        },
 
 	{0   , 0xfe, 0   ,    2, "Lives"		    },
 	{0x0b, 0x01, 0x02, 0x00, "2"		        },
@@ -274,20 +285,25 @@ static struct BurnDIPInfo NavaroneDIPList[]=
 	{0x0b, 0x01, 0x30, 0x10, "1 Coin 1 Credit"	},
 	{0x0b, 0x01, 0x30, 0x20, "1 Coin 2 Credits" },
 	{0x0b, 0x01, 0x30, 0x00, "Free Play"        },
+
+	{0   , 0xfe, 0   ,    2, "Color Mode"		},
+	{0x0c, 0x01, 0x01, 0x00, "Color"		    },
+	{0x0c, 0x01, 0x01, 0x01, "B&W"		        },
 };
 
 STDDIPINFO(Navarone)
 
 static struct BurnInputInfo KaiteinInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"		},
+	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
 
 STDINPUTINFO(Kaitein)
@@ -296,6 +312,7 @@ STDINPUTINFO(Kaitein)
 static struct BurnDIPInfo KaiteinDIPList[]=
 {
 	{0x07, 0xff, 0xff, 0x15, NULL		        },
+	{0x08, 0xff, 0xff, 0x20, NULL		        },
 
 	{0   , 0xfe, 0   ,    4, "Lives"		    },
 	{0x07, 0x01, 0x03, 0x00, "2"		        },
@@ -319,14 +336,15 @@ static struct BurnDIPInfo KaiteinDIPList[]=
 STDDIPINFO(Kaitein)
 
 static struct BurnInputInfo KaiteiInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 1"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy2 + 0,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"		},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
 
 STDINPUTINFO(Kaitei)
@@ -335,6 +353,7 @@ STDINPUTINFO(Kaitei)
 static struct BurnDIPInfo KaiteiDIPList[]=
 {
 	{0x06, 0xff, 0xff, 0x1e, NULL		        },
+	{0x07, 0xff, 0xff, 0x20, NULL		        },
 
 	{0   , 0xfe, 0   ,    4, "Lives"		    },
 	{0x06, 0x01, 0x06, 0x06, "4"		        },
@@ -356,15 +375,16 @@ static struct BurnDIPInfo KaiteiDIPList[]=
 STDDIPINFO(Kaitei)
 
 static struct BurnInputInfo SosInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"},
-	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"},
-	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"},
-	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
+	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
+	{"P1 Start",	BIT_DIGITAL,	DrvJoy1 + 2,	"p1 start"	},
+	{"P1 Left",		BIT_DIGITAL,	DrvJoy3 + 1,	"p1 left"	},
+	{"P1 Right",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 right"	},
+	{"P1 Button 1",	BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"},
+	{"Reset",		BIT_DIGITAL,	&DrvReset,	    "reset"		},
+	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",		BIT_DIPSWITCH,	DrvDip + 0,	    "dip"		},
+	{"Dip B",		BIT_DIPSWITCH,	DrvDip + 1,	    "dip"		},
 };
 
 STDINPUTINFO(Sos)
@@ -373,6 +393,7 @@ STDINPUTINFO(Sos)
 static struct BurnDIPInfo SosDIPList[]=
 {
 	{0x07, 0xff, 0xff, 0x2a, NULL		        },
+	{0x08, 0xff, 0xff, 0x20, NULL		        },
 
 	{0   , 0xfe, 0   ,    4, "Lives"		    },
 	{0x07, 0x01, 0x06, 0x00, "2"		        },
@@ -642,6 +663,12 @@ static void geebee_palette_init()
 }
 #endif
 
+enum {
+	CYAN = 0x10,
+	GREEN = 0x12,
+	YELLOW = 0x14
+};
+
 static void navarone_palette_init()
 {
 	geebee_palette_common();
@@ -654,6 +681,49 @@ static void navarone_palette_init()
 	DrvPalette[6] = geebee_palette[0];
 	DrvPalette[7] = geebee_palette[2];
 	DrvPalette[8] = geebee_palette[1];
+
+	DrvPalette[CYAN + 0] = BurnHighCol(0x33, 0xe5, 0xff, 0); // cyanish
+	DrvPalette[CYAN + 1] = BurnHighCol(0x33 / 2, 0xe5 / 2 , 0xff / 2, 0); // cyanish low
+
+	DrvPalette[GREEN + 0] = BurnHighCol(0x33, 0xff, 0x33, 0); // greenish
+	DrvPalette[GREEN + 1] = BurnHighCol(0x33 / 2, 0xff / 2, 0x33 / 2, 0); // greenish
+
+	DrvPalette[YELLOW + 0] = BurnHighCol(0xff, 0xe5, 0x33, 0); // yellowish
+	DrvPalette[YELLOW + 1] = BurnHighCol(0xff / 2, 0xe5 / 2, 0x33 / 2, 0); // yellowish
+}
+
+static void do_color(INT32 x, INT32 y, INT32 color)
+{
+	UINT16 *p = (UINT16*)&pTransDraw[(x * nScreenWidth) + y]; // yes (flipped / post-tiles)
+
+	if (p[0] == 0) return;
+
+	if (p[0] == 1 || p[0] == 5 || p[0] == 8) p[0] = color; else  // color table for white / bright
+		if (p[0] == 3 || p[0] == 7) p[0] = color + 1;            // color table for grey / dim
+}
+
+static void navarone_colorize()
+{
+	for (INT32 x = 0; x < nScreenHeight; x++) {
+		for (INT32 y = 0; y < nScreenWidth; y++) {
+
+			if (y < 8*2) do_color(x, y, CYAN); else
+				if (y >= 272-(8*4)) do_color(x, y, CYAN); // player / border
+
+			if (x < 8*2) do_color(x, y, CYAN); else
+				if (x >= 224-(8*2)) do_color(x, y, CYAN); // player / border
+
+			if (x >= 8*12 && x < 8*16 && y >= 8*12 && y < 8*16)
+				do_color(x, y, YELLOW); // ru.mil
+
+			if (x >= 8*4 && x < 224-(8*4) && y >= 8*3 && y < 8*4)
+				do_color(x, y, CYAN); // bonus/round text
+
+			if (y >= 8*2 && x >= 8*2 && x < 224-(8*2) && y < 272-(8*4))
+				do_color(x, y, GREEN); // snake island
+
+		}
+	}
 }
 
 static void DrvMakeInputs()
@@ -674,10 +744,10 @@ static void DrvMakeInputs()
 	}
 
 	if (use_paddle && !bBurnRunAheadFrame) {
-		if (DrvJoy4[0]) Paddle += 0x04;
-		if (DrvJoy4[1]) Paddle -= 0x04;
-		if (Paddle < 0x10) Paddle = 0x10;
-		if (Paddle > 0xa8) Paddle = 0xa8;
+		BurnTrackballConfig(0, AXIS_REVERSED, AXIS_REVERSED);
+		BurnTrackballFrame(0, Analog[0], Analog[1], 0x01, 0x1f);
+		BurnTrackballUDLR(0, 0, 0, DrvJoy4[0], DrvJoy4[1], 4);
+		BurnTrackballUpdate(0);
 	}
 }
 
@@ -687,14 +757,14 @@ static UINT8 geebee_in_r(UINT8 offset)
 
 	offset &= 3;
 	switch (offset) {
-		case 0: res = DrvInput[0] | 0x20; break;
+		case 0: res = DrvInput[0] | (DrvDip[0] & 0x20); break;
 		case 1: res = DrvInput[1]; break;
 		case 2: res = DrvDip[0] | ((kaiteimode) ? 0x80 : 0x00); break;
 	}
 
 	if (offset == 3)
 	{
-		res = (use_paddle) ? Paddle : (DrvInput[2]);
+		res = (use_paddle) ? BurnTrackballRead(0) : (DrvInput[2]);
 
 		if (!use_paddle && !kaiteimode) // joystick-mode
 		{
@@ -743,7 +813,8 @@ static void geebee_out7_w(UINT16 offset, UINT8 data)
 
 static UINT8 warpwarp_sw_r(UINT8 offset)
 {
-	return (DrvInput[0] >> (offset & 7)) & 1;
+	UINT8 combined = (DrvInput[0] & ~0x20) | (DrvDip[1] & 0x20);
+	return (combined >> (offset & 7)) & 1;
 }
 
 static UINT8 warpwarp_dsw1_r(UINT8 offset)
@@ -753,7 +824,7 @@ static UINT8 warpwarp_dsw1_r(UINT8 offset)
 
 static UINT8 warpwarp_vol_r(UINT8 /*offset*/)
 {
-	INT32 res = (use_paddle) ? Paddle : DrvInput[2];
+	INT32 res = (use_paddle) ? BurnTrackballRead(0) : DrvInput[2];
 
 	if (!use_paddle) {
 		if (res & 1) return 0x0f;
@@ -898,7 +969,6 @@ static INT32 DrvDoReset()
 	ball_on = 0;
 	ball_h = 0;
 	ball_v = 0;
-	Paddle = 0;
 
 	warpwarp_sound_reset();
 
@@ -960,7 +1030,14 @@ static INT32 DrvInit()
 	if (bombbeemode) {
 		bprintf(0, _T("bombbee/cutieq mode\n"));
 		if (BurnLoadRom(DrvZ80ROM + 0x0000, 0, 1)) return 1;
-		if (BurnLoadRom(DrvGFX1ROM        , 1, 1)) return 1;
+
+		if (0 == strcmp(BurnDrvGetTextA(DRV_NAME), "bombbee")) { // bombbee
+			if (BurnLoadRom(DrvZ80ROM + 0x1000, 1, 1)) return 1;
+			if (BurnLoadRom(DrvGFX1ROM,         2, 1)) return 1;
+		} else { // cutieq
+			if (BurnLoadRom(DrvGFX1ROM,         1, 1)) return 1;
+		}
+
 		GfxDecode(0x100, 1, 8, 8, CharPlaneOffsets, CharXOffsets, CharYOffsets, 0x40, DrvGFX1ROM, DrvCharGFX);
 
 	} else
@@ -1039,6 +1116,11 @@ static INT32 DrvInit()
 
 	warpwarp_sound_init();
 
+	if (use_paddle) {
+		BurnTrackballInit(1);
+		BurnTrackballConfigStartStopPoints(0, 0x10, 0xac, 0x10, 0xac);
+	}
+
 	DrvDoReset();
 
 	return 0;
@@ -1053,6 +1135,10 @@ static INT32 DrvExit()
 	BurnFree(AllMem);
 
 	warpwarp_sound_deinit();
+
+	if (use_paddle) {
+		BurnTrackballExit();
+	}
 
 	rockola = 0;
 	navaronemode = 0;
@@ -1130,6 +1216,8 @@ static INT32 DrvDraw()
 	draw_chars();
 	draw_bullet();
 
+	if (navaronemode && (~DrvDip[1] & 0x01)) navarone_colorize();
+
 	BurnTransferCopy(DrvPalette);
 
 	return 0;
@@ -1192,11 +1280,14 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		warpwarp_sound_scan();
 
+		if (use_paddle) {
+			BurnTrackballScan();
+		}
+
 		SCAN_VAR(ball_on);
 		SCAN_VAR(ball_h);
 		SCAN_VAR(ball_v);
 		SCAN_VAR(geebee_bgw);
-		SCAN_VAR(Paddle);
 	}
 
 	return 0;
@@ -1219,7 +1310,7 @@ struct BurnDriver BurnDrvWarpwarp = {
 	"warpwarp", NULL, NULL, NULL, "1981",
 	"Warp & Warp\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, warpwarpRomInfo, warpwarpRomName, NULL, NULL, NULL, NULL, WarpwarpInputInfo, WarpwarpDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1250,7 +1341,7 @@ struct BurnDriver BurnDrvWarpwarpr = {
 	"warpwarpr", "warpwarp", NULL, NULL, "1981",
 	"Warp Warp (Rock-Ola set 1)\0", NULL, "Namco (Rock-Ola license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, warpwarprRomInfo, warpwarprRomName, NULL, NULL, NULL, NULL, WarpwarpInputInfo, WarpwarprDIPInfo,
 	warpwarprDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1275,7 +1366,7 @@ struct BurnDriver BurnDrvWarpwarpr2 = {
 	"warpwarpr2", "warpwarp", NULL, NULL, "1981",
 	"Warp Warp (Rock-Ola set 2)\0", NULL, "Namco (Rock-Ola license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT | GBF_MAZE, 0,
 	NULL, warpwarpr2RomInfo, warpwarpr2RomName, NULL, NULL, NULL, NULL, WarpwarpInputInfo, WarpwarprDIPInfo,
 	warpwarprDrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1306,7 +1397,7 @@ struct BurnDriver BurnDrvGeebee = {
 	"geebee", NULL, NULL, NULL, "1978",
 	"Gee Bee (Japan)\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, geebeeRomInfo, geebeeRomName, NULL, NULL, NULL, NULL, GeebeeInputInfo, GeebeeDIPInfo,
 	GeebeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1327,7 +1418,7 @@ struct BurnDriver BurnDrvGeebeeg = {
 	"geebeeg", "geebee", NULL, NULL, "1978",
 	"Gee Bee (US)\0", NULL, "Namco (Gremlin license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, geebeegRomInfo, geebeegRomName, NULL, NULL, NULL, NULL, GeebeeInputInfo, GeebeeDIPInfo,
 	GeebeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1351,7 +1442,7 @@ struct BurnDriver BurnDrvGeebeea = {
 	"geebeea", "geebee", NULL, NULL, "1978",
 	"Gee Bee (UK)\0", NULL, "Namco (Alca license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, geebeeaRomInfo, geebeeaRomName, NULL, NULL, NULL, NULL, GeebeeInputInfo, GeebeeDIPInfo,
 	GeebeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1375,7 +1466,7 @@ struct BurnDriver BurnDrvGeebeeb = {
 	"geebeeb", "geebee", NULL, NULL, "1978",
 	"Gee Bee (Europe)\0", NULL, "Namco (F.lli Bertolino license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, geebeebRomInfo, geebeebRomName, NULL, NULL, NULL, NULL, GeebeeInputInfo, GeebeeDIPInfo,
 	GeebeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1393,10 +1484,10 @@ INT32 NavaroneInit()
 // Navarone
 
 static struct BurnRomInfo navaroneRomDesc[] = {
-	{ "navalone.p1",	0x0800, 0x5a32016b, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
-	{ "navalone.p2",	0x0800, 0xb1c86fe3, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "navarone.p1",	0x0800, 0x5a32016b, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "navarone.p2",	0x0800, 0xb1c86fe3, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "navalone.chr",	0x0800, 0xb26c6170, 2 | BRF_GRA }, //  2 gfx1
+	{ "navarone.chr",	0x0800, 0xb26c6170, 2 | BRF_GRA }, //  2 gfx1
 };
 
 STD_ROM_PICK(navarone)
@@ -1406,7 +1497,7 @@ struct BurnDriver BurnDrvNavarone = {
 	"navarone", NULL, NULL, NULL, "1980",
 	"Navarone\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, navaroneRomInfo, navaroneRomName, NULL, NULL, NULL, NULL, NavaroneInputInfo, NavaroneDIPInfo,
 	NavaroneInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1437,7 +1528,7 @@ struct BurnDriver BurnDrvKaitein = {
 	"kaitein", "kaitei", NULL, NULL, "1980",
 	"Kaitei Takara Sagashi (Namco license)\0", NULL, "K.K. Tokki (Namco license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, kaiteinRomInfo, kaiteinRomName, NULL, NULL, NULL, NULL, KaiteinInputInfo, KaiteinDIPInfo,
 	KaiteinInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1470,7 +1561,7 @@ struct BurnDriver BurnDrvKaitei = {
 	"kaitei", NULL, NULL, NULL, "1980",
 	"Kaitei Takara Sagashi\0", NULL, "K.K. Tokki", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_ACTION, 0,
 	NULL, kaiteiRomInfo, kaiteiRomName, NULL, NULL, NULL, NULL, KaiteiInputInfo, KaiteiDIPInfo,
 	KaiteiInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1487,7 +1578,7 @@ INT32 SOSInit()
 }
 
 
-// SOS
+// SOS Game
 
 static struct BurnRomInfo sosRomDesc[] = {
 	{ "sos.p1",	0x0800, 0xf70bdafb, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
@@ -1500,10 +1591,10 @@ STD_ROM_PICK(sos)
 STD_ROM_FN(sos)
 
 struct BurnDriver BurnDrvSos = {
-	"sos", NULL, NULL, NULL, "1980",
-	"SOS\0", NULL, "Namco", "Miscellaneous",
+	"sos", NULL, NULL, NULL, "1979",
+	"SOS Game\0", NULL, "K.K. Tokki (Namco license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 1, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, sosRomInfo, sosRomName, NULL, NULL, NULL, NULL, SosInputInfo, SosDIPInfo,
 	SOSInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1523,9 +1614,11 @@ INT32 BombbeeInit()
 // Bomb Bee
 
 static struct BurnRomInfo bombbeeRomDesc[] = {
-	{ "bombbee.1k",	0x2000, 0x9f8cd7af, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+//	{ "bombbee.1k",	0x2000, 0x9f8cd7af, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "tmm333.2k",	0x1000, 0xa442f22b, 1 | BRF_PRG | BRF_ESS }, //  0 maincpu
+	{ "tmm333.1k",	0x1000, 0x81f805b3, 1 | BRF_PRG | BRF_ESS }, //  1
 
-	{ "bombbee.4c",	0x0800, 0x5f37d569, 1 | BRF_GRA }, //  1 gfx1
+	{ "tmm334.4c",	0x0800, 0x5f37d569, 1 | BRF_GRA },           //  2 gfx1
 };
 
 STD_ROM_PICK(bombbee)
@@ -1535,7 +1628,7 @@ struct BurnDriver BurnDrvBombbee = {
 	"bombbee", NULL, NULL, NULL, "1979",
 	"Bomb Bee\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, bombbeeRomInfo, bombbeeRomName, NULL, NULL, NULL, NULL, BombbeeInputInfo, BombbeeDIPInfo,
 	BombbeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4
@@ -1557,7 +1650,7 @@ struct BurnDriver BurnDrvCutieq = {
 	"cutieq", NULL, NULL, NULL, "1979",
 	"Cutie Q\0", NULL, "Namco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BREAKOUT, 0,
 	NULL, cutieqRomInfo, cutieqRomName, NULL, NULL, NULL, NULL, BombbeeInputInfo, BombbeeDIPInfo,
 	BombbeeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x300,
 	224, 272, 3, 4

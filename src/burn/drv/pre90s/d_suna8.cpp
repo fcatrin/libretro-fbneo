@@ -57,7 +57,7 @@ static UINT8 m_rambank = 0;
 static UINT8 disable_mainram_write = 0;
 static UINT8 protection_val = 0;
 static UINT8 hardhead_ip = 0;
-static UINT8 Sparkman = 0, Hardhead2 = 0;
+static UINT8 Sparkman = 0, Hardhead2 = 0, Srangerb = 0, Hardheadb = 0;
 
 static UINT8  DrvJoy1[8];
 static UINT8  DrvJoy2[8];
@@ -66,58 +66,60 @@ static UINT8  DrvDips[3];
 static UINT8  DrvInputs[3];
 static UINT8  DrvReset;
 
+static INT32 nCyclesExtra[3];
+
 static struct BurnInputInfo DrvInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Drv)
 
 static struct BurnInputInfo SparkmanInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"},
-	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"},
-	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"},
-	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 fire 3"},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 start"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 coin"},
-	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"},
-	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"},
-	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"},
-	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"},
-	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 3"},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 7,	"p2 coin"	},
+	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 6,	"p2 start"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
+	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
+	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
+	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Sparkman)
@@ -1025,11 +1027,6 @@ static void sound_type1_fm_irq_handler(INT32, INT32 nStatus)
 	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
-static INT32 DrvSyncDAC()
-{
-	return (INT32)(float)(nBurnSoundLen * (ZetTotalCycles() / (6000000.000 / (nBurnFPS / 100.000))));
-}
-
 static INT32 MemIndex()
 {
 	UINT8 *Next; Next = AllMem;
@@ -1272,6 +1269,8 @@ static void CommonDoReset(INT32 clear_ram)
 	protection_val = 0;
 	hardhead_ip = 0;
 
+	nCyclesExtra[0] = nCyclesExtra[1] = nCyclesExtra[2] = 0;
+
 	HiscoreReset();
 }
 
@@ -1287,15 +1286,19 @@ static INT32 HardheadDoReset()
 
 static INT32 HardheadInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
-		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
+		if (Hardheadb) {
+			UINT8 *Temp = (UINT8*)BurnMalloc(0x10000);
+			if (BurnLoadRom(Temp, 0, 1)) return 1;
+			memcpy (DrvZ80ROM0 + 0x48000, Temp + 0x00000, 0x08000);
+			memcpy (DrvZ80ROM0 + 0x00000, Temp + 0x08000, 0x08000);
+			BurnFree(Temp);
+		}
+		else {
+			if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
+		}
 		if (BurnLoadRom(DrvZ80ROM0 + 0x10000,  1, 1)) return 1;
 		if (BurnLoadRom(DrvZ80ROM0 + 0x18000,  2, 1)) return 1;
 		if (BurnLoadRom(DrvZ80ROM0 + 0x20000,  3, 1)) return 1;
@@ -1318,7 +1321,7 @@ static INT32 HardheadInit()
 		if (BurnLoadRom(DrvSampleROM + 0x000, 13, 1)) return 1;
 
 		DrvGfxDecode(DrvGfxROM0, 0x40000);
-		HardheadDecrypt();
+		if (Hardheadb == 0) HardheadDecrypt();
 		DrvExpandSamples(0x10000);
 	}
 
@@ -1342,7 +1345,7 @@ static INT32 HardheadInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 3000000, (0 ? &sound_type1_fm_irq_handler : NULL), 0);
-	BurnTimerAttachYM3812(&ZetConfig, 3000000);
+	BurnTimerAttach(&ZetConfig, 3000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	AY8910Init(0, 1500000, 1);
@@ -1358,12 +1361,7 @@ static INT32 HardheadInit()
 
 static INT32 SparkmanInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -1426,7 +1424,7 @@ static INT32 SparkmanInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, NULL, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 6000000);
+	BurnTimerAttach(&ZetConfig, 6000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	AY8910Init(0, 1500000, 1);
@@ -1521,12 +1519,7 @@ static void starfigh_decrypt()
 
 static INT32 StarfighInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -1583,7 +1576,7 @@ static INT32 StarfighInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, NULL, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 6000000);
+	BurnTimerAttach(&ZetConfig, 6000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	AY8910Init(0, 1500000, 1);
@@ -1607,6 +1600,7 @@ static INT32 HardheadExit()
 	BurnFree(AllMem);
 
 	Sparkman = 0;
+	Hardheadb = 0;
 
 	return 0;
 }
@@ -1622,38 +1616,35 @@ static INT32 RrangerDoReset(INT32 clear_ram)
 
 static INT32 RrangerInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
-		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
-		if (BurnLoadRom(DrvZ80ROM0 + 0x10000,  1, 1)) return 1;
-		if (BurnLoadRom(DrvZ80ROM0 + 0x18000,  2, 1)) return 1;
-		if (BurnLoadRom(DrvZ80ROM0 + 0x30000,  3, 1)) return 1;
+		INT32 i = 0;
+		if (BurnLoadRom(DrvZ80ROM0 + 0x00000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvZ80ROM0 + 0x10000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvZ80ROM0 + 0x18000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvZ80ROM0 + 0x30000, i++, 1)) return 1;
 		memcpy (DrvZ80ROM0 + 0x20000, DrvZ80ROM0 + 0x38000, 0x08000);
-		if (BurnLoadRom(DrvZ80ROM0 + 0x38000,  4, 1)) return 1;
+		if (BurnLoadRom(DrvZ80ROM0 + 0x38000, i++, 1)) return 1;
 		memcpy (DrvZ80ROM0 + 0x28000, DrvZ80ROM0 + 0x40000, 0x08000);
+		if (Srangerb && BurnLoadRom(DrvZ80ROM0 + 0x28000,  i++, 1)) return 1;
 
-		if (BurnLoadRom(DrvZ80ROM1 + 0x00000,  5, 1)) return 1;
+		if (BurnLoadRom(DrvZ80ROM1 + 0x00000, i++, 1)) return 1;
 
-		if (BurnLoadRom(DrvGfxROM0 + 0x00000,  6, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x08000,  7, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x10000,  8, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x18000,  9, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x20000, 10, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x28000, 11, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x30000, 12, 1)) return 1;
-		if (BurnLoadRom(DrvGfxROM0 + 0x38000, 13, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x00000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x08000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x10000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x18000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x20000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x28000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x30000, i++, 1)) return 1;
+		if (BurnLoadRom(DrvGfxROM0 + 0x38000, i++, 1)) return 1;
 
-		for (INT32 i = 0x3ffff; i >= 0; i--) {	// invert
-			DrvGfxROM0[i] = DrvGfxROM0[i] ^ 0xff;
+		for (INT32 j = 0x3ffff; j >= 0; j--) {	// invert
+			DrvGfxROM0[j] = DrvGfxROM0[j] ^ 0xff;
 		}
 
-		if (BurnLoadRom(DrvSampleROM + 0x000, 14, 1)) return 1;
+		if (BurnLoadRom(DrvSampleROM + 0x000, i++, 1)) return 1;
 
 		DrvGfxDecode(DrvGfxROM0, 0x40000);
 		DrvExpandSamples(0x10000);
@@ -1700,6 +1691,8 @@ static INT32 RrangerExit()
 
 	BurnFree(AllMem);
 
+	Srangerb = 0;
+
 	return 0;
 }
 
@@ -1720,12 +1713,7 @@ static INT32 Hardhea2DoReset()
 
 static INT32 Hardhea2Init()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x00000,  0, 1)) return 1;
@@ -1785,20 +1773,20 @@ static INT32 Hardhea2Init()
 	ZetClose();
 
 	BurnYM3812Init(1, 3000000, sound_type1_fm_irq_handler, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 6000000);
-	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
+	BurnTimerAttach(&ZetConfig, 6000000);
+	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 0.60, BURN_SND_ROUTE_BOTH);
 
 	AY8910Init(0, 1500000, 1);
 	AY8910SetAllRoutes(0, 0.33, BURN_SND_ROUTE_BOTH);
 
-	DACInit(0, 0, 1, DrvSyncDAC);
-	DACSetRoute(0, 0.17, BURN_SND_ROUTE_LEFT);
-	DACInit(1, 0, 1, DrvSyncDAC);
-	DACSetRoute(1, 0.17, BURN_SND_ROUTE_RIGHT);
-	DACInit(2, 0, 1, DrvSyncDAC);
-	DACSetRoute(2, 0.17, BURN_SND_ROUTE_LEFT);
-	DACInit(3, 0, 1, DrvSyncDAC);
-	DACSetRoute(3, 0.17, BURN_SND_ROUTE_RIGHT);
+	DACInit(0, 0, 1, ZetTotalCycles, 6000000);
+	DACSetRoute(0, 0.24, BURN_SND_ROUTE_LEFT);
+	DACInit(1, 0, 1, ZetTotalCycles, 6000000);
+	DACSetRoute(1, 0.24, BURN_SND_ROUTE_RIGHT);
+	DACInit(2, 0, 1, ZetTotalCycles, 6000000);
+	DACSetRoute(2, 0.24, BURN_SND_ROUTE_LEFT);
+	DACInit(3, 0, 1, ZetTotalCycles, 6000000);
+	DACSetRoute(3, 0.24, BURN_SND_ROUTE_RIGHT);
 
 	GenericTilesInit();
 
@@ -1817,7 +1805,7 @@ static INT32 Hardhea2Exit()
 	AY8910Exit(0);
 	DACExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
 	Hardhead2 = 0;
 
@@ -2123,37 +2111,32 @@ static INT32 HardheadFrame()
 		}
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 16;
 	INT32 nCyclesTotal[2] = { 6000000 / 60, 3000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
-		if (i == (nInterleave-1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN(0, Zet);
+		if (i == (nInterleave-1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		BurnTimerUpdateYM3812(nCyclesSegment);
+		CPU_RUN_TIMER(1);
 		if ((i % (nInterleave/4)) == ((nInterleave / 4) - 1)) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 	}
 
-	ZetOpen(1);
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
-	if (pBurnSoundOut) {		
+	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 		sample_render(pBurnSoundOut, nBurnSoundLen);
 	}
-	ZetClose();
 
 	if (pBurnDraw) {
 		HardheadDraw();
@@ -2184,36 +2167,31 @@ static INT32 RrangerFrame()
 		}
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 16;
 	INT32 nCyclesTotal[2] = { 6000000 / 60, 3000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
-		if (i == (nInterleave-1)) ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO);
+		CPU_RUN(0, Zet);
+		if (i == (nInterleave-1)) ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		BurnTimerUpdate(nCyclesSegment);
+		CPU_RUN_TIMER(1);
 		if ((i % (nInterleave/4)) == ((nInterleave / 4) - 1)) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 	}
 
-	ZetOpen(1);
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
-	if (pBurnSoundOut) {		
+	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 		sample_render(pBurnSoundOut, nBurnSoundLen);
 	}
-	ZetClose();
 
 	if (pBurnDraw) {
 		RrangerDraw();
@@ -2239,48 +2217,38 @@ static INT32 Hardhea2Frame()
 		}
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[3] = { 6000000 / 60, 6000000 / 60, 6000000 / 60 };
-	INT32 nCyclesDone[3] = { 0, 0, 0 };
+	INT32 nCyclesDone[3] = { nCyclesExtra[0], 0, 0 };
 
 	vblank = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
+		CPU_RUN(0, Zet);
 		if (i == 112 && *nmi_enable) ZetNmi();
-		if (i == 240) { vblank = 1; ZetSetIRQLine(0, CPU_IRQSTATUS_AUTO); }
+		if (i == 240) { vblank = 1; ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD); }
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		BurnTimerUpdateYM3812(nCyclesSegment);
+		CPU_RUN_TIMER(1);
 		if ((i % (nInterleave/4)) == ((nInterleave / 4) - 1)) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 
 		ZetOpen(2);
-		nCyclesSegment = nCyclesTotal[2] / nInterleave;
-		nCyclesDone[2] += ZetRun(nCyclesSegment);
+		CPU_RUN(2, Zet);
 		ZetClose();
 	}
 
-	ZetOpen(1);
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
-	ZetClose();
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
-		ZetOpen(1);	
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
-		ZetClose();
-		ZetOpen(2);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
-		ZetClose();
 	}
 
 	if (pBurnDraw) {
@@ -2310,18 +2278,16 @@ static INT32 SparkmanFrame() // & starfigh
 		DrvInputs[2] = (DrvInputs[2] & 0x03) | (DrvDips[2] & 0xbc);
 	}
 
-	INT32 nCyclesSegment;
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { (Sparkman ? 6000000 : 9000000) / 60, 6000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], 0 };
 
 	vblank = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesSegment = nCyclesTotal[0] / nInterleave;
-		nCyclesDone[0] += ZetRun(nCyclesSegment);
+		CPU_RUN(0, Zet);
 		if (i == 112 && *nmi_enable) ZetNmi();
 		if (i == (Sparkman ? 250 : 255)) { // any other value and the sprites glitch (MAME uses 240 here, hmmm)
 			vblank = 1;
@@ -2330,23 +2296,20 @@ static INT32 SparkmanFrame() // & starfigh
 		ZetClose();
 
 		ZetOpen(1);
-		nCyclesSegment = (nCyclesTotal[1] / nInterleave) * (i + 1);
-		BurnTimerUpdateYM3812(nCyclesSegment);
+		CPU_RUN_TIMER(1);
 		if ((i % (nInterleave/4)) == ((nInterleave / 4) - 1)) {
 			ZetSetIRQLine(0, CPU_IRQSTATUS_HOLD);
 		}
 		ZetClose();
 	}
 
-	ZetOpen(1);
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
 
-	if (pBurnSoundOut) {		
+	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		AY8910Render(pBurnSoundOut, nBurnSoundLen);
 		sample_render(pBurnSoundOut, nBurnSoundLen);
 	}
-	ZetClose();
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -2397,6 +2360,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(disable_mainram_write);
 		SCAN_VAR(protection_val);
 		SCAN_VAR(hardhead_ip);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 	
 	if (nAction & ACB_WRITE) {
@@ -2456,6 +2421,121 @@ struct BurnDriver BurnDrvHardhead = {
 };
 
 
+// Hard Head (bootleg, set 1)
+
+static struct BurnRomInfo hardheadbRomDesc[] = {
+	{ "1_27512.l6",	0x10000, 0xbb4aa9ac, 1 }, //  0 maincpu
+	{ "p2",			0x08000, 0xfaa2cf9a, 1 }, //  1
+	{ "p3",			0x08000, 0x3d24755e, 1 }, //  2
+	{ "p4",			0x08000, 0x0241ac79, 1 }, //  3
+	{ "p7",			0x08000, 0xbeba8313, 1 }, //  4
+	{ "p8",			0x08000, 0x211a9342, 1 }, //  5
+	{ "p9",			0x08000, 0x2ad430c4, 1 }, //  6
+	{ "p10",		0x08000, 0xb6894517, 1 }, //  7
+
+	{ "p13",		0x08000, 0x493c0b41, 2 }, //  8 audiocpu
+
+	{ "p5",			0x08000, 0xe9aa6fba, 3 }, //  9 gfx1
+	{ "p6",			0x08000, 0x15d5f5dd, 3 }, // 10
+	{ "p11",		0x08000, 0x055f4c29, 3 }, // 11
+	{ "p12",		0x08000, 0x9582e6db, 3 }, // 12
+
+	{ "p14",		0x08000, 0x41314ac1, 4 }, // 13 samples
+};
+
+STD_ROM_PICK(hardheadb)
+STD_ROM_FN(hardheadb)
+
+static INT32 HardheadbInit()
+{
+	Hardheadb = 1;
+
+	return HardheadInit();
+}
+
+struct BurnDriver BurnDrvHardheadb = {
+	"hardheadb", "hardhead", NULL, NULL, "1988",
+	"Hard Head (bootleg, set 1)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, hardheadbRomInfo, hardheadbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, HardheadDIPInfo,
+	HardheadbInit, HardheadExit, HardheadFrame, HardheadDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Hard Head (bootleg, set 3)
+
+static struct BurnRomInfo hardheadb3RomDesc[] = {
+	{ "1_27512.l6",		0x10000, 0xbb4aa9ac, 1 }, //  0 maincpu
+	{ "2_27256.k6",		0x08000, 0x8fcc1248, 1 }, //  1
+	{ "p3",				0x08000, 0x3d24755e, 1 }, //  2
+	{ "p4",				0x08000, 0x0241ac79, 1 }, //  3
+	{ "p7",				0x08000, 0xbeba8313, 1 }, //  4
+	{ "p8",				0x08000, 0x11729c89, 1 }, //  5
+	{ "p9",				0x08000, 0x2ad430c4, 1 }, //  6
+	{ "10_27256.i8",	0x08000, 0x84fc6574, 1 }, //  7
+
+	{ "p13",			0x08000, 0x493c0b41, 2 }, //  8 audiocpu
+
+	{ "p5",				0x08000, 0xe9aa6fba, 3 }, //  9 gfx1
+	{ "p6",				0x08000, 0x15d5f5dd, 3 }, // 10
+	{ "11_27256.d8",	0x08000, 0x3751b99d, 3 }, // 11
+	{ "p12",			0x08000, 0x9582e6db, 3 }, // 12
+
+	{ "p14",			0x08000, 0x41314ac1, 4 }, // 13 samples
+};
+
+STD_ROM_PICK(hardheadb3)
+STD_ROM_FN(hardheadb3)
+
+struct BurnDriver BurnDrvHardheadb3 = {
+	"hardheadb3", "hardhead", NULL, NULL, "1989",
+	"Hard Head (bootleg, set 3)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, hardheadb3RomInfo, hardheadb3RomName, NULL, NULL, NULL, NULL, DrvInputInfo, HardheadDIPInfo,
+	HardheadbInit, HardheadExit, HardheadFrame, HardheadDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Popper (bootleg of Hard Head)
+
+static struct BurnRomInfo pop_hhRomDesc[] = {
+	{ "1_27512.l6",		0x10000, 0xbb4aa9ac, 1 }, //  0 maincpu
+	{ "2_27256.k6",		0x08000, 0x8fcc1248, 1 }, //  1
+	{ "p3",				0x08000, 0x3d24755e, 1 }, //  2
+	{ "p4",				0x08000, 0x0241ac79, 1 }, //  3
+	{ "p7",				0x08000, 0xbeba8313, 1 }, //  4
+	{ "8_27256.k8",		0x08000, 0x87a8b4b4, 1 }, //  5
+	{ "p9",				0x08000, 0x2ad430c4, 1 }, //  6
+	{ "10_27256.i8",	0x08000, 0x84fc6574, 1 }, //  7
+
+	{ "p13",			0x08000, 0x493c0b41, 2 }, //  8 audiocpu
+
+	{ "p5",				0x08000, 0xe9aa6fba, 3 }, //  9 gfx1
+	{ "p6",				0x08000, 0x15d5f5dd, 3 }, // 10
+	{ "11_27256.d8",	0x08000, 0x3751b99d, 3 }, // 11
+	{ "p12",			0x08000, 0x9582e6db, 3 }, // 12
+
+	{ "p14",			0x08000, 0x41314ac1, 4 }, // 13 samples
+};
+
+STD_ROM_PICK(pop_hh)
+STD_ROM_FN(pop_hh)
+
+struct BurnDriver BurnDrvPop_hh = {
+	"pop_hh", "hardhead", NULL, NULL, "1989",
+	"Popper (bootleg of Hard Head)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	NULL, pop_hhRomInfo, pop_hhRomName, NULL, NULL, NULL, NULL, DrvInputInfo, HardheadDIPInfo,
+	HardheadbInit, HardheadExit, HardheadFrame, HardheadDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
 // Super Ranger (v2.0)
 
 static struct BurnRomInfo srangerRomDesc[] = {
@@ -2488,6 +2568,241 @@ struct BurnDriver BurnDrvSranger = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
 	NULL, srangerRomInfo, srangerRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Super Ranger (v2.0)
+// Sharp Image License but distributed by CAPCOM U.S.A. Inc.  PCB came with ROM 1 labeled as 01 CAPCOM
+// PCB have been see with ROM 1 simply labled as 1 in either RED and BLUE print.
+
+static struct BurnRomInfo rrangerRomDesc[] = {
+	{ "01_capcom.e2",	0x08000, 0xff1868cf, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  5 audiocpu
+
+	{ "6.p5",	0x08000, 0x57543643, 3 }, //  6 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  7
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  8
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, //  9
+	{ "10.p9",	0x08000, 0x42c4fdbf, 3 }, // 10
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 11
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 12
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 13
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 14 samples
+};
+
+STD_ROM_PICK(rranger)
+STD_ROM_FN(rranger)
+
+struct BurnDriver BurnDrvRranger = {
+	"rranger", "sranger", NULL, NULL, "1988",
+	"Rough Ranger (v2.0)\0", NULL, "SunA (Sharp Image license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, rrangerRomInfo, rrangerRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Rough Ranger (v2.0, bootleg)
+// protection is patched out in this set.
+
+static struct BurnRomInfo rrangerbRomDesc[] = {
+	{ "1.e2",	0x08000, 0x4fb4f096, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  5 audiocpu
+
+	{ "6.p5",	0x08000, 0x57543643, 3 }, //  6 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  7
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  8
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, //  9
+	{ "10.p9",	0x08000, 0x42c4fdbf, 3 }, // 10
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 11
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 12
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 13
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 14 samples
+};
+
+STD_ROM_PICK(rrangerb)
+STD_ROM_FN(rrangerb)
+
+struct BurnDriver BurnDrvRrangerb = {
+	"rrangerb", "sranger", NULL, NULL, "1988",
+	"Rough Ranger (v2.0, bootleg)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, rrangerbRomInfo, rrangerbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Super Ranger (older)
+
+static struct BurnRomInfo srangeroRomDesc[] = {
+	{ "1.e2",	0x08000, 0x2287d3fc, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  5 audiocpu
+
+	{ "6.p5",	0x08000, 0xffe13cc4, 3 }, //  6 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  7
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  8
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, //  9
+	{ "10.p9",	0x08000, 0x13f1faab, 3 }, // 10
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 11
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 12
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 13
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 14 samples
+};
+
+STD_ROM_PICK(srangero)
+STD_ROM_FN(srangero)
+
+struct BurnDriver BurnDrvSrangero = {
+	"srangero", "sranger", NULL, NULL, "1988",
+	"Super Ranger (older)\0", NULL, "SunA", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, srangeroRomInfo, srangeroRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Super Ranger (older, bootleg)
+
+static struct BurnRomInfo srangerbRomDesc[] = {
+	{ "r1bt",	0x08000, 0x40635e7c, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+	{ "r5bt",	0x08000, 0xf7f391b5, 1 }, //  5
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  6 audiocpu
+
+	{ "6.p5",	0x08000, 0x4f11fef3, 3 }, //  7 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  8
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  9
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, // 10
+	{ "10.p9",	0x08000, 0x1b204d6b, 3 }, // 11
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 12
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 13
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 14
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 15 samples
+};
+
+STD_ROM_PICK(srangerb)
+STD_ROM_FN(srangerb)
+
+static INT32 SrangerbInit()
+{
+	Srangerb = 1;
+
+	return RrangerInit();
+}
+
+struct BurnDriver BurnDrvSrangerb = {
+	"srangerb", "sranger", NULL, NULL, "1988",
+	"Super Ranger (older, bootleg)\0", NULL, "bootleg (NYWA)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, srangerbRomInfo, srangerbRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	SrangerbInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Super Ranger (older, WDK license)
+// same program as srangero, 2 different gfx roms
+
+static struct BurnRomInfo srangerwRomDesc[] = {
+	{ "1.e2",	0x08000, 0x2287d3fc, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  5 audiocpu
+
+	{ "6.p5",	0x08000, 0x312ecda6, 3 }, //  6 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  7
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  8
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, //  9
+	{ "10.p9",	0x08000, 0x8731abc6, 3 }, // 10
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 11
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 12
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 13
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 14 samples
+};
+
+STD_ROM_PICK(srangerw)
+STD_ROM_FN(srangerw)
+
+struct BurnDriver BurnDrvSrangerw = {
+	"srangerw", "sranger", NULL, NULL, "1988",
+	"Super Ranger (older, WDK license)\0", NULL, "SunA (WDK license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, srangerwRomInfo, srangerwRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
+	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Super Ranger (older, WDK license)
+// same program as srangero, 2 different gfx roms
+
+static struct BurnRomInfo srangernRomDesc[] = {
+	{ "1.e2",	0x08000, 0x2287d3fc, 1 }, //  0 maincpu
+	{ "2.f2",	0x08000, 0xff65af29, 1 }, //  1
+	{ "3.h2",	0x08000, 0x64e09436, 1 }, //  2
+	{ "4.i2",	0x10000, 0x4346fae6, 1 }, //  3
+	{ "5.j2",	0x10000, 0x6a7ca1c3, 1 }, //  4
+
+	{ "14.j13",	0x08000, 0x11c83aa1, 2 }, //  5 audiocpu
+
+	{ "6.p5",	0x08000, 0xaf534075, 3 }, //  6 gfx1
+	{ "7.p6",	0x08000, 0x9f35dbfa, 3 }, //  7
+	{ "8.p7",	0x08000, 0xf400db89, 3 }, //  8
+	{ "9.p8",	0x08000, 0xfa2a11ea, 3 }, //  9
+	{ "10.p9",	0x08000, 0xa4916537, 3 }, // 10
+	{ "11.p10",	0x08000, 0x19037a7b, 3 }, // 11
+	{ "12.p11",	0x08000, 0xc59c0ec7, 3 }, // 12
+	{ "13.p12",	0x08000, 0x9809fee8, 3 }, // 13
+
+	{ "15.e13",	0x08000, 0x28c2c87e, 4 }, // 14 samples
+};
+
+STD_ROM_PICK(srangern)
+STD_ROM_FN(srangern)
+
+struct BurnDriver BurnDrvSrangern = {
+	"srangern", "sranger", NULL, NULL, "1988",
+	"Super Ranger (older, NOVA license)\0", NULL, "SunA (NOVA license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, srangernRomInfo, srangernRomName, NULL, NULL, NULL, NULL, DrvInputInfo, RrangerDIPInfo,
 	RrangerInit, RrangerExit, RrangerFrame, RrangerDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 224, 4, 3
 };
@@ -2601,6 +2916,45 @@ struct BurnDriver BurnDrvSparkman = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
 	NULL, sparkmanRomInfo, sparkmanRomName, NULL, NULL, NULL, NULL, SparkmanInputInfo, SparkmanDIPInfo,
+	SparkmanInit, HardheadExit, SparkmanFrame, SparkmanDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 224, 4, 3
+};
+
+
+// Spark Man (v2.0, set 2)
+
+static struct BurnRomInfo sparkmanaRomDesc[] = {
+	{ "p9.7f",		0x08000, 0xb114cb2b, 1 }, //  0 maincpu
+	{ "10.g7",		0x10000, 0x48b4a31e, 1 }, //  1
+	{ "12.g8",		0x10000, 0xb8a4a557, 1 }, //  2
+	{ "11.i7",		0x10000, 0xf5f38e1f, 1 }, //  3
+	{ "13.i8",		0x10000, 0xe54eea25, 1 }, //  4
+
+	{ "14.h11",		0x08000, 0x06822f3d, 2 }, //  5 audiocpu
+
+	{ "p3.u1",		0x10000, 0x39dbd414, 3 }, //  6 gfx1
+	{ "p2.t1",		0x10000, 0x2e474203, 3 }, //  7
+	{ "p1.r1",		0x08000, 0x7115cfe7, 3 }, //  8
+	{ "p6.u2",		0x10000, 0xe6551db9, 3 }, //  9
+	{ "p5.t2",		0x10000, 0x0df5da2a, 3 }, // 10
+	{ "p4.r2",		0x08000, 0x6904bde2, 3 }, // 11
+
+	{ "p7.u4",		0x10000, 0x17c16ce4, 4 }, // 12 gfx2
+	{ "p8.u6",		0x10000, 0x414222ea, 4 }, // 13
+
+	{ "15.b10",		0x08000, 0x46c7d4d8, 5 }, // 14 samples
+	{ "16.b11",		0x08000, 0xd6823a62, 5 }, // 15
+};
+
+STD_ROM_PICK(sparkmana)
+STD_ROM_FN(sparkmana)
+
+struct BurnDriver BurnDrvSparkmana = {
+	"sparkmana", "sparkman", NULL, NULL, "1989",
+	"Spark Man (v2.0, set 2)\0", NULL, "SunA", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RUNGUN, 0,
+	NULL, sparkmanaRomInfo, sparkmanaRomName, NULL, NULL, NULL, NULL, SparkmanInputInfo, SparkmanDIPInfo,
 	SparkmanInit, HardheadExit, SparkmanFrame, SparkmanDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 224, 4, 3
 };

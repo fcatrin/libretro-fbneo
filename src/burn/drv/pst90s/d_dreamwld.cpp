@@ -1,4 +1,4 @@
-// FB Alpha Dream World / Baryon driver module
+// FB Neo Dream World / Baryon driver module
 // Based on MAME driver by David Haywood
 
 #include "tiles_generic.h"
@@ -19,7 +19,6 @@ static UINT8 *DrvSndROM0;
 static UINT8 *DrvSndROM1;
 static UINT8 *DrvSprRAM;
 static UINT8 *DrvSprBuf;
-static UINT8 *DrvSprBuf2;
 static UINT8 *DrvPalRAM;
 static UINT8 *Drv68KRAM;
 static UINT8 *DrvBg1RAM;
@@ -39,6 +38,8 @@ static UINT8 *DrvOkiBank;
 static UINT8 prot_p1;
 static UINT8 prot_p2;
 static UINT8 prot_latch;
+
+static INT32 nCyclesExtra[2];
 
 static struct BurnInputInfo CommonInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
@@ -453,8 +454,6 @@ static tilemap_callback( foreground )
 
 static INT32 DrvDoReset()
 {
-	DrvReset = 0;
-
 	memset (AllRam, 0, RamEnd - AllRam);
 
 	SekOpen(0);
@@ -470,6 +469,10 @@ static INT32 DrvDoReset()
 
 	dreamwld_oki_setbank(0, 0);
 	dreamwld_oki_setbank(1, 0); // dreamwld
+
+	nCyclesExtra[0] = nCyclesExtra[1] = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -505,7 +508,6 @@ static INT32 MemIndex()
 	DrvBgScrollRAM	= Next; Next += 0x0002000;
 	DrvSprRAM	= Next; Next += 0x0002000;
 	DrvSprBuf	= Next; Next += 0x0002000;
-	DrvSprBuf2	= Next; Next += 0x0002000;
 	DrvPalRAM	= Next; Next += 0x0002000;
 	DrvBg1RAM	= Next; Next += 0x0002000;
 	DrvBg2RAM	= Next; Next += 0x0002000;
@@ -637,12 +639,7 @@ static INT32 DrvInit(INT32 (*pInitCallback)())
 {
 	BurnSetRefreshRate(57.79);
 
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (pInitCallback) {
@@ -675,10 +672,10 @@ static INT32 DrvInit(INT32 (*pInitCallback)())
 	mcs51_set_write_handler(mcs51_write_port);
 	mcs51_set_read_handler(mcs51_read_port);
 
-	MSM6295Init(0, 1000000 / 165, 1);
-	MSM6295Init(1, 1000000 / 165, 1); // dreamwld
-	MSM6295SetRoute(0, 0.45, BURN_SND_ROUTE_BOTH);
-	MSM6295SetRoute(1, 0.45, BURN_SND_ROUTE_BOTH);
+	MSM6295Init(0, 1000000 / 165, 0);
+	MSM6295Init(1, 1000000 / 165, 0); // dreamwld
+	MSM6295SetRoute(0, 1.00, BURN_SND_ROUTE_BOTH);
+	MSM6295SetRoute(1, 1.00, BURN_SND_ROUTE_BOTH);
 	MSM6295SetBank(0, DrvSndROM0, 0, 0x2ffff);
 	MSM6295SetBank(1, DrvSndROM1, 0, 0x2ffff);
 
@@ -703,7 +700,7 @@ static INT32 DrvExit()
 
 	GenericTilesExit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -756,7 +753,7 @@ static void draw_layer(INT32 layer)
 
 static void draw_sprites()
 {
-	UINT16 *source   = (UINT16*)DrvSprBuf2;
+	UINT16 *source   = (UINT16*)DrvSprBuf;
 	UINT16 *finish   = source + 0x2000/2;
 	UINT16 *redirect = (UINT16 *)DrvGfxROM2;
 
@@ -770,7 +767,7 @@ static void draw_sprites()
 		xsize  = (BURN_ENDIAN_SWAP_INT16(source[1])&0x0e00) >> 9;
 		ysize  = (BURN_ENDIAN_SWAP_INT16(source[0])&0x0e00) >> 9;
 		tileno = (BURN_ENDIAN_SWAP_INT16(source[3])&0xffff);
-		if (BURN_ENDIAN_SWAP_INT16(source[2])&1) tileno += 0x10000; // fix sprites in cute fighter -dink
+		tileno +=(BURN_ENDIAN_SWAP_INT16(source[2])&1) * 0x10000;
 		colour = (BURN_ENDIAN_SWAP_INT16(source[2])&0x3f00) >> 8;
 		xflip  = (BURN_ENDIAN_SWAP_INT16(source[2])&0x4000);
 		yflip  = (BURN_ENDIAN_SWAP_INT16(source[2])&0x8000);
@@ -868,7 +865,7 @@ static INT32 DrvFrame()
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = {(16000000 * 100) / 5779, (16000000 * 100) / 5779 / 12 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nCyclesExtra[0], nCyclesExtra[1] };
 
 	SekOpen(0);
 
@@ -877,17 +874,17 @@ static INT32 DrvFrame()
 		CPU_RUN(0, Sek);
 		CPU_RUN(1, mcs51);
 
-		if (i == 224) {
-			SekSetIRQLine(4, CPU_IRQSTATUS_ACK); // Oddity: _AUTO doesn't work here..
-			nCyclesDone[0] += SekRun(50);
-			SekSetIRQLine(4, CPU_IRQSTATUS_NONE);
+		if (i == nInterleave - 1) {
+			SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 		}
 	}
 
 	SekClose();
-	
+
+	nCyclesExtra[0] = nCyclesDone[0] - nCyclesTotal[0];
+	nCyclesExtra[1] = nCyclesDone[1] - nCyclesTotal[1];
+
 	if (pBurnSoundOut) {
-		BurnSoundClear();
 		MSM6295Render(pBurnSoundOut, nBurnSoundLen);
 	}
 
@@ -895,8 +892,7 @@ static INT32 DrvFrame()
 		DrvDraw();
 	}
 
-	memcpy (DrvSprBuf2, DrvSprBuf, 0x2000);
-	memcpy (DrvSprBuf,  DrvSprRAM, 0x2000);
+	memcpy (DrvSprBuf, DrvSprRAM, 0x2000);
 
 	return 0;
 }
@@ -926,6 +922,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		SCAN_VAR(prot_p1);
 		SCAN_VAR(prot_p2);
 		SCAN_VAR(prot_latch);
+
+		SCAN_VAR(nCyclesExtra);
 
 		if (nAction & ACB_WRITE) {
 			dreamwld_oki_setbank(0, DrvOkiBank[0]);
@@ -965,14 +963,21 @@ STD_ROM_FN(baryon)
 
 static INT32 BaryonInit()
 {
-	return DrvInit(BaryonRomLoad);
+	INT32 rc = DrvInit(BaryonRomLoad);
+
+	if (!rc) {
+		MSM6295SetRoute(0, 1.45, BURN_SND_ROUTE_BOTH);
+		MSM6295SetRoute(1, 1.45, BURN_SND_ROUTE_BOTH);
+	}
+
+	return rc;
 }
 
 struct BurnDriver BurnDrvBaryon = {
 	"baryon", NULL, NULL, NULL, "1997",
-	"Baryon - Future Assault (set 1)\0", NULL, "SemiCom", "Miscellaneous",
+	"Baryon - Future Assault (set 1)\0", NULL, "SemiCom / Tirano", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, baryonRomInfo, baryonRomName, NULL, NULL, NULL, NULL, CommonInputInfo, BaryonDIPInfo,
 	BaryonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	224, 304, 3, 4
@@ -1006,9 +1011,9 @@ STD_ROM_PICK(baryona)
 STD_ROM_FN(baryona)
 struct BurnDriver BurnDrvBaryona = {
 	"baryona", "baryon", NULL, NULL, "1997",
-	"Baryon - Future Assault (set 2)\0", NULL, "SemiCom", "Miscellaneous",
+	"Baryon - Future Assault (set 2)\0", NULL, "SemiCom / Tirano", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, baryonaRomInfo, baryonaRomName, NULL, NULL, NULL, NULL, CommonInputInfo, BaryonDIPInfo,
 	BaryonInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	224, 304, 3, 4
@@ -1054,7 +1059,7 @@ struct BurnDriver BurnDrvCutefght = {
 	"cutefght", NULL, NULL, NULL, "1998",
 	"Cute Fighter\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VSFIGHT, 0,
 	NULL, cutefghtRomInfo, cutefghtRomName, NULL, NULL, NULL, NULL, CommonInputInfo, CutefghtDIPInfo,
 	CutefghtInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -1095,7 +1100,7 @@ struct BurnDriver BurnDrvRolcrush = {
 	"rolcrush", NULL, NULL, NULL, "1999",
 	"Rolling Crush (version 1.07.E - 1999/02/11, Trust license)\0", NULL, "SemiCom / Exit (Trust license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, rolcrushRomInfo, rolcrushRomName, NULL, NULL, NULL, NULL, CommonInputInfo, RolcrushDIPInfo,
 	RolcrushInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -1131,7 +1136,7 @@ struct BurnDriver BurnDrvRolcrusha = {
 	"rolcrusha", "rolcrush", NULL, NULL, "1999",
 	"Rolling Crush (version 1.03.E - 1999/01/29)\0", NULL, "SemiCom / Exit", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, rolcrushaRomInfo, rolcrushaRomName, NULL, NULL, NULL, NULL, CommonInputInfo, RolcrushDIPInfo,
 	RolcrushInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -1174,7 +1179,7 @@ struct BurnDriver BurnDrvGaialast = {
 	"gaialast", NULL, NULL, NULL, "1999",
 	"Gaia - The Last Choice of Earth\0", NULL, "SemiCom / XESS", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, gaialastRomInfo, gaialastRomName, NULL, NULL, NULL, NULL, CommonInputInfo, GaialastDIPInfo,
 	GaialastInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3
@@ -1210,14 +1215,21 @@ STD_ROM_FN(dreamwld)
 
 static INT32 DreamwldInit()
 {
-	return DrvInit(DreamwldRomLoad);
+	INT32 rc = DrvInit(DreamwldRomLoad);
+
+	if (!rc) {
+		MSM6295SetRoute(0, 1.45, BURN_SND_ROUTE_BOTH);
+		MSM6295SetRoute(1, 1.45, BURN_SND_ROUTE_BOTH);
+	}
+
+	return rc;
 }
 
 struct BurnDriver BurnDrvDreamwld = {
 	"dreamwld", NULL, NULL, NULL, "2000",
 	"Dream World\0", NULL, "SemiCom", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MAZE, 0,
 	NULL, dreamwldRomInfo, dreamwldRomName, NULL, NULL, NULL, NULL, CommonInputInfo, DreamwldDIPInfo,
 	DreamwldInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x1000,
 	304, 224, 4, 3

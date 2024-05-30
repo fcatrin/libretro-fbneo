@@ -26,7 +26,7 @@ static UINT8 DrvRecalc;
 static UINT8 flipscreen;
 static UINT16 scrollx;
 
-static UINT32 YFlipping = 0; // shtrider has a weird screen layout
+static UINT32 is_shtrider = 0; // shtrider has a weird screen layout
 
 static UINT8 DrvJoy1[8];
 static UINT8 DrvJoy2[8];
@@ -262,6 +262,8 @@ static INT32 DrvDoReset()
 
 	flipscreen = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -377,12 +379,7 @@ static tilemap_callback( layer0 )
 
 static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM  + 0x0000,  0, 1)) return 1;
@@ -433,6 +430,8 @@ static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
 	ZetClose();
 
 	IremSoundInit(DrvSndROM, 0, 4000000);
+	MSM5205SetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
+	MSM5205SetRoute(1, 0.80, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, layer0_map_callback, 8, 8, 64, 32);
@@ -442,7 +441,7 @@ static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
 	GenericTilemapSetOffsets(0, -8, 0);
 	GenericTilemapSetTransSplit(0, 0, 0xff, 0x00);
 	GenericTilemapSetTransSplit(0, 1, 0x3f, 0xc0);
-	if (YFlipping) GenericTilemapSetFlip(TMAP_GLOBAL, TMAP_FLIPY);
+	if (is_shtrider) GenericTilemapSetFlip(TMAP_GLOBAL, TMAP_FLIPY);
 	DrvDoReset();
 
 	return 0;
@@ -450,9 +449,9 @@ static INT32 DrvInit(void (*pRomCallback)(), INT32 soundromsmall, INT32 gfxtype)
 
 static INT32 travrusaInit() { return DrvInit(NULL, 1, 0); }
 static INT32 motoraceInit() { return DrvInit(motoraceDecode, 1, 0); }
-static INT32 shtriderInit() { YFlipping = 1; return DrvInit(NULL, 0, 1); }
-static INT32 shtrideraInit() { YFlipping = 1; return DrvInit(shtrideraDecode, 0, 1); }
-static INT32 shtriderbInit() { YFlipping = 1; return DrvInit(NULL, 0, 0); }
+static INT32 shtriderInit() { is_shtrider = 1; return DrvInit(NULL, 0, 1); }
+static INT32 shtrideraInit() { is_shtrider = 1; return DrvInit(shtrideraDecode, 0, 1); }
+static INT32 shtriderbInit() { is_shtrider = 1; return DrvInit(NULL, 0, 0); }
 
 static INT32 DrvExit()
 {
@@ -462,9 +461,9 @@ static INT32 DrvExit()
 
 	IremSoundExit();
 
-	BurnFree(AllMem);
+	BurnFreeMemIndex();
 
-	YFlipping = 0;
+	is_shtrider = 0;
 
 	return 0;
 }
@@ -505,7 +504,7 @@ static void DrvPaletteInit()
 
 static void draw_sprites()
 {
-	if (YFlipping) {
+	if (is_shtrider) {
 		GenericTilesSetClip(0, 240, 64, 256); // shtrider
 	} else {
 		GenericTilesSetClip(0, 240,  0, 192); // everything else
@@ -521,7 +520,7 @@ static void draw_sprites()
 		int flipy = attr & 0x80;
 		int color = attr & 0x0f;
 
-		if (YFlipping) {
+		if (is_shtrider) {
 			sy = 240 - sy;
 			flipy = !flipy;
 		}
@@ -578,7 +577,7 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nInterleave = MSM5205CalcInterleave(0, 3579545);
-	INT32 nCyclesTotal[2] = { 4000000 / 60, 3579545 / 60 };
+	INT32 nCyclesTotal[2] = { (INT32)(4000000 / 56.75), (INT32)(3579545 / 56.75) };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	ZetOpen(0);
@@ -587,12 +586,11 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		switch (i) {
-			case  0: ZetSetIRQLine(0, CPU_IRQSTATUS_ACK); break;
-			case 14: ZetSetIRQLine(0, CPU_IRQSTATUS_NONE); break;
+			case 0: ZetSetIRQLine(0, (is_shtrider) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_HOLD); break;
+			case 7: ZetSetIRQLine(0, CPU_IRQSTATUS_NONE); break;
 		}
 
 		CPU_RUN(0, Zet);
-
 		CPU_RUN(1, M6803);
 		MSM5205Update(); // adpcm update samples
 	}
@@ -638,6 +636,14 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 	return 0;
 }
 
+#define TRAVRUSA_PROMS \
+	{ "mmi6349.ij",		0x0200, 0xc9724350, 5 | BRF_GRA }, \
+	{ "tbp18s.2",		0x0020, 0xa1130007, 5 | BRF_GRA }, \
+	{ "tbp24s10.3",		0x0100, 0x76062638, 5 | BRF_GRA }, \
+	{ "prom.h1",		0x0100, 0x2f98ddf0, 0 | BRF_OPT }, \
+	{ "prom.f1",		0x0100, 0xadea1297, 0 | BRF_OPT }, \
+	{ "prom1.f1",		0x0020, 0xa1130007, 0 | BRF_OPT }, \
+	{ "prom2.h2",		0x0100, 0x76062638, 0 | BRF_OPT },
 
 // Traverse USA / Zippy Race
 
@@ -657,9 +663,7 @@ static struct BurnRomInfo travrusaRomDesc[] = {
 	{ "zr1-9.l3",		0x2000, 0x13be6a14, 4 | BRF_GRA },           //  9
 	{ "zr1-10.k3",		0x2000, 0x6fcc9fdb, 4 | BRF_GRA },           // 10
 
-	{ "mmi6349.ij",		0x0200, 0xc9724350, 5 | BRF_GRA },           // 11 Color data
-	{ "tbp18s.2",		0x0020, 0xa1130007, 5 | BRF_GRA },           // 12
-	{ "tbp24s10.3",		0x0100, 0x76062638, 5 | BRF_GRA },           // 13
+	TRAVRUSA_PROMS
 };
 
 STD_ROM_PICK(travrusa)
@@ -669,14 +673,14 @@ struct BurnDriver BurnDrvTravrusa = {
 	"travrusa", NULL, NULL, NULL, "1983",
 	"Traverse USA / Zippy Race\0", NULL, "Irem", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, travrusaRomInfo, travrusaRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
 };
 
 
-// Traverse USA (bootleg)
+// Traverse USA (bootleg, set 1)
 
 static struct BurnRomInfo travrusabRomDesc[] = {
 	{ "at4.m3",			0x2000, 0x704ce6e4, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
@@ -704,10 +708,47 @@ STD_ROM_FN(travrusab)
 
 struct BurnDriver BurnDrvTravrusab = {
 	"travrusab", "travrusa", NULL, NULL, "1983",
-	"Traverse USA (bootleg)\0", NULL, "bootleg (I.P.)", "Miscellaneous",
+	"Traverse USA (bootleg, set 1)\0", NULL, "bootleg (I.P.)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, travrusabRomInfo, travrusabRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
+	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 240, 3, 4
+};
+
+
+// Traverse USA (bootleg, set 2)
+
+static struct BurnRomInfo travrusab2RomDesc[] = {
+	{ "0.2m3",			0x2000, 0xc96e81ac, 1 | BRF_PRG | BRF_ESS }, //  0 Z80 Code
+	{ "5.2l3",			0x2000, 0x145d6b34, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "6.2k3",			0x2000, 0xe1b51383, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "7.2j3",			0x2000, 0xab8a3a33, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "4.1a1",			0x1000, 0xa02ad8a0, 2 | BRF_GRA },           //  4 M6803 Code
+
+	{ "1.1e3",			0x2000, 0xaa8994dd, 3 | BRF_GRA },           //  5 Background tiles
+	{ "2.1c3",			0x2000, 0x3a046dd1, 3 | BRF_GRA },           //  6
+	{ "3.1a3",			0x2000, 0x1cc3d3f4, 3 | BRF_GRA },           //  7
+
+	{ "8.3n3",			0x2000, 0x3e2c7a6b, 4 | BRF_GRA },           //  8 Sprite tiles
+	{ "9.3m3",			0x2000, 0x13be6a14, 4 | BRF_GRA },           //  9
+	{ "10.3k3",			0x2000, 0x6fcc9fdb, 4 | BRF_GRA },           // 10
+
+	{ "6349-2.1k2",		0x0200, 0xc9724350, 5 | BRF_GRA },           // 11 Color data
+	{ "tbp18s030.3f1",	0x0020, 0xa1130007, 5 | BRF_GRA },           // 12
+	{ "mb7052.3h2",		0x0100, 0x76062638, 5 | BRF_GRA },           // 13
+};
+
+STD_ROM_PICK(travrusab2)
+STD_ROM_FN(travrusab2)
+
+struct BurnDriver BurnDrvTravrusab2 = {
+	"travrusab2", "travrusa", NULL, NULL, "1983",
+	"Traverse USA (bootleg, set 2)\0", NULL, "bootleg", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_BOOTLEG | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	NULL, travrusab2RomInfo, travrusab2RomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
 };
@@ -731,9 +772,7 @@ static struct BurnRomInfo motoraceRomDesc[] = {
 	{ "mr5.3m",			0x2000, 0xf75f2aad, 4 | BRF_GRA },           //  9
 	{ "mr6.3k",			0x2000, 0x518889a0, 4 | BRF_GRA },           // 10
 
-	{ "mmi6349.ij",		0x0200, 0xc9724350, 5 | BRF_GRA },           // 11 Color data
-	{ "tbp18s.2",		0x0020, 0xa1130007, 5 | BRF_GRA },           // 12
-	{ "tbp24s10.3",		0x0100, 0x76062638, 5 | BRF_GRA },           // 13
+	TRAVRUSA_PROMS
 };
 
 STD_ROM_PICK(motorace)
@@ -743,7 +782,7 @@ struct BurnDriver BurnDrvMotorace = {
 	"motorace", "travrusa", NULL, NULL, "1983",
 	"MotoRace USA\0", NULL, "Irem (Williams license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, motoraceRomInfo, motoraceRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	motoraceInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
@@ -764,13 +803,11 @@ static struct BurnRomInfo mototourRomDesc[] = {
 	{ "mt1-2.c3",		0x2000, 0x3a046dd1, 3 | BRF_GRA },           //  6
 	{ "mt1-3.a3",		0x2000, 0x1cc3d3f4, 3 | BRF_GRA },           //  7
 
-	{ "mt1-8..n3",		0x2000, 0x600a57f5, 4 | BRF_GRA },           //  8 Sprite tiles
-	{ "mt1-9..m3",		0x2000, 0x6f9f2a4e, 4 | BRF_GRA },           //  9
-	{ "mt1-10..k3",		0x2000, 0xd958def5, 4 | BRF_GRA },           // 10
+	{ "mt1-8.n3",		0x2000, 0x600a57f5, 4 | BRF_GRA },           //  8 Sprite tiles
+	{ "mt1-9.m3",		0x2000, 0x6f9f2a4e, 4 | BRF_GRA },           //  9
+	{ "mt1-10.k3",		0x2000, 0xd958def5, 4 | BRF_GRA },           // 10
 
-	{ "mmi6349.k2",		0x0200, 0xc9724350, 5 | BRF_GRA },           // 11 Color data
-	{ "prom1.f1",		0x0020, 0xa1130007, 5 | BRF_GRA },           // 12
-	{ "prom2.h2",		0x0100, 0x76062638, 5 | BRF_GRA },           // 13
+	TRAVRUSA_PROMS
 };
 
 STD_ROM_PICK(mototour)
@@ -780,7 +817,7 @@ struct BurnDriver BurnDrvMototour = {
 	"mototour", "travrusa", NULL, NULL, "1983",
 	"MotoTour / Zippy Race (Tecfri license)\0", NULL, "Irem (Tecfri license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, mototourRomInfo, mototourRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
@@ -817,7 +854,7 @@ struct BurnDriver BurnDrvMototoura = {
 	"mototoura", "travrusa", NULL, NULL, "1983",
 	"MotoTour / Zippy Race (Assa version of Tecfri license)\0", NULL, "Irem (Tecfri license / Assa)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, mototouraRomInfo, mototouraRomName, NULL, NULL, NULL, NULL, TravrusaInputInfo, TravrusaDIPInfo,
 	travrusaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
@@ -855,7 +892,7 @@ struct BurnDriver BurnDrvShtrider = {
 	"shtrider", NULL, NULL, NULL, "1985",
 	"Shot Rider\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, shtriderRomInfo, shtriderRomName, NULL, NULL, NULL, NULL, ShtriderInputInfo, ShtriderDIPInfo,
 	shtriderInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
@@ -893,7 +930,7 @@ struct BurnDriver BurnDrvShtridera = {
 	"shtridera", "shtrider", NULL, NULL, "1984",
 	"Shot Rider (Sigma license)\0", NULL, "Seibu Kaihatsu (Sigma license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, shtrideraRomInfo, shtrideraRomName, NULL, NULL, NULL, NULL, ShtriderInputInfo, ShtriderDIPInfo,
 	shtrideraInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4
@@ -930,7 +967,7 @@ struct BurnDriver BurnDrvShtriderb = {
 	"shtriderb", "shtrider", NULL, NULL, "1985",
 	"Shot Rider (bootleg)\0", "Graphics issues", "bootleg", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
+	BDF_GAME_NOT_WORKING | BDF_CLONE | BDF_BOOTLEG | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_RACING, 0,
 	NULL, shtriderbRomInfo, shtriderbRomName, NULL, NULL, NULL, NULL, ShtriderInputInfo, ShtriderDIPInfo,
 	shtriderbInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 240, 3, 4

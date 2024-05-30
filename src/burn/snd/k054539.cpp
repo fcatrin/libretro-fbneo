@@ -8,8 +8,6 @@
 
 *********************************************************/
 
-// IRQ handling is disabled (handled in driver) for now...
-
 // Dec 3, 2017: anti-pop/anti-click code added: rampdown, dpcm table symmetricification, check last sample of 4bit dpcm for huge dc offset)
 // Jan 19, 2018: added cubic resampling. -dink
 // Aug 21-24, 2020: added digital delay/echo effect. -dink
@@ -24,6 +22,7 @@
 #include <math.h>
 #include "k054539.h"
 #include "biquad.h"
+#include "dtimer.h"
 
 static INT32 nNumChips = 0;
 
@@ -32,7 +31,7 @@ struct _k054539_interface
 {
 	const char *rgnoverride;
 	void (*apan)(double, double);
-//	void (*irq)(running_machine *);
+	void (*irq)(int);
 };
 
 struct k054539_channel {
@@ -71,6 +70,8 @@ struct k054539_info {
 
 	INT32 clock;
 
+	dtimer irqtimer;
+
 	double volume[2];
 	INT32 output_dir[2];
 	BIQ biquad[2];
@@ -88,6 +89,25 @@ static INT16 *soundbuf[2] = { NULL, NULL };
 static UINT32 nSampleSize;
 static INT32 nFractionalPosition[2];
 static INT32 nPosition[2];
+
+static void timer_callback(INT32 chip)
+{
+	if (Chips[chip].regs[0x22f] & 0x20) {
+		if (Chips[chip].intf.irq) {
+			Chips[chip].intf.irq(chip);
+		}
+	}
+}
+
+void K054539SetIRQCallback(INT32 chip, void (*irq_cb)(int))
+{
+	info = &Chips[chip];
+	info->intf.irq = irq_cb;
+
+	if (chip != 0) {
+		bprintf(0, _T("K054539SetIRQCallback(): timer only enabled for chip #0!\n"));
+	}
+}
 
 void K054539SetFlags(INT32 chip, INT32 flags)
 {
@@ -209,6 +229,16 @@ void K054539Write(INT32 chip, INT32 offset, UINT8 data)
 					k054539_keyoff(ch);
 		break;
 
+		case 0x227:
+		{
+			if (chip == 0) {
+				INT32 cycles = (1 / ((38 + data) * (info->clock/384.0/14400.0))) * 18432000;
+				//bprintf(0, _T("chip %d - timer:  data / cycles  %x  %d\n"), chip, data, cycles);
+				info->irqtimer.start(cycles, -1, 1, 1);
+			}
+		}
+		break;
+
 		case 0x22d:
 			if(regbase[0x22e] == 0x80)
 				info->cur_zone[info->cur_ptr] = data;
@@ -276,6 +306,10 @@ void K054539Reset(INT32 chip)
 	info->delay_decay = 0.6;
 	memset(info->delay_ram, 0, DELAYRAM_SIZE);
 
+	if (chip == 0) {
+		info->irqtimer.stop_retrig();
+	}
+
 	info->cur_ptr = 0;
 	info->cur_zone = info->rom;
 	memset(info->regs, 0, sizeof(info->regs));
@@ -317,9 +351,6 @@ static void k054539_init_chip(INT32 clock, UINT8 *rom, INT32 nLen)
 	bprintf(0, _T("*   K054539: init biquad filter for delay taps.\n"));
 	info->biquad[0].init(FILT_HIGHPASS, 48000, 500, 1.0, 0.0);
 	info->biquad[1].init(FILT_LOWPASS, 48000, 12000, 1.0, 0.0);
-
-	//	if(info->intf->irq)
-//		timer_pulse(ATTOTIME_IN_HZ(480), info, 0, k054539_irq); // 10% of usual clock...
 }
 
 void K054539SetApanCallback(INT32 chip, void (*ApanCB)(double, double))
@@ -340,7 +371,13 @@ void K054539Init(INT32 chip, INT32 clock, UINT8 *rom, INT32 nLen)
 
 	info->clock = clock;
 
-	nSampleSize = (UINT32)48000 * (1 << 16) / nBurnSoundRate;
+	if (chip == 0) {
+		timerInit();
+		info->irqtimer.init(chip, timer_callback);
+		timerAdd(info->irqtimer);
+	}
+
+	if (nBurnSoundRate) nSampleSize = (UINT32)48000 * (1 << 16) / nBurnSoundRate;
 	nFractionalPosition[chip] = 0;
 	nPosition[chip] = 0;
 
@@ -390,6 +427,8 @@ void K054539Exit()
 	soundbuf[0] = NULL;
 	soundbuf[1] = NULL;
 
+	timerExit();
+
 	for (INT32 i = 0; i < 2; i++) {
 		info = &Chips[i];
 		BurnFree (info->delay_ram);
@@ -400,11 +439,6 @@ void K054539Exit()
 	
 	DebugSnd_K054539Initted = 0;
 	nNumChips = 0;
-}
-
-static INT32 signdiff(INT32 a, INT32 b)
-{
-	return ((a >= 0 && b < 0) || (a < 0 && b >= 0));
 }
 
 void K054539Update(INT32 chip, INT16 *outputs, INT32 samples_len)
@@ -418,9 +452,8 @@ void K054539Update(INT32 chip, INT16 *outputs, INT32 samples_len)
 #define VOL_CAP 1.80
 
 	static const INT16 dpcm[16] = {
-		0<<8, 1<<8, 4<<8, 9<<8, 16<<8, 25<<8, 36<<8, 49<<8,
-		0, -49<<8, -36<<8, -25<<8, -16<<8, -9<<8, -4<<8, -1<<8 // make symmetrical -dink
-		//-64<<8, -49<<8, -36<<8, -25<<8, -16<<8, -9<<8, -4<<8, -1<<8
+		0 * 0x100,   1 * 0x100,   2 * 0x100,   4 * 0x100,  8 * 0x100, 16 * 0x100, 32 * 0x100, 64 * 0x100,
+		0 * 0x100, -64 * 0x100, -32 * 0x100, -16 * 0x100, -8 * 0x100, -4 * 0x100, -2 * 0x100, -1 * 0x100
 	};
 #if DELAY_DEBUG
 	bprintf(0, _T("-- frame %d --\n"), nCurrentFrame);
@@ -534,7 +567,7 @@ void K054539Update(INT32 chip, INT16 *outputs, INT32 samples_len)
 					pdelta = +1;
 				}
 
-				INT32 cur_pfrac, cur_val, cur_pval, cur_pval2;
+				INT32 cur_pfrac, cur_val, cur_pval;
 				if(cur_pos != (INT32)chan->pos) {
 					chan->pos = cur_pos;
 					cur_pfrac = 0;
@@ -604,7 +637,6 @@ void K054539Update(INT32 chip, INT16 *outputs, INT32 samples_len)
 						cur_pfrac += fdelta;
 						cur_pos += pdelta;
 
-						cur_pval2 = cur_pval;
 						cur_pval = cur_val;
 						cur_val = rom[cur_pos>>1];
 						if(cur_val == 0x88 && (base2[1] & 1)) {
@@ -613,11 +645,7 @@ void K054539Update(INT32 chip, INT16 *outputs, INT32 samples_len)
 						}
 						if(cur_val == 0x88) {
 							k054539_keyoff(ch);
-							//bprintf(0, _T("4bit dpcm off ch %X. cur_val %X cur_pval %X cur_pval2 %X\n"), ch, cur_val, cur_pval, cur_pval2);
-							// at the end of the sample: if there's a huge jump between pval and pval2, use pval2(previous sample).  this is a stupidly weird dc offset -dink
-							if (signdiff(cur_pval, cur_pval2))
-								cur_pval = cur_pval2;
-							cur_val = cur_pval;
+							cur_val = 0;
 							break;
 						}
 						if(cur_pos & 1)
@@ -808,6 +836,10 @@ void K054539Scan(INT32 nAction, INT32 *)
 		SCAN_VAR(info->delay_decay);
 		SCAN_VAR(info->cur_ptr);
 		SCAN_VAR(info->cur_limit);
+
+		if (i == 0) {
+			timerScan();
+		}
 
 		if (nAction & ACB_WRITE) {
 			INT32 data = info->regs[0x22e];

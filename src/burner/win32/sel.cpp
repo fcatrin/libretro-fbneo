@@ -47,7 +47,7 @@ bool bIconsLoaded				= 0;
 bool bIconsOnlyParents          = 1;
 int nIconsXDiff;
 int nIconsYDiff;
-static HICON hDrvIcon[19999];
+static HICON *hDrvIcon;
 bool bGameInfoOpen				= false;
 
 // Dialog Sizing
@@ -95,6 +95,10 @@ static int nDlgDrvCountTxtInitialPos[4];
 static int nDlgDrvRomInfoBtnInitialPos[4];
 static int nDlgSelectGameGrpInitialPos[4];
 static int nDlgSelectGameLstInitialPos[4];
+
+static int _213 = 213;
+static int _160 = 160;
+static int dpi_x = 96;
 
 // Filter TreeView
 HWND hFilterList					= NULL;
@@ -164,6 +168,8 @@ HTREEITEM hFilterStrategy   		= NULL;
 HTREEITEM hFilterRpg        		= NULL;
 HTREEITEM hFilterSim        		= NULL;
 HTREEITEM hFilterAdv        		= NULL;
+HTREEITEM hFilterCard        		= NULL;
+HTREEITEM hFilterBoard        		= NULL;
 HTREEITEM hFilterOtherFamily		= NULL;
 HTREEITEM hFilterMslug				= NULL;
 HTREEITEM hFilterSf					= NULL;
@@ -289,7 +295,7 @@ static UINT64 MASKALL				= ((UINT64)MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 
 #define MASKBOARDTYPEGENUINE	(1)
 #define MASKFAMILYOTHER			0x10000000
 
-#define MASKALLGENRE			(GBF_HORSHOOT | GBF_VERSHOOT | GBF_SCRFIGHT | GBF_VSFIGHT | GBF_BIOS | GBF_BREAKOUT | GBF_CASINO | GBF_BALLPADDLE | GBF_MAZE | GBF_MINIGAMES | GBF_PINBALL | GBF_PLATFORM | GBF_PUZZLE | GBF_QUIZ | GBF_SPORTSMISC | GBF_SPORTSFOOTBALL | GBF_MISC | GBF_MAHJONG | GBF_RACING | GBF_SHOOT | GBF_ACTION | GBF_RUNGUN | GBF_STRATEGY | GBF_RPG | GBF_SIM | GBF_ADV)
+#define MASKALLGENRE			(GBF_HORSHOOT | GBF_VERSHOOT | GBF_SCRFIGHT | GBF_VSFIGHT | GBF_BIOS | GBF_BREAKOUT | GBF_CASINO | GBF_BALLPADDLE | GBF_MAZE | GBF_MINIGAMES | GBF_PINBALL | GBF_PLATFORM | GBF_PUZZLE | GBF_QUIZ | GBF_SPORTSMISC | GBF_SPORTSFOOTBALL | GBF_MISC | GBF_MAHJONG | GBF_RACING | GBF_SHOOT | GBF_ACTION | GBF_RUNGUN | GBF_STRATEGY | GBF_RPG | GBF_SIM | GBF_ADV | GBF_CARD | GBF_BOARD)
 #define MASKALLFAMILY			(MASKFAMILYOTHER | FBF_MSLUG | FBF_SF | FBF_KOF | FBF_DSTLK | FBF_FATFURY | FBF_SAMSHO | FBF_19XX | FBF_SONICWI | FBF_PWRINST | FBF_SONIC | FBF_DONPACHI | FBF_MAHOU)
 #define MASKALLBOARD			(MASKBOARDTYPEGENUINE | BDF_BOOTLEG | BDF_DEMO | BDF_HACK | BDF_HOMEBREW | BDF_PROTOTYPE)
 
@@ -297,7 +303,7 @@ static UINT64 MASKALL				= ((UINT64)MASKCAPMISC | MASKCAVE | MASKCPS | MASKCPS2 
 #define MASKSEGAGRP				(MASKSEGA | MASKSG1000 | MASKSMS | MASKMEGADRIVE | MASKGG)
 
 UINT64 nLoadMenuShowX			= 0; // hardware etc
-int nLoadMenuShowY				= 0; // selector options
+int nLoadMenuShowY				= AVAILABLE; // selector options, default to show available
 int nLoadMenuBoardTypeFilter	= 0;
 int nLoadMenuGenreFilter		= 0;
 int nLoadMenuFavoritesFilter	= 0;
@@ -357,6 +363,26 @@ static void RebuildEverything();
 #define SetControlPosAlignTopLeftResizeHorVertALT(a, b)			\
 	SetWindowPos(GetDlgItem(hSelDlg, a), hSelDlg, b[0], b[1], b[2] - xDelta, b[3] - yDelta, SWP_NOZORDER | SWP_NOSENDCHANGING);
 
+static void GetTitlePreviewScale()
+{
+	RECT rect;
+	GetWindowRect(GetDlgItem(hSelDlg, IDC_STATIC2), &rect);
+	int w = rect.right - rect.left;
+	int h = rect.bottom - rect.top;
+
+	w = w * 90 / 100; // make W 90% of the "Preview / Title" windowpane
+	h = w * 75 / 100; // make H 75% of w (4:3)
+
+	_213 = w;
+	_160 = h;
+
+	HDC hDc = GetDC(0);
+
+	dpi_x = GetDeviceCaps(hDc, LOGPIXELSX);
+	//bprintf(0, _T("dpi_x is %d\n"), dpi_x);
+	ReleaseDC(0, hDc);
+}
+
 static void GetInitialPositions()
 {
 	RECT rect;
@@ -406,6 +432,8 @@ static void GetInitialPositions()
 	GetInititalControlPos(IDGAMEINFO, nDlgDrvRomInfoBtnInitialPos);
 	GetInititalControlPos(IDC_STATIC1, nDlgSelectGameGrpInitialPos);
 	GetInititalControlPos(IDC_TREE1, nDlgSelectGameLstInitialPos);
+
+	GetTitlePreviewScale();
 
 	// When the window is created with too few entries for TreeView to warrant the
 	// use of a vertical scrollbar, the right side will be slightly askew. -dink
@@ -488,6 +516,8 @@ static TCHAR* MangleGamename(const TCHAR* szOldName, bool /*bRemoveArticle*/)
 
 static TCHAR* RemoveSpace(const TCHAR* szOldName)
 {
+	if (NULL == szOldName) return NULL;
+
 	static TCHAR szNewName[256] = _T("");
 	int j = 0;
 	int i = 0;
@@ -578,6 +608,8 @@ static int DoExtraFilters()
 	if ((~nLoadMenuGenreFilter & GBF_RPG)					&& (BurnDrvGetGenreFlags() & GBF_RPG))				bGenreOk = 1;
 	if ((~nLoadMenuGenreFilter & GBF_SIM)					&& (BurnDrvGetGenreFlags() & GBF_SIM))				bGenreOk = 1;
 	if ((~nLoadMenuGenreFilter & GBF_ADV)					&& (BurnDrvGetGenreFlags() & GBF_ADV))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_CARD)					&& (BurnDrvGetGenreFlags() & GBF_CARD))				bGenreOk = 1;
+	if ((~nLoadMenuGenreFilter & GBF_BOARD)					&& (BurnDrvGetGenreFlags() & GBF_BOARD))			bGenreOk = 1;
 	if (bGenreOk == 0) return 1;
 
 	return 0;
@@ -656,7 +688,7 @@ static int SelListMake()
 
 		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
 
-		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
+		UINT64 nHardware = (UINT64)1 << (((UINT32)BurnDrvGetHardwareCode() >> 24) & 0x3f);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || (nHardware & MASKALL) == 0)) {
 			continue;
 		}
@@ -721,7 +753,7 @@ static int SelListMake()
 
 		if(!gameAv[nBurnDrvActive]) nMissingDrvCount++;
 
-		UINT64 nHardware = (UINT64)1 << (BurnDrvGetHardwareCode() >> 24);
+		UINT64 nHardware = (UINT64)1 << (((UINT32)BurnDrvGetHardwareCode() >> 24) & 0x3f);
 		if ((nHardware & MASKALL) && ((nHardware & nLoadMenuShowX) || ((nHardware & MASKALL) == 0))) {
 			continue;
 		}
@@ -927,6 +959,7 @@ static void SelOkay()
 	}
 #endif
 	nDialogSelect = nSelect;
+	IpsPatchInit();	// Entry point : SelOkay
 
 	bDialogCancel = false;
 	MyEndDialog();
@@ -948,9 +981,10 @@ static void RefreshPanel()
 		nTimer = 0;
 	}
 
+	GetTitlePreviewScale();
 
-	hPrevBmp = PNGLoadBitmap(hSelDlg, NULL, 213, 160, 2);
-	hTitleBmp = PNGLoadBitmap(hSelDlg, NULL, 213, 160, 2);
+	hPrevBmp = PNGLoadBitmap(hSelDlg, NULL, _213, _160, 2);
+	hTitleBmp = PNGLoadBitmap(hSelDlg, NULL, _213, _160, 2);
 
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_H, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hPrevBmp);
 	SendDlgItemMessage(hSelDlg, IDC_SCREENSHOT_V, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)NULL);
@@ -1078,12 +1112,12 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 		if (ay > ax) {
 			bImageOrientation = TRUE;
 
-			y = 160;
+			y = _160;
 			x = y * ax / ay;
 		} else {
 			bImageOrientation = FALSE;
 
-			x = 213;
+			x = _213;
 			y = x * ay / ax;
 		}
 
@@ -1124,7 +1158,7 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 				if (img.width <= game_x / 2) {
 					ax = 4;
 					ay = 3;
-					x = 213;
+					x = _213;
 					y = x * ay / ax;
 				}
 			}
@@ -1148,7 +1182,7 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 		}
 
 		bImageOrientation = FALSE;
-		hNewImage = PNGLoadBitmap(hSelDlg, NULL, 213, 160, 2);
+		hNewImage = PNGLoadBitmap(hSelDlg, NULL, _213, _160, 2);
 	}
 
 	if (hPrevBmp && (HorCtrl == IDC_SCREENSHOT_H || VerCtrl == IDC_SCREENSHOT_V)) {
@@ -1180,6 +1214,64 @@ static int UpdatePreview(bool bReset, TCHAR *szPath, int HorCtrl, int VerCtrl)
 	return 0;
 }
 
+// Sometimes we have different setnames than other emu's, the table below
+// will translate our set to their set to keep hiscore.dat/arcadedb happy
+// NOTE: asciiz version repeated in burn/hiscore.cpp
+
+struct game_replace_entry {
+	TCHAR fb_name[80];
+	TCHAR mame_name[80];
+};
+
+static game_replace_entry replace_table[] = {
+	{ _T("vsraidbbay"),			_T("bnglngby")		},
+	{ _T("vsrbibbal"),			_T("rbibb")			},
+	{ _T("vsbattlecity"),		_T("btlecity")		},
+	{ _T("vscastlevania"),		_T("cstlevna")		},
+	{ _T("vsclucluland"),		_T("cluclu")		},
+	{ _T("vsdrmario"),			_T("drmario")		},
+	{ _T("vsduckhunt"),			_T("duckhunt")		},
+	{ _T("vsexcitebike"),		_T("excitebk")		},
+	{ _T("vsfreedomforce"),		_T("vsfdf")			},
+	{ _T("vsgoonies"),			_T("goonies")		},
+	{ _T("vsgradius"),			_T("vsgradus")		},
+	{ _T("vsgumshoe"),			_T("vsgshoe")		},
+	{ _T("vshogansalley"),		_T("hogalley")		},
+	{ _T("vsiceclimber"),		_T("iceclimb")		},
+	{ _T("vsmachrider"),		_T("nvs_machrider")	},
+	{ _T("vsmightybomjack"),	_T("nvs_mightybj")	},
+	{ _T("vsninjajkun"),		_T("jajamaru")		},
+	{ _T("vspinball"),			_T("vspinbal")		},
+	{ _T("vsplatoon"),			_T("nvs_platoon")	},
+	{ _T("vsslalom"),			_T("vsslalom")		},
+	{ _T("vssoccer"),			_T("vssoccer")		},
+	{ _T("vsstarluster"),		_T("starlstr")		},
+	{ _T("vssmgolf"),			_T("smgolf")		},
+	{ _T("vssmgolfla"),			_T("ladygolf")		},
+	{ _T("vssmb"),				_T("suprmrio")		},
+	{ _T("vssuperskykid"),		_T("vsskykid")		},
+	{ _T("vssuperxevious"),		_T("supxevs")		},
+	{ _T("vstetris"),			_T("vstetris")		},
+	{ _T("vstkoboxing"),		_T("tkoboxng")		},
+	{ _T("vstopgun"),			_T("topgun")		},
+	{ _T("\0"), 				_T("\0")			}
+};
+
+static TCHAR *fbn_to_mame(TCHAR *name)
+{
+	TCHAR *game = name; // default to passed name
+
+	// Check the above table to see if we should use an alias
+	for (INT32 i = 0; replace_table[i].fb_name[0] != '\0'; i++) {
+		if (!_tcscmp(replace_table[i].fb_name, name)) {
+			game = replace_table[i].mame_name;
+			break;
+		}
+	}
+
+	return game;
+}
+
 static unsigned __stdcall DoShellExThread(void *arg)
 {
 	ShellExecute(NULL, _T("open"), (TCHAR*)arg, NULL, NULL, SW_SHOWNORMAL);
@@ -1193,7 +1285,7 @@ static void ViewEmma()
 	unsigned ThreadID = 0;
 	static TCHAR szShellExURL[MAX_PATH];
 
-	_stprintf(szShellExURL, _T("http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s"), BurnDrvGetText(DRV_NAME));
+	_stprintf(szShellExURL, _T("http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=%s"), fbn_to_mame(BurnDrvGetText(DRV_NAME)));
 
 	hThread = (HANDLE)_beginthreadex(NULL, 0, DoShellExThread, (void*)szShellExURL, 0, &ThreadID);
 }
@@ -1344,6 +1436,8 @@ static void CreateFilters()
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_RPG			, hFilterRpg   			, nLoadMenuGenreFilter & GBF_RPG   					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_SIM			, hFilterSim   			, nLoadMenuGenreFilter & GBF_SIM   					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_ADV			, hFilterAdv   			, nLoadMenuGenreFilter & GBF_ADV   					);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_CARD		, hFilterCard   		, nLoadMenuGenreFilter & GBF_CARD					);
+	_TVCreateFiltersA(hGenre		, IDS_GENRE_BOARD		, hFilterBoard   		, nLoadMenuGenreFilter & GBF_BOARD					);
 	_TVCreateFiltersA(hGenre		, IDS_GENRE_BIOS		, hFilterBios			, nLoadMenuGenreFilter & GBF_BIOS					);
 
 	_TVCreateFiltersC(hRoot			, IDS_SEL_HARDWARE		, hHardware				, nLoadMenuShowX & MASKALL					);
@@ -1424,6 +1518,8 @@ static HICON hConsDrvIcon[ICON_MAXCONSOLES];
 void LoadDrvIcons()
 {
 	TCHAR szIcon[MAX_PATH];
+
+	hDrvIcon = (HICON *)malloc((nBurnDrvCount + 256) * sizeof(HICON));
 
 	if(nIconsSize == ICON_16x16) {
 		nIconsSizeXY	= 16;
@@ -1588,6 +1684,8 @@ void UnloadDrvIcons() {
 		DestroyIcon(hDrvIcon[nDrvIndex]);
 		hDrvIcon[nDrvIndex] = NULL;
 	}
+
+	free(hDrvIcon);
 }
 
 #define UM_CHECKSTATECHANGE (WM_USER + 100)
@@ -1700,8 +1798,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_APPLYIPS), FALSE);
 		EnableWindow(GetDlgItem(hDlg, IDC_SEL_IPSMANAGER), FALSE);
-		bDoIpsPatch = false;
-		IpsPatchExit();
+		IpsPatchExit();	// bDoIpsPatch = false;
 
 		WndInMid(hDlg, hParent);
 
@@ -1962,6 +2059,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterRpg, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterSim, FALSE);
 				_TreeView_SetCheckState(hFilterList, hFilterAdv, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterCard, FALSE);
+				_TreeView_SetCheckState(hFilterList, hFilterBoard, FALSE);
 
 				nLoadMenuGenreFilter = MASKALLGENRE;
 			} else {
@@ -1993,6 +2092,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 				_TreeView_SetCheckState(hFilterList, hFilterRpg, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterSim, TRUE);
 				_TreeView_SetCheckState(hFilterList, hFilterAdv, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterCard, TRUE);
+				_TreeView_SetCheckState(hFilterList, hFilterBoard, TRUE);
 
 				nLoadMenuGenreFilter = 0;
 			}
@@ -2091,6 +2192,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 		if (hItemChanged == hFilterRpg)				_ToggleGameListing(nLoadMenuGenreFilter, GBF_RPG);
 		if (hItemChanged == hFilterSim)				_ToggleGameListing(nLoadMenuGenreFilter, GBF_SIM);
 		if (hItemChanged == hFilterAdv)				_ToggleGameListing(nLoadMenuGenreFilter, GBF_ADV);
+		if (hItemChanged == hFilterCard)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_CARD);
+		if (hItemChanged == hFilterBoard)			_ToggleGameListing(nLoadMenuGenreFilter, GBF_BOARD);
 
 		RebuildEverything();
 	}
@@ -2493,8 +2596,18 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT Msg, WPARAM wParam, LPARAM lP
 
 						// Display the short name if needed
 						if (nLoadMenuShowY & SHOWSHORT) {
-							DrawText(lplvcd->nmcd.hdc, BurnDrvGetText(DRV_NAME), -1, &rect, DT_NOPREFIX | DT_SINGLELINE | DT_LEFT | DT_VCENTER);
-							rect.left += 16 + 40 + 20 + 20;
+							// calculate field expansion (between romname & description)
+							int expansion = (rect.right / dpi_x) - 4;
+							if (expansion < 0) expansion = 0;
+
+							const int FIELD_SIZE = 16 + 40 + 20 + 20 + (expansion*8);
+							const int EXPAND_ICON_SIZE = 16 + 8;
+							const int temp_right = rect.right;
+							rect.right = EXPAND_ICON_SIZE + FIELD_SIZE - 2;
+							DrawText(lplvcd->nmcd.hdc, BurnDrvGetText(DRV_NAME), -1, &rect, DT_NOPREFIX | DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
+							rect.right = temp_right;
+
+							rect.left += FIELD_SIZE;
 						}
 
 						{

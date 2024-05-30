@@ -37,55 +37,55 @@ static UINT8 DrvInputs[3];
 static UINT8 DrvReset;
 
 static struct BurnInputInfo RocktrisInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 2"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Rocktris)
 
 static struct BurnInputInfo CannballInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy2 + 7,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy2 + 7,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy2 + 6,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy2 + 5,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy2 + 4,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy2 + 2,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy2 + 1,	"p1 fire 3"	},
 
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy1 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy3 + 6,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy3 + 7,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy3 + 6,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy3 + 5,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy3 + 4,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy3 + 3,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy3 + 2,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy1 + 5,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Cannball)
@@ -363,11 +363,6 @@ inline static INT32 DrvMSM5205SynchroniseStream(INT32 nSoundRate)
 	return (INT64)((double)ZetTotalCycles() * nSoundRate) / 4000000;
 }
 
-static INT32 DrvSynchroniseStream(INT32 nSoundRate)
-{
-	return (INT64)ZetTotalCycles() * nSoundRate / 4000000;
-}
-
 static INT32 DrvDoReset()
 {
 	memset (AllRam, 0, RamEnd - AllRam);
@@ -389,6 +384,8 @@ static INT32 DrvDoReset()
 	flipscreen = 0;
 	adpcm_toggle = 0;
 	adpcm_data = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -421,12 +418,7 @@ static INT32 MemIndex()
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(DrvZ80ROM0 + 0x000000,  0, 1)) return 1;
@@ -465,12 +457,12 @@ static INT32 DrvInit()
 	ZetSetReadHandler(yunsung8_sound_read);
 	ZetClose();
 
-	BurnYM3812Init(1, 4000000, NULL, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 4000000);
+	BurnYM3812Init(1, 4000000, NULL, 0);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	MSM5205Init(0, DrvMSM5205SynchroniseStream, 400000, DrvMSM5205Int, MSM5205_S96_4B, 1);
-	MSM5205SetRoute(0, 0.80, BURN_SND_ROUTE_BOTH);
+	MSM5205SetRoute(0, 0.25, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 	GenericTilemapInit(0, TILEMAP_SCAN_ROWS, background_map_callback, 8, 8, 64, 32);
@@ -493,7 +485,7 @@ static INT32 DrvExit()
 	ZetExit();
 	GenericTilesExit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -555,26 +547,20 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		ZetOpen(0);
-		nCyclesDone[0] += ZetRun(nCyclesTotal[0] / nInterleave);
+		CPU_RUN(0, Zet);
 		if (i == (nInterleave - 1)) ZetSetIRQLine(0, CPU_IRQSTATUS_ACK);
 		ZetClose();
 
 		ZetOpen(1);
-		BurnTimerUpdateYM3812((1 + i) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 		MSM5205Update();
 		ZetClose();
 	}
-
-	ZetOpen(1);
-	
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
 		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		MSM5205Render(0, pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -649,7 +635,7 @@ struct BurnDriver BurnDrvMagix = {
 	"magix", NULL, NULL, NULL, "1995",
 	"Magix / Rock\0", NULL, "Yun Sung", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, magixRomInfo, magixRomName, NULL, NULL, NULL, NULL, RocktrisInputInfo, MagixDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 240, 4, 3
@@ -709,7 +695,7 @@ struct BurnDriver BurnDrvCannball = {
 	"cannball", NULL, NULL, NULL, "1995",
 	"Cannon Ball (Yun Sung, horizontal)\0", NULL, "Yun Sung / Soft Vision", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, cannballRomInfo, cannballRomName, NULL, NULL, NULL, NULL, CannballInputInfo, CannballDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	384, 240, 4, 3
@@ -739,7 +725,7 @@ struct BurnDriver BurnDrvCannballv = {
 	"cannballv", "cannball", NULL, NULL, "1995",
 	"Cannon Ball (Yun Sung, vertical)\0", NULL, "Yun Sung / J&K Production", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, cannballvRomInfo, cannballvRomName, NULL, NULL, NULL, NULL, CannballInputInfo, CannballDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 384, 3, 4
@@ -766,7 +752,7 @@ STD_ROM_PICK(rocktris)
 STD_ROM_FN(rocktris)
 
 struct BurnDriver BurnDrvRocktris = {
-	"rocktris", NULL, NULL, NULL, "1994",
+	"rocktris", NULL, NULL, NULL, "1994?",
 	"Rock Tris\0", NULL, "Yun Sung", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,

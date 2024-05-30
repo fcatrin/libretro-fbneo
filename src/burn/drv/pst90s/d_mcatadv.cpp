@@ -45,30 +45,32 @@ static UINT8 *soundlatch2;
 
 static INT32 nGame;
 
+static INT32 nExtraCycles;
+
 static struct BurnInputInfo McatadvInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 8,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 8,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 9,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 9,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Mcatadv)
@@ -135,26 +137,26 @@ static struct BurnDIPInfo McatadvDIPList[]=
 STDDIPINFO(Mcatadv)
 
 static struct BurnInputInfo NostInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 8,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy2 + 8,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 8,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 9,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 9,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Nost)
@@ -337,8 +339,7 @@ static void sound_bankswitch(INT32 data)
 {
 	*nDrvZ80Bank = data;
 
-	ZetMapArea(0x4000 << nGame, 0xbfff, 0, DrvZ80ROM + (data * 0x4000));
-	ZetMapArea(0x4000 << nGame, 0xbfff, 2, DrvZ80ROM + (data * 0x4000));
+	ZetMapMemory(DrvZ80ROM + (data * 0x4000), 0x4000 << nGame, 0xbfff, MAP_ROM);
 }
 
 static void __fastcall mcatadv_sound_write(UINT16 address, UINT8 data)
@@ -387,6 +388,7 @@ static void __fastcall mcatadv_sound_out(UINT16 port, UINT8 data)
 
 		case 0x80:
 			*soundlatch2 = data;
+			ZetRunEnd();
 		return;
 	}
 }
@@ -410,11 +412,7 @@ static UINT8 __fastcall mcatadv_sound_in(UINT16 port)
 
 static void DrvFMIRQHandler(INT32, INT32 nStatus)
 {
-	if (nStatus) {
-		ZetSetIRQLine(0xff, CPU_IRQSTATUS_ACK);
-	} else {
-		ZetSetIRQLine(0,    CPU_IRQSTATUS_NONE);
-	}
+	ZetSetIRQLine(0, (nStatus) ? CPU_IRQSTATUS_ACK : CPU_IRQSTATUS_NONE);
 }
 
 static INT32 DrvGfxDecode()
@@ -467,10 +465,10 @@ static INT32 MemIndex()
 	DrvSprRAM		= Next; Next += 0x010000;
 	DrvSprBuf		= Next; Next += 0x008000;
 
-	DrvScrollRAM0		= (UINT16*)Next; Next += 0x000004 * sizeof(UINT16);
-	DrvScrollRAM1		= (UINT16*)Next; Next += 0x000004 * sizeof(UINT16);
+	DrvScrollRAM0	= (UINT16*)Next; Next += 0x000004 * sizeof(UINT16);
+	DrvScrollRAM1	= (UINT16*)Next; Next += 0x000004 * sizeof(UINT16);
 	DrvVidRegs		= (UINT16*)Next; Next += 0x000008 * sizeof(UINT16);
-	DrvVidRegBuf		= (UINT16*)Next; Next += 0x000008 * sizeof(UINT16);
+	DrvVidRegBuf	= (UINT16*)Next; Next += 0x000008 * sizeof(UINT16);
 
 	nDrvZ80Bank		= Next; Next += 0x000001;
 	soundlatch		= Next; Next += 0x000001;
@@ -501,6 +499,8 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	BurnWatchdogReset();
 	BurnWatchdogRead(); // needs watchdog on by default
 
+	nExtraCycles = 0;
+
 	HiscoreReset();
 
 	return 0;
@@ -508,12 +508,7 @@ static INT32 DrvDoReset(INT32 clear_mem)
 
 static INT32 DrvInit()
 {
-	AllMem = NULL;
-	MemIndex();
-	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
-	memset(AllMem, 0, nLen);
-	MemIndex();
+	BurnAllocMemIndex();
 
 	{
 		if (BurnLoadRom(Drv68KROM  + 0x000001,	0, 2)) return 1;
@@ -570,11 +565,8 @@ static INT32 DrvInit()
 
 	ZetInit(0);
 	ZetOpen(0);
-	ZetMapArea(0x0000, 0x7fff, 0, DrvZ80ROM);
-	ZetMapArea(0x0000, 0x7fff, 2, DrvZ80ROM);
-	ZetMapArea(0xc000, 0xdfff, 0, DrvZ80RAM);
-	ZetMapArea(0xc000, 0xdfff, 1, DrvZ80RAM);
-	ZetMapArea(0xc000, 0xdfff, 2, DrvZ80RAM);
+	ZetMapMemory(DrvZ80ROM, 0x0000, 0x7fff, MAP_ROM);
+	ZetMapMemory(DrvZ80RAM, 0xc000, 0xdfff, MAP_RAM);
 	ZetSetWriteHandler(mcatadv_sound_write);
 	ZetSetReadHandler(mcatadv_sound_read);
 	ZetSetInHandler(mcatadv_sound_in);
@@ -605,7 +597,7 @@ static INT32 DrvExit()
 	ZetExit();
 	BurnYM2610Exit();
 
-	BurnFree (AllMem);
+	BurnFreeMemIndex();
 
 	return 0;
 }
@@ -762,8 +754,6 @@ static void draw_background(UINT8 *vidramsrc, UINT8 *gfxbase, UINT16 *scroll, IN
 						sx -= 16;
 					}
 				}
-
-				//Render16x16Tile_Mask_Clip(pTransDraw, code, sx, sy, color, 4, 0, 0, gfxbase);
 			}
 		}
 
@@ -830,9 +820,6 @@ static INT32 DrvDraw()
 
 	draw_sprites();
 
-	memcpy (DrvSprBuf, DrvSprRAM, 0x08000);
-	memcpy (DrvVidRegBuf, DrvVidRegs, 0x08 * sizeof(UINT16));
-
 	BurnTransferCopy(DrvPalette);
 
 	return 0;
@@ -857,12 +844,8 @@ static INT32 DrvFrame()
 	}
 
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 4000000 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
 	INT32 nInterleave = 30;
-
-	if (nGame == 1) { // Nostradamus 4mhz boost -dink
-		nCyclesTotal[0] = 20000000 / 60;
-	}
 
 	SekNewFrame();
 	ZetNewFrame();
@@ -871,23 +854,27 @@ static INT32 DrvFrame()
 	ZetOpen(0);
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
-		BurnTimerUpdate((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN(0, Sek);
+		CPU_RUN_TIMER(1);
 	}
+
 	SekSetIRQLine(1, CPU_IRQSTATUS_AUTO);
 
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	ZetClose();
+	SekClose();
 
 	if (pBurnSoundOut) {
 		BurnYM2610Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
-	ZetClose();
-	SekClose();
+	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnDraw) {
 		DrvDraw();
 	}
+
+	memcpy (DrvSprBuf, DrvSprRAM, 0x08000);
+	memcpy (DrvVidRegBuf, DrvVidRegs, 0x08 * sizeof(UINT16));
 
 	return 0;
 }
@@ -895,7 +882,7 @@ static INT32 DrvFrame()
 static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 {
 	struct BurnArea ba;
-	
+
 	if (pnMin != NULL) {
 		*pnMin = 0x029702;
 	}
@@ -915,6 +902,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		BurnYM2610Scan(nAction, pnMin);
 
 		BurnWatchdogScan(nAction);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	if (nAction & ACB_WRITE) {

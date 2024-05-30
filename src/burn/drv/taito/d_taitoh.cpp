@@ -32,6 +32,8 @@ static INT16 DrvAnalogPort1 = 0;
 static INT16 DrvAnalogPort2 = 0;
 static INT16 DrvAnalogPort3 = 0;
 
+static INT32 nCyclesExtra;
+
 #define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo SyvalionInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	TC0220IOCInputPort0 + 2,	"p1 coin"	},
@@ -447,9 +449,10 @@ static void __fastcall syvalion_main_write_byte(UINT32 address, UINT8 data)
 	}
 }
 
+static UINT8 DOWN_LATCH[2] = { 0, 0 };
+
 static UINT8 syvalion_extended_read()
 {
-	static UINT8 DOWN_LATCH[2] = { 0, 0 };
 	// Simulating digital inputs in Syvalion notes - dink aug.2016
 	//  when down is pressed, the body goes "down" but the head points "up".
 	//  this is solved by latching the down button(s) and returning 0xf2 in
@@ -803,6 +806,10 @@ static INT32 DrvDoReset(INT32 clear_mem)
 	ZetClose();
 
 	TaitoICReset();
+
+	nCyclesExtra = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1752,31 +1759,26 @@ static INT32 DrvFrame()
 
 	SekOpen(0);
 
-	INT32 SekSpeed = (INT32)((INT64)12000000 * nBurnCPUSpeedAdjust / 0x100);
-	INT32 ZetSpeed = (INT32)((INT64)4000000 * nBurnCPUSpeedAdjust / 0x100);
-
 	INT32 nInterleave = 100;
-	INT32 nCyclesTotal[2] = { SekSpeed / 60, ZetSpeed / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
+	INT32 nCyclesTotal[2] = { BurnSpeedAdjust(12000000) / 60, BurnSpeedAdjust(4000000)  / 60 };
+	INT32 nCyclesDone[2] = { nCyclesExtra, 0 };
 
 	for (INT32 i = 0; i < nInterleave; i++) {
 		CPU_RUN(0, Sek);
 		if (i == (nInterleave / 1) - 1) SekSetIRQLine(irq_config, CPU_IRQSTATUS_AUTO);
 
 		ZetOpen(0);
-		BurnTimerUpdate((i + 1) * nCyclesTotal[1] / nInterleave);
+		CPU_RUN_TIMER(1);
 		ZetClose();
 	}
 
-	ZetOpen(0);
-	BurnTimerEndFrame(nCyclesTotal[1]);
+	SekClose();
+
+	nCyclesExtra = nCyclesDone[0] - nCyclesTotal[0];
 
 	if (pBurnSoundOut) {
 		BurnYM2610Update(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	SekClose();
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -1825,6 +1827,10 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		TaitoICScan(nAction);
 
 		BurnTrackballScan();
+
+		SCAN_VAR(DOWN_LATCH);
+
+		SCAN_VAR(nCyclesExtra);
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -1882,7 +1888,7 @@ struct BurnDriver BurnDrvSyvalion = {
 	"syvalion", NULL, NULL, NULL, "1988",
 	"Syvalion (Japan)\0", NULL, "Taito Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, syvalionRomInfo, syvalionRomName, NULL, NULL, NULL, NULL, SyvalionInputInfo, SyvalionDIPInfo,
 	SyvalionInit, DrvExit, DrvFrame, SyvalionDraw, DrvScan, NULL, 0x210,
 	512, 400, 4, 3
@@ -1944,7 +1950,7 @@ struct BurnDriver BurnDrvSyvalionp = {
 	"syvalionp", "syvalion", NULL, NULL, "1988",
 	"Syvalion (World, prototype)\0", NULL, "Taito Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, syvalionpRomInfo, syvalionpRomName, NULL, NULL, NULL, NULL, SyvalionInputInfo, SyvalionDIPInfo,
 	SyvalionpInit, DrvExit, DrvFrame, SyvalionDraw, DrvScan, NULL, 0x210,
 	512, 400, 4, 3
@@ -1991,7 +1997,7 @@ struct BurnDriver BurnDrvSyvalionu = {
 	"syvalionu", "syvalion", NULL, NULL, "1988",
 	"Syvalion (US, PS2 Taito Legends 2)\0", NULL, "Taito America Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, syvalionuRomInfo, syvalionuRomName, NULL, NULL, NULL, NULL, SyvalionInputInfo, SyvalionDIPInfo,
 	SyvalionInit, DrvExit, DrvFrame, SyvalionDraw, DrvScan, NULL, 0x210,
 	512, 400, 4, 3
@@ -2038,7 +2044,7 @@ struct BurnDriver BurnDrvSyvalionw = {
 	"syvalionw", "syvalion", NULL, NULL, "1988",
 	"Syvalion (World, PS2 Taito Legends 2)\0", NULL, "Taito Corporation Japan", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_HORSHOOT, 0,
 	NULL, syvalionwRomInfo, syvalionwRomName, NULL, NULL, NULL, NULL, SyvalionInputInfo, SyvalionDIPInfo,
 	SyvalionInit, DrvExit, DrvFrame, SyvalionDraw, DrvScan, NULL, 0x210,
 	512, 400, 4, 3
@@ -2078,7 +2084,7 @@ struct BurnDriver BurnDrvRecordbr = {
 	"recordbr", NULL, NULL, NULL, "1988",
 	"Recordbreaker (World)\0", NULL, "Taito Corporation Japan", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, recordbrRomInfo, recordbrRomName, NULL, NULL, NULL, NULL, RecordbrInputInfo, RecordbrDIPInfo,
 	SyvalionInit, DrvExit, DrvFrame, RecordbrDraw, DrvScan, NULL, 0x210,
 	320, 240, 4, 3
@@ -2118,7 +2124,7 @@ struct BurnDriver BurnDrvGogold = {
 	"gogold", "recordbr", NULL, NULL, "1988",
 	"Go For The Gold (Japan)\0", NULL, "Taito Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, gogoldRomInfo, gogoldRomName, NULL, NULL, NULL, NULL, RecordbrInputInfo, GogoldDIPInfo,
 	SyvalionInit, DrvExit, DrvFrame, RecordbrDraw, DrvScan, NULL, 0x210,
 	320, 240, 4, 3
@@ -2156,7 +2162,7 @@ struct BurnDriver BurnDrvTetristh = {
 	"tetristh", "tetris", NULL, NULL, "1988",
 	"Tetris (Japan, Taito H-System)\0", NULL, "Sega", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_PUZZLE, 0,
 	NULL, tetristhRomInfo, tetristhRomName, NULL, NULL, NULL, NULL, TetristhInputInfo, TetristhDIPInfo,
 	TetristhInit, DrvExit, DrvFrame, RecordbrDraw, DrvScan, NULL, 0x210,
 	320, 224, 4, 3
@@ -2199,7 +2205,7 @@ struct BurnDriver BurnDrvDleague = {
 	"dleague", NULL, NULL, NULL, "1990",
 	"Dynamite League (US)\0", NULL, "Taito America Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, dleagueRomInfo, dleagueRomName, NULL, NULL, NULL, NULL, DleagueInputInfo, DleagueDIPInfo,
 	DleagueInit, DrvExit, DrvFrame, DleagueDraw, DrvScan, NULL, 0x210,
 	320, 240, 4, 3
@@ -2241,7 +2247,7 @@ struct BurnDriver BurnDrvDleaguej = {
 	"dleaguej", "dleague", NULL, NULL, "1990",
 	"Dynamite League (Japan)\0", NULL, "Taito Corporation", "Taito H System",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TAITO_MISC, GBF_SPORTSMISC, 0,
 	NULL, dleaguejRomInfo, dleaguejRomName, NULL, NULL, NULL, NULL, DleagueInputInfo, DleaguejDIPInfo,
 	DleagueInit, DrvExit, DrvFrame, DleagueJDraw, DrvScan, NULL, 0x210,
 	320, 240, 4, 3

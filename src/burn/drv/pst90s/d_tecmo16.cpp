@@ -319,6 +319,25 @@ static struct BurnRomInfo FstarfrcjRomDesc[] = {
 STD_ROM_PICK(Fstarfrcj)
 STD_ROM_FN(Fstarfrcj)
 
+static struct BurnRomInfo FstarfrcjaRomDesc[] = {
+	{ "fstarf01.ic1",  0x40000, 0x3b495b2c, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
+	{ "fstarf02.ic2",  0x40000, 0x5dacfd3d, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
+
+	{ "fstarf03.rom",  0x20000, 0x54375335, BRF_GRA },			 //  2
+	{ "fstarf05.rom",  0x80000, 0x77a281e7, BRF_GRA },			 //  3
+	{ "fstarf04.rom",  0x80000, 0x398a920d, BRF_GRA },			 //  4
+	{ "fstarf09.rom",  0x80000, 0xd51341d2, BRF_GRA },			 //  5
+	{ "fstarf06.rom",  0x80000, 0x07e40e87, BRF_GRA },			 //  6
+
+	{ "fstarf07.rom",  0x10000, 0xe0ad5de1, BRF_PRG | BRF_SND }, //  7	Z80 Program Code
+
+	{ "fstarf08.rom",  0x20000, 0xf0ad5693, BRF_SND },			 //  8	Samples
+};
+
+
+STD_ROM_PICK(Fstarfrcja)
+STD_ROM_FN(Fstarfrcja)
+
 static struct BurnRomInfo FstarfrcwRomDesc[] = {
 	{ "1.bin",         0x40000, 0x5bc0a9d2, BRF_ESS | BRF_PRG }, //  0	68000 Program Code
 	{ "2.bin",         0x40000, 0x8ec787cb, BRF_ESS | BRF_PRG }, //  1	68000 Program Code
@@ -411,6 +430,8 @@ static INT32 DrvDoReset()
 
 	MSM6295Reset(0);
 	BurnYM2151Reset();
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1337,7 +1358,7 @@ struct BurnDriver BurnDrvFstarfrc = {
 	"fstarfrc", NULL, NULL, NULL, "1992",
 	"Final Star Force (US)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, FstarfrcRomInfo, FstarfrcRomName, NULL, NULL, NULL, NULL, FstarfrcInputInfo, FstarfrcDIPInfo,
 	FstarfrcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 224, 256, 3, 4
@@ -1345,10 +1366,20 @@ struct BurnDriver BurnDrvFstarfrc = {
 
 struct BurnDriver BurnDrvFstarfrcj = {
 	"fstarfrcj", "fstarfrc", NULL, NULL, "1992",
-	"Final Star Force (Japan)\0", NULL, "Tecmo", "Miscellaneous",
+	"Final Star Force (Japan, set 1)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, FstarfrcjRomInfo, FstarfrcjRomName, NULL, NULL, NULL, NULL, FstarfrcInputInfo, FstarfrcDIPInfo,
+	FstarfrcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
+	NULL, 0x2000, 224, 256, 3, 4
+};
+
+struct BurnDriver BurnDrvFstarfrcja = {
+	"fstarfrcja", "fstarfrc", NULL, NULL, "1992",
+	"Final Star Force (Japan, set 2)\0", NULL, "Tecmo", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, FstarfrcjaRomInfo, FstarfrcjaRomName, NULL, NULL, NULL, NULL, FstarfrcInputInfo, FstarfrcDIPInfo,
 	FstarfrcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 224, 256, 3, 4
 };
@@ -1357,7 +1388,7 @@ struct BurnDriver BurnDrvFstarfrcw = {
 	"fstarfrcw", "fstarfrc", NULL, NULL, "1992",
 	"Final Star Force (World?)\0", NULL, "Tecmo", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, FstarfrcwRomInfo, FstarfrcwRomName, NULL, NULL, NULL, NULL, FstarfrcInputInfo, FstarfrcDIPInfo,
 	FstarfrcInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 224, 256, 3, 4
@@ -1367,7 +1398,7 @@ struct BurnDriver BurnDrvGinkun = {
 	"ginkun", NULL, NULL, NULL, "1995",
 	"Ganbare Ginkun\0", NULL, "Tecmo", "Miscellaneous",
 	L"\u304C\u3093\u3070\u308C \u30AE\u30F3\u304F\u3093\0Ganbare Ginkun\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_MINIGAMES, 0,
 	NULL, GinkunRomInfo, GinkunRomName, NULL, NULL, NULL, NULL, FstarfrcInputInfo, GinkunDIPInfo,
 	GinkunInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 256, 224, 4, 3
@@ -1377,7 +1408,7 @@ struct BurnDriver BurnDrvRiot = {
 	"riot", NULL, NULL, NULL, "1992",
 	"Riot\0", NULL, "NMK", "Miscellaneous",
 	L"\u96F7\u8ECB\u6597 Riot\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, RiotRomInfo, RiotRomName, NULL, NULL, NULL, NULL, RiotInputInfo, RiotDIPInfo,
 	RiotInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 256, 224, 4, 3
@@ -1387,7 +1418,7 @@ struct BurnDriver BurnDrvRiotw = {
 	"riotw", "riot", NULL, NULL, "1992",
 	"Riot (Woong Bi license)\0", NULL, "Woong Bi", "Miscellaneous",
 	L"\u96F7\u8ECB\u6597 Riot (Woong Bi license)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, RiotwRomInfo, RiotwRomName, NULL, NULL, NULL, NULL, RiotInputInfo, RiotDIPInfo,
 	RiotInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	NULL, 0x2000, 256, 224, 4, 3

@@ -37,6 +37,8 @@ static UINT8 DrvReset;
 
 static INT32 is_sdgndmps = 0;
 
+static INT32 nExtraCycles;
+
 static struct BurnInputInfo DconInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Start",	BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
@@ -271,6 +273,10 @@ static INT32 DrvDoReset()
 	gfx_bank = 0;
 	gfx_enable = 0;
 
+	nExtraCycles = 0;
+
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -354,49 +360,6 @@ static INT32 DrvGfxDecode()
 	return 0;
 }
 
-#if 0
-static INT32 DrvGfxDecode()
-{
-	INT32 Plane0[4]  = { 0x00000, 0x00004, 0x80000, 0x80004 };
-	INT32 XOffs0[8]  = { 0x003, 0x002, 0x001, 0x000, 0x00b, 0x00a, 0x009, 0x008 };
-	INT32 YOffs0[8]  = { 0x000, 0x010, 0x020, 0x030, 0x040, 0x050, 0x060, 0x070 };
-
-	INT32 Plane1[4]  = { 0x008, 0x00c, 0x000, 0x004 };
-	INT32 XOffs1[16] = { 0x003, 0x002, 0x001, 0x000, 0x013, 0x012, 0x011, 0x010,
-			   0x203, 0x202, 0x201, 0x200, 0x213, 0x212, 0x211, 0x210 };
-	INT32 YOffs1[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
-			   0x100, 0x120, 0x140, 0x160, 0x180, 0x1a0, 0x1c0, 0x1e0 };
-
-	UINT8 *tmp = (UINT8*)BurnMalloc(0x200000);
-	if (tmp == NULL) {
-		return 1;
-	}
-
-	memcpy (tmp, DrvGfxROM[0], 0x020000);
-
-	GfxDecode(0x1000, 4,  8,  8, Plane0, XOffs0, YOffs0, 0x080, tmp, DrvGfxROM[0]);
-
-	memcpy (tmp, DrvGfxROM[1], 0x80000);
-
-	GfxDecode(0x1000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, tmp, DrvGfxROM[1]);
-
-	memcpy (tmp, DrvGfxROM[2], 0x80000);
-
-	GfxDecode(0x1000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, tmp, DrvGfxROM[2]);
-
-	memcpy (tmp, DrvGfxROM[3], 0x100000);
-
-	GfxDecode(0x2000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, tmp, DrvGfxROM[3]);
-
-	memcpy (tmp, DrvGfxROM[4], 0x200000);
-
-	GfxDecode(0x4000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x400, tmp, DrvGfxROM[4]);
-
-	BurnFree (tmp);
-
-	return 0;
-}
-#endif
 static INT32 DrvInit()
 {
 	is_sdgndmps = strcmp(BurnDrvGetTextA(DRV_NAME), "sdgndmps") == 0;
@@ -593,56 +556,29 @@ static INT32 DrvFrame()
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[2] = { 10000000 / 60, 3579545 / 60 };
-	INT32 nCyclesDone[2] = { 0, 0 };
-	INT32 nSoundBufferPos = 0;
+	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
 
 	SekOpen(0);
 	ZetOpen(0);
 
-	if (is_sdgndmps)
+	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		for (INT32 i = 0; i < nInterleave; i++)
-		{
-			CPU_RUN(0, Sek);
+		CPU_RUN(0, Sek);
 
-			if (i == 239) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
+		if (i == 255) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
 
-			CPU_RUN(1, Zet);
-
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				seibu_sound_update(pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
-		}
-	}
-	else
-	{
-		for (INT32 i = 0; i < nInterleave; i++)
-		{
-			CPU_RUN(0, Sek);
-
-			if (i == 255) SekSetIRQLine(4, CPU_IRQSTATUS_AUTO);
-
-			BurnTimerUpdateYM3812((i + 1) * (nCyclesTotal[1] / nInterleave));
-		}
-
-		BurnTimerEndFrameYM3812(nCyclesTotal[1]);
-	}
-
-	if (pBurnSoundOut && !is_sdgndmps) {
-		seibu_sound_update(pBurnSoundOut, nBurnSoundLen);
-	} else {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			seibu_sound_update(pSoundBuf, nSegmentLength);
-		}
+		CPU_RUN_TIMER(1);
 	}
 
 	ZetClose();
 	SekClose();
+
+	nExtraCycles = nCyclesDone[0] - nCyclesTotal[0];
+
+	if (pBurnSoundOut) {
+		seibu_sound_update(pBurnSoundOut, nBurnSoundLen);
+		BurnSoundDCFilter();
+	}
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -674,6 +610,8 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 		SCAN_VAR(gfx_bank);
 		SCAN_VAR(gfx_enable);
+
+		SCAN_VAR(nExtraCycles);
 	}
 
 	return 0;
@@ -714,7 +652,7 @@ struct BurnDriver BurnDrvDcon = {
 	"dcon", NULL, NULL, NULL, "1992",
 	"D-Con\0", NULL, "Success", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, dconRomInfo, dconRomName, NULL, NULL, NULL, NULL, DconInputInfo, DconDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &BurnRecalc, 0x800,
 	320, 224, 4, 3
@@ -755,7 +693,7 @@ struct BurnDriver BurnDrvSdgndmps = {
 	"sdgndmps", NULL, NULL, NULL, "1991",
 	"SD Gundam Psycho Salamander no Kyoui\0", NULL, "Banpresto / Bandai", "Miscellaneous",
 	L"\u30AC\u30F3\u30C0\u30E0 \u30B5\u30A4\u30B3\u30B5\u30E9\u30DE\uF303\u30C0\u30FC\u306E\u8105\u5A01\0SD Gundam Psycho Salamander no Kyoui\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, sdgndmpsRomInfo, sdgndmpsRomName, NULL, NULL, NULL, NULL, SdgndmpsInputInfo, SdgndmpsDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &BurnRecalc, 0x800,
 	320, 224, 4, 3

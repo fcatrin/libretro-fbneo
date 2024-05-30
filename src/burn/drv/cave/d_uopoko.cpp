@@ -265,6 +265,8 @@ static INT32 DrvDoReset()
 	nIRQPending = 0;
 	nCyclesExtra = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -532,8 +534,8 @@ static INT32 DrvInit()
 
 // Rom information
 static struct BurnRomInfo uopokoRomDesc[] = {
-	{ "u26.int",      0x080000, 0xb445c9ac, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
-	{ "u25.int",      0x080000, 0xa1258482, BRF_ESS | BRF_PRG }, //  1
+	{ "u26.u26",      0x080000, 0xb445c9ac, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "u25.u25",      0x080000, 0xa1258482, BRF_ESS | BRF_PRG }, //  1
 
 	{ "cave_cv-02_u33.u33", 	0x400000, 0x5d142ad2, BRF_GRA }, //  2 Sprite data
 
@@ -549,8 +551,8 @@ STD_ROM_PICK(uopoko)
 STD_ROM_FN(uopoko)
 
 static struct BurnRomInfo uopokojRomDesc[] = {
-	{ "u26.bin",      0x080000, 0xE7EEC050, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
-	{ "u25.bin",      0x080000, 0x68CB6211, BRF_ESS | BRF_PRG }, //  1
+	{ "u26j.u26",      0x080000, 0xE7EEC050, BRF_ESS | BRF_PRG }, //  0 CPU #0 code
+	{ "u25j.u25",      0x080000, 0x68CB6211, BRF_ESS | BRF_PRG }, //  1
 
 	{ "cave_cv-02_u33.u33", 	0x400000, 0x5d142ad2, BRF_GRA }, //  2 Sprite data
 
@@ -566,20 +568,20 @@ STD_ROM_PICK(uopokoj)
 STD_ROM_FN(uopokoj)
 
 struct BurnDriver BurnDrvUoPoko = {
-	"uopoko", NULL, NULL, NULL, "1999",
-	"Puzzle Uo Poko (International, ver. 98/02/06)\0", NULL, "Cave / Jaleco", "Cave",
+	"uopoko", NULL, NULL, NULL, "1998",
+	"Puzzle Uo Poko (World)\0", NULL, "Cave (Jaleco license)", "Cave",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
+	BDF_GAME_WORKING | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
 	NULL, uopokoRomInfo, uopokoRomName, NULL, NULL, NULL, NULL, uopokoInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3
 };
 
 struct BurnDriver BurnDrvUoPokoj = {
-	"uopokoj", "uopoko", NULL, NULL, "1999",
-	"Puzzle Uo Poko (Japan, ver. 98/02/06)\0", NULL, "Cave / Jaleco", "Cave",
-	L"\u30D1\u30BA\u30EB \u9B5A\u30DD\u30B3 \u3046\u304A\u307D\u3053 (Japan, ver. 98/02/06)\0Puzzle Uo Poko\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
+	"uopokoj", "uopoko", NULL, NULL, "1998",
+	"Puzzle Uo Poko (Japan)\0", NULL, "Cave (Jaleco license)", "Cave",
+	L"Puzzle Uo Poko\0\u30D1\u30BA\u30EB \u9B5A\u30DD\u30B3 \u3046\u304A\u307D\u3053 (Japan)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_16BIT_ONLY | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_68K_ONLY, GBF_PUZZLE, 0,
 	NULL, uopokojRomInfo, uopokojRomName, NULL, NULL, NULL, NULL, uopokoInputInfo, NULL,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan,
 	&CaveRecalcPalette, 0x8000, 320, 240, 4, 3

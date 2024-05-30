@@ -83,6 +83,7 @@ BEGIN
 	IDS_DISK_ALL_CARD			"All Memory Card Files"
 	IDS_DISK_ALL_DAT			"All Dat Files"
 	IDS_DISK_TEXT				"Text Files"
+	IDS_DISK_FILE_ROMDATA		"%s Romdata Files"
 
 	IDS_DISK_SAVEREPORT			"Save system information report"
 
@@ -241,6 +242,8 @@ BEGIN
     IDS_GENRE_RPG               "RPG"
     IDS_GENRE_SIM               "Simulator"
     IDS_GENRE_ADV               "Adventure"
+    IDS_GENRE_CARD              "Card Game"
+    IDS_GENRE_BOARD             "Board Game"
 
 	IDS_FAMILY					"Family"
 	IDS_FAMILY_MSLUG			"Metal Slug"
@@ -366,9 +369,10 @@ BEGIN
 	IDS_ERR_UI_MODULE			"Couldn't intialise '%s' module."
 	IDS_ERR_UI_TRIPLE			"Couldn't create a triple buffer."
 	IDS_ERR_UI_FULL_NOMODE		"No appropriate display mode supported. Please adjust your full-screen settings."
-	IDS_ERR_UI_FULL_PROBLEM		"Problem setting '%dx%dx%dbpp (%dHz)' display mode"
+	IDS_ERR_UI_FULL_PROBLEM		"Problem setting '%dx%dx%dbpp' display mode"
 	IDS_ERR_UI_FULL_CUSTRES		"\n\nThis is not a standard VGA resolution; please make sure it is supported by your video card."
 	IDS_ERR_UI_VID_MODULE		"Couldn't intialise '%s' module. Try installing the Direct X End User runtimes (June 2010)."
+	IDS_ERR_UI_HARDFX_MODULE	"Unable to load shader '%S'."
 
 	IDS_ERR_DISK_CREATE			"Error creating "
 	IDS_ERR_DISK_LOAD			"Error loading "

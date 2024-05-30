@@ -1,6 +1,8 @@
 // FB Alpha Renegade driver module
 // Based on MAME driver by Phil Stroffolino, Carlos A. Lozano, Rob Rosenbrock
 
+// todo: clean up this mess. -dink
+
 #include "tiles_generic.h"
 #include "m6502_intf.h"
 #include "m6805_intf.h"
@@ -383,6 +385,8 @@ static INT32 DrvDoReset()
 	M6502Close();
 	
 	M6809Open(0);
+	BurnYM3526Reset();
+	MSM5205Reset();
 	M6809Reset();
 	M6809Close();
 	
@@ -405,10 +409,7 @@ static INT32 DrvDoReset()
 		MCUPortBIn = 0;
 		MCUPortCIn = 0;
 	}
-	
-	BurnYM3526Reset();
-	MSM5205Reset();
-	
+
 	DrvRomBank = 0;
 	DrvVBlank = 0;
 	memset(DrvScrollX, 0, 2);
@@ -812,8 +813,8 @@ static INT32 DrvInit(INT32 nMcuType)
 		DisableMCUEmulation = 1;
 	}
 	
-	BurnYM3526Init(3000000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3526(&M6809Config, 1500000);
+	BurnYM3526Init(3000000, &DrvFMIRQHandler, 0);
+	BurnTimerAttach(&M6809Config, 1500000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 	
 	GenericTilesInit();
@@ -938,7 +939,7 @@ static void DrvRenderSprites()
 	UINT8 *Finish = Source + 96 * 4;
 
 	while (Source < Finish) {
-		INT32 sy = 240 - Source[0];
+		INT32 sy = 224 - Source[0];
 
 		if (sy >= 16) {
 			INT32 Attr = Source[1];
@@ -1030,56 +1031,44 @@ static INT32 DrvDraw()
 static INT32 DrvFrame()
 {
 	INT32 nInterleave = MSM5205CalcInterleave(0, 12000000 / 8);
-	
+
 	if (DrvReset) DrvDoReset();
 
 	DrvMakeInputs();
 
 	INT32 nCyclesTotal[3] = { (12000000 / 8) / 60, (12000000 / 8) / 60, (12000000 / 4) / 60 };
 	INT32 nCyclesDone[3] = { 0, 0, 0 };
-	INT32 nCyclesSegment;
-	
+
 	DrvVBlank = 0;
-	
+
 	M6502NewFrame();
 	M6809NewFrame();
 
 	for (INT32 i = 0; i < nInterleave; i++) {
-		INT32 nCurrentCPU, nNext;
-		
 		M6502Open(0);
-		nCurrentCPU = 0;
-		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesDone[nCurrentCPU] += M6502Run(nCyclesSegment);
+		CPU_RUN(0, M6502);
 		if (i == ((nInterleave / 10) * 7)) DrvVBlank = 1;
 		if (i ==  (nInterleave / 2)) M6502SetIRQLine(M6502_INPUT_LINE_NMI, CPU_IRQSTATUS_AUTO);
 		if (i == ((nInterleave / 10) * 9)) M6502SetIRQLine(M6502_IRQ_LINE, CPU_IRQSTATUS_HOLD);
 		M6502Close();
-		
+
 		if (!DisableMCUEmulation) {
 			m6805Open(0);
-			nCurrentCPU = 2;
-			nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-			nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-			nCyclesDone[nCurrentCPU] += m6805Run(nCyclesSegment);
+			CPU_RUN(2, m6805);
 			m6805Close();
 		}
-		
+
 		M6809Open(0);
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 		MSM5205Update();
 		M6809Close();
 	}
-	
-	M6809Open(0);
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
+
 	if (pBurnSoundOut) {
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
 		MSM5205Render(0, pBurnSoundOut, nBurnSoundLen);
 	}
-	M6809Close();
-	
+
 	if (pBurnDraw) DrvDraw();
 
 	return 0;
@@ -1141,7 +1130,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 
 struct BurnDriver BurnDrvRenegade = {
 	"renegade", NULL, NULL, NULL, "1986",
-	"Renegade (US)\0", NULL, "Technos (Taito America license)", "Miscellaneous",
+	"Renegade (US)\0", NULL, "Technos Japan (Taito America license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TECHNOS, GBF_SCRFIGHT, 0,
 	NULL, DrvRomInfo, DrvRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,
@@ -1151,7 +1140,7 @@ struct BurnDriver BurnDrvRenegade = {
 
 struct BurnDriver BurnDrvKuniokun = {
 	"kuniokun", "renegade", NULL, NULL, "1986",
-	"Nekketsu Kouha Kunio-kun (Japan)\0", NULL, "Technos", "Miscellaneous",
+	"Nekketsu Kouha Kunio-kun (Japan)\0", NULL, "Technos Japan", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_TECHNOS, GBF_SCRFIGHT, 0,
 	NULL, DrvjRomInfo, DrvjRomName, NULL, NULL, NULL, NULL, DrvInputInfo, DrvDIPInfo,

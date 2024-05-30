@@ -79,10 +79,10 @@ void GenericTilesSetClip(INT32 nMinx, INT32 nMaxx, INT32 nMiny, INT32 nMaxy)
 
 void GenericTilesGetClip(INT32 *nMinx, INT32 *nMaxx, INT32 *nMiny, INT32 *nMaxy)
 {
-	*nMinx = nScreenWidthMin;
-	*nMaxx = nScreenWidthMax;
-	*nMiny = nScreenHeightMin;
-	*nMaxy = nScreenHeightMax;
+	if (nMinx) *nMinx = nScreenWidthMin;
+	if (nMaxx) *nMaxx = nScreenWidthMax;
+	if (nMiny) *nMiny = nScreenHeightMin;
+	if (nMaxy) *nMaxy = nScreenHeightMax;
 }
 
 void GenericTilesClearClip()
@@ -220,6 +220,59 @@ INT32 BurnTransferCopy(UINT32* pPalette)
 	return 0;
 }
 
+INT32 BurnTransferPartial(UINT32* pPalette, INT32 nStart, INT32 nEnd)
+{
+#if defined FBNEO_DEBUG
+	if (!Debug_BurnTransferInitted) bprintf(PRINT_ERROR, _T("BurnTransferPartial called without init\n"));
+#endif
+
+	// Sanity checks
+	if (nStart < 0) nStart = 0;
+	if (nStart > nTransHeight) nStart = nTransHeight;
+	if (nEnd < 0) nEnd = 0;
+	if (nEnd > nTransHeight) nEnd = nTransHeight;
+	if (nEnd < nStart) return 1;
+	if (!pBurnDraw) return 1;
+
+	UINT16* pSrc = pTransDraw + nStart * nTransWidth;
+	UINT8* pDest = pBurnDraw + nStart * nBurnPitch;
+
+	pBurnDrvPalette = pPalette;
+
+	switch (nBurnBpp) {
+		case 2: {
+			for (INT32 y = nStart; y < nEnd; y++, pSrc += nTransWidth, pDest += nBurnPitch) {
+				for (INT32 x = 0; x < nTransWidth; x ++) {
+					((UINT16*)pDest)[x] = pPalette[pSrc[x]];
+				}
+			}
+			break;
+		}
+		case 3: {
+			for (INT32 y = nStart; y < nEnd; y++, pSrc += nTransWidth, pDest += nBurnPitch) {
+				for (INT32 x = 0; x < nTransWidth; x++) {
+					UINT32 c = pPalette[pSrc[x]];
+					*(pDest + (x * 3) + 0) = c & 0xFF;
+					*(pDest + (x * 3) + 1) = (c >> 8) & 0xFF;
+					*(pDest + (x * 3) + 2) = c >> 16;
+
+				}
+			}
+			break;
+		}
+		case 4: {
+			for (INT32 y = nStart; y < nEnd; y++, pSrc += nTransWidth, pDest += nBurnPitch) {
+				for (INT32 x = 0; x < nTransWidth; x++) {
+					((UINT32*)pDest)[x] = pPalette[pSrc[x]];
+				}
+			}
+			break;
+		}
+	}
+
+	return 0;
+}
+
 #define nTransOverflow 16 // 16 lines of overflow, some games spill past the end of the allocated height causing heap corruption.
 
 void BurnTransferSetDimensions(INT32 nWidth, INT32 nHeight)
@@ -228,17 +281,12 @@ void BurnTransferSetDimensions(INT32 nWidth, INT32 nHeight)
 	nTransWidth = nWidth;
 }
 
-void BurnTransferExit()
+INT32 BurnTransferFindSpill()
 {
-#if defined FBNEO_DEBUG
-	if (!Debug_BurnTransferInitted) bprintf(PRINT_ERROR, _T("BurnTransferExit called without init\n"));
-#endif
+	INT32 uhoh_spill = 0;
 
 	if (Debug_BurnTransferInitted)
 	{ // pTransDraw spill detector v.0001.01 - handy for driver development!
-
-		INT32 uhoh_spill = 0;
-
 		for (INT32 y = nTransHeight; y < nTransHeight + nTransOverflow; y++) {
 			for (INT32 x = 0; x < nTransWidth; x++) {
 				if (pTransDraw[y * nTransWidth + x]) uhoh_spill = 1;
@@ -246,8 +294,20 @@ void BurnTransferExit()
 		}
 		if (uhoh_spill) {
 			bprintf(PRINT_ERROR, _T("!!! BurnTransferExit(): Game wrote past pTransDraw's allocated dimensions!\n"));
+			bprintf(PRINT_ERROR, _T("... Frame  %d.  Transfer dimensions  %d x %d\n"), nCurrentFrame, nTransWidth, nTransHeight);
 		}
 	}
+
+	return uhoh_spill;
+}
+
+void BurnTransferExit()
+{
+#if defined FBNEO_DEBUG
+	if (!Debug_BurnTransferInitted) bprintf(PRINT_ERROR, _T("BurnTransferExit called without init\n"));
+#endif
+
+	BurnTransferFindSpill();
 
 	BurnBitmapExit();
 	pTransDraw = NULL;
@@ -305,6 +365,16 @@ void BurnTransferFlip(INT32 bFlipX, INT32 bFlipY)
 			src2 -= nScreenWidth;
 		}
 	}
+}
+
+void BurnTransferRealloc()
+{
+	BurnBitmapAllocate(0, nTransWidth, nTransHeight + nTransOverflow, true);
+
+	pTransDraw = BurnBitmapGetBitmap(0);
+	pPrioDraw = BurnBitmapGetPriomap(0);
+
+	BurnTransferClear();
 }
 
 /*================================================================================================
@@ -6278,6 +6348,41 @@ void RenderPrioTransmaskSprite(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 color
 					dst[x] = pxl + color;
 				}
 				pri[x] = 0x1f;
+			}
+		}
+
+		sx -= width;
+	}
+}
+
+
+void RenderTransmaskSprite(UINT16 *dest, UINT8 *gfx, INT32 code, INT32 color, INT32 tmask, INT32 sx, INT32 sy, INT32 fx, INT32 fy, INT32 width, INT32 height)
+{
+#if defined FBNEO_DEBUG
+	if (!Debug_GenericTilesInitted) bprintf(PRINT_ERROR, _T("RenderTransmaskSprite called without init\n"));
+#endif
+
+	if (sx < (nScreenWidthMin - (width - 1)) || sy < (nScreenHeightMin - (height - 1)) || sx >= nScreenWidthMax || sy >= nScreenHeightMax) return;
+
+	UINT8 *gfx_base = gfx + (code * width * height);
+
+	INT32 flipx = fx ? (width - 1) : 0;
+	INT32 flipy = fy ? (height - 1) : 0;
+
+	for (INT32 y = 0; y < height; y++, sy++)
+	{
+		if (sy < nScreenHeightMin || sy >= nScreenHeightMax) continue;
+
+		UINT16 *dst = dest + sy * nScreenWidth + sx;
+
+		for (INT32 x = 0; x < width; x++, sx++)
+		{
+			if (sx < nScreenWidthMin || sx >= nScreenWidthMax) continue;
+
+			INT32 pxl = gfx_base[(y ^ flipy) * width + (x ^ flipx)];
+
+			if ((tmask & (1 << pxl)) == 0) {
+				dst[x] = pxl + color;
 			}
 		}
 

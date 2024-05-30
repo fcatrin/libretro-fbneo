@@ -55,46 +55,23 @@ INT32 nSekCPUOffsetAddress[SEK_MAX];
 
 static UINT32 nSekAddressMask[SEK_MAX], nSekAddressMaskActive;
 
-static INT32 core_idle(INT32 cycles)
-{
-	SekRunAdjust(cycles);
-
-	return cycles;
-}
-
-static void core_set_irq(INT32 cpu, INT32 line, INT32 state)
-{
-	INT32 active = nSekActive;
-	if (active != cpu)
-	{
-		if (active != -1) SekClose();
-		SekOpen(cpu);
-	}
-
-	SekSetIRQLine(line, state);
-
-	if (active != cpu)
-	{
-		SekClose();
-		if (active != -1) SekOpen(active);
-	}
-}
-
 cpu_core_config SekConfig =
 {
 	"68k",
-	SekOpen,
-	SekClose,
+	SekCPUPush,
+	SekCPUPop,
 	SekCheatRead,
 	SekWriteByteROM,
 	SekGetActive,
 	SekTotalCycles,
 	SekNewFrame,
-	core_idle,
-	core_set_irq,
+	SekIdle,
+	SekSetIRQLine,
 	SekRun,
 	SekRunEnd,
 	SekReset,
+	SekScan,
+	SekExit,
 	0x1000000,
 	0
 };
@@ -633,10 +610,15 @@ struct m68kpstack {
 	INT32 nHostCPU;
 	INT32 nPushedCPU;
 };
-#define MAX_PSTACK 10
+#define MAX_PSTACK 20
 
 static m68kpstack pstack[MAX_PSTACK];
 static INT32 pstacknum = 0;
+
+INT32 SekCPUGetStackNum()
+{
+	return pstacknum;
+}
 
 void SekCPUPush(INT32 nCPU)
 {
@@ -762,6 +744,23 @@ void SekNewFrame()
 	}
 #endif
 	nSekCyclesTotal = 0;
+}
+
+void SekCyclesBurnRun(INT32 nCycles)
+{
+#if defined FBNEO_DEBUG
+	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekSetCyclesBurnRun called without init\n"));
+	if (nSekActive == -1) bprintf(PRINT_ERROR, _T("SekSetCyclesBurnRun called when no CPU open\n"));
+#endif
+#ifdef EMU_C68K
+		if ((nSekCpuCore == SEK_CORE_C68K) && nSekCPUType[nSekActive] == 0x68000) {
+			c68k[nSekActive].cycles -= nCycles;
+		} else {
+#endif
+			m68k_ICount -= nCycles;
+#ifdef EMU_C68K
+		}
+#endif
 }
 
 void SekSetCyclesScanline(INT32 nCycles)
@@ -933,6 +932,8 @@ INT32 SekInit(INT32 nCount, INT32 nCPUType)
 
 	CpuCheatRegister(nCount, &SekConfig);
 
+	pstacknum = 0;
+
 	return 0;
 }
 
@@ -946,13 +947,13 @@ static void SekCPUExitM68K(INT32 i)
 }
 #endif
 
-INT32 SekExit()
+void SekExit()
 {
 #if defined FBNEO_DEBUG
 	if (!DebugCPU_SekInitted) bprintf(PRINT_ERROR, _T("SekExit called without init\n"));
 #endif
 
-	if (!DebugCPU_SekInitted) return 1;
+	if (!DebugCPU_SekInitted) return;
 
 	// Deallocate cpu extenal data (memory map etc)
 	for (INT32 i = 0; i <= nSekCount; i++) {
@@ -985,8 +986,6 @@ INT32 SekExit()
 	nSekCount = -1;
 
 	DebugCPU_SekInitted = 0;
-
-	return 0;
 }
 
 void SekReset()

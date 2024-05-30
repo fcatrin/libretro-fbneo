@@ -4,6 +4,7 @@
 #include "tiles_generic.h"
 #include "nec_intf.h"
 #include "z80_intf.h"
+#include "burn_gun.h" // for dial (wheels runner)
 #include "burn_ym2151.h"
 #include "burn_ym3526.h"
 #include "sn76496.h"
@@ -38,6 +39,8 @@ static UINT8 DrvDips[2];
 static UINT8 DrvInputs[4];
 static UINT8 DrvReset;
 
+static INT16 Analog[2];
+
 static INT32 game_select = 0;
 
 static struct BurnInputInfo FantlandInputList[] = {
@@ -66,15 +69,18 @@ static struct BurnInputInfo FantlandInputList[] = {
 
 STDINPUTINFO(Fantland)
 
+#define A(a, b, c, d) {a, b, (UINT8*)(c), d}
 static struct BurnInputInfo WheelrunInputList[] = {
 	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 coin"	},
 	{"P1 Left",			BIT_DIGITAL,	DrvFake + 0,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvFake + 1,	"p1 right"	},
+	A("P1 Wheel", 		BIT_ANALOG_REL, &Analog[0],		"p1 x-axis"),
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 1"	},
 
 	{"P2 Coin",			BIT_DIGITAL,	DrvJoy2 + 0,	"p2 coin"	},
 	{"P2 Left",			BIT_DIGITAL,	DrvFake + 2,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvFake + 3,	"p2 right"	},
+	A("P2 Wheel", 		BIT_ANALOG_REL, &Analog[1],		"p2 x-axis"),
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 fire 1"	},
 
 	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
@@ -190,42 +196,43 @@ STDDIPINFO(Galaxygn)
 
 static struct BurnDIPInfo WheelrunDIPList[]=
 {
-	{0x09, 0xff, 0xff, 0xff, NULL			},
-	{0x0a, 0xff, 0xff, 0xdf, NULL			},
+	DIP_OFFSET(0x0b)
+	{0x00, 0xff, 0xff, 0xff, NULL			},
+	{0x01, 0xff, 0xff, 0xdf, NULL			},
 
 	{0   , 0xfe, 0   ,    8, "Coinage"		},
-	{0x09, 0x01, 0x07, 0x01, "4 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x02, "3 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x03, "2 Coins 1 Credits"	},
-	{0x09, 0x01, 0x07, 0x07, "1 Coin  1 Credits"	},
-	{0x09, 0x01, 0x07, 0x06, "1 Coin  2 Credits"	},
-	{0x09, 0x01, 0x07, 0x05, "1 Coin  3 Credits"	},
-	{0x09, 0x01, 0x07, 0x04, "1 Coin  4 Credits"	},
-	{0x09, 0x01, 0x07, 0x00, "Free Play"		},
+	{0x00, 0x01, 0x07, 0x01, "4 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x02, "3 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x03, "2 Coins 1 Credits"	},
+	{0x00, 0x01, 0x07, 0x07, "1 Coin  1 Credits"	},
+	{0x00, 0x01, 0x07, 0x06, "1 Coin  2 Credits"	},
+	{0x00, 0x01, 0x07, 0x05, "1 Coin  3 Credits"	},
+	{0x00, 0x01, 0x07, 0x04, "1 Coin  4 Credits"	},
+	{0x00, 0x01, 0x07, 0x00, "Free Play"		},
 
 	{0   , 0xfe, 0   ,    2, "Demo Sounds"		},
-	{0x09, 0x01, 0x08, 0x00, "Off"			},
-	{0x09, 0x01, 0x08, 0x08, "On"			},
+	{0x00, 0x01, 0x08, 0x00, "Off"			},
+	{0x00, 0x01, 0x08, 0x08, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Allow Continue"	},
-	{0x09, 0x01, 0x10, 0x00, "No"			},
-	{0x09, 0x01, 0x10, 0x10, "Yes"			},
+	{0x00, 0x01, 0x10, 0x00, "No"			},
+	{0x00, 0x01, 0x10, 0x10, "Yes"			},
 
 	{0   , 0xfe, 0   ,    4, "Difficulty"		},
-	{0x09, 0x01, 0x60, 0x60, "Normal"		},
-	{0x09, 0x01, 0x60, 0x40, "Hard"			},
-	{0x09, 0x01, 0x60, 0x20, "Harder"		},
-	{0x09, 0x01, 0x60, 0x00, "Hardest"		},
+	{0x00, 0x01, 0x60, 0x60, "Normal"		},
+	{0x00, 0x01, 0x60, 0x40, "Hard"			},
+	{0x00, 0x01, 0x60, 0x20, "Harder"		},
+	{0x00, 0x01, 0x60, 0x00, "Hardest"		},
 
 	{0   , 0xfe, 0   ,    8, "Wheel Sensitivity"	},
-	{0x0a, 0x01, 0xff, 0x7f, "0"			},
-	{0x0a, 0x01, 0xff, 0xbf, "1"			},
-	{0x0a, 0x01, 0xff, 0xdf, "2"			},
-	{0x0a, 0x01, 0xff, 0xef, "3"			},
-	{0x0a, 0x01, 0xff, 0xf7, "4"			},
-	{0x0a, 0x01, 0xff, 0xfb, "5"			},
-	{0x0a, 0x01, 0xff, 0xfd, "6"			},
-	{0x0a, 0x01, 0xff, 0xfe, "7"			},
+	{0x01, 0x01, 0xff, 0x7f, "0"			},
+	{0x01, 0x01, 0xff, 0xbf, "1"			},
+	{0x01, 0x01, 0xff, 0xdf, "2"			},
+	{0x01, 0x01, 0xff, 0xef, "3"			},
+	{0x01, 0x01, 0xff, 0xf7, "4"			},
+	{0x01, 0x01, 0xff, 0xfb, "5"			},
+	{0x01, 0x01, 0xff, 0xfd, "6"			},
+	{0x01, 0x01, 0xff, 0xfe, "7"			},
 };
 
 STDDIPINFO(Wheelrun)
@@ -378,6 +385,7 @@ static INT32 DrvDoReset()
 		DACReset();
 		BurnYM2151Reset();
 		VezClose();
+		HiscoreReset();
 	}
 	else if (game_select == 2)
 	{
@@ -388,8 +396,11 @@ static INT32 DrvDoReset()
 		SN76496Reset();
 	}
 
+
 	soundlatch = 0;
 	nmi_enable = 0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -652,7 +663,7 @@ static INT32 WheelrunInit()
 	ZetClose();
 
 	BurnYM3526Init(3500000, &DrvYM3526IrqHandler, &SynchroniseStream, 0);
-	BurnTimerAttachYM3526(&ZetConfig, 9000000);
+	BurnTimerAttach(&ZetConfig, 9000000);
 	BurnYM3526SetRoute(BURN_SND_YM3526_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	SN76489AInit(0, 3500000, 1);
@@ -660,6 +671,8 @@ static INT32 WheelrunInit()
 
 	SN76489AInit(1, 3500000, 1);
 	SN76496SetRoute(1, 0.60, BURN_SND_ROUTE_BOTH);
+
+	BurnTrackballInit(1);
 
 	GenericTilesInit();
 
@@ -678,6 +691,7 @@ static INT32 DrvExit()
 		BurnYM2151Exit();
 		DACExit();
 	} else if (game_select == 2) {
+		BurnTrackballExit();
 		ZetExit();
 		BurnYM3526Exit();
 		SN76496Exit();
@@ -827,14 +841,10 @@ static INT32 FantlandFrame()
 		VezClose();
 	}
 
-	VezOpen(1);
-
 	if (pBurnSoundOut) {
 		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
 		DACUpdate(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	VezClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -843,6 +853,25 @@ static INT32 FantlandFrame()
 	return 0;
 }
 
+static INT32 wheel_target[2];
+static INT32 wheel_adder[2];
+
+static void wheel_tick(INT32 player)
+{
+	wheel_target[player] = (INT8)BurnTrackballRead(0, player) / 2 + 0x04;
+	if (wheel_target[player] > 7) wheel_target[player] = 7;
+	else if (wheel_target[player] < 1) wheel_target[player] = 1;
+	BurnTrackballReadReset(0, player);
+
+	if (wheel_adder[player] > wheel_target[player])
+		wheel_adder[player]--;
+	else if (wheel_adder[player] < wheel_target[player])
+		wheel_adder[player]++;
+	else wheel_adder[player] = wheel_target[player]; // derp!
+
+	DrvInputs[player] &= ~0x70;
+	DrvInputs[player] |= wheel_target[player] << 4;
+}
 
 static INT32 WheelrunFrame()
 {
@@ -866,12 +895,12 @@ static INT32 WheelrunFrame()
 		DrvInputs[0] &= ~0x70;
 		DrvInputs[1] &= ~0x70;
 
-		UINT8 nWheel = ((DrvFake[0] ? 5 : 0) | (DrvFake[1] ? 3 : 0)) << 4;
-		if (nWheel == 0) nWheel = 0x40;
-		DrvInputs[0] |= nWheel;
-		nWheel = ((DrvFake[2] ? 5 : 0) | (DrvFake[3] ? 3 : 0)) << 4;
-		if (nWheel == 0) nWheel = 0x40;
-		DrvInputs[1] |= nWheel;
+		BurnTrackballConfig(0, AXIS_REVERSED, AXIS_REVERSED);
+		BurnTrackballFrame(0, Analog[0], Analog[1], 1, 0xf);
+		BurnTrackballUDLR(0, DrvFake[2], DrvFake[3], DrvFake[0], DrvFake[1]);
+		BurnTrackballUpdate(0);
+		wheel_tick(0);
+		wheel_tick(1);
 	}
 
 	INT32 nInterleave = 10;
@@ -886,18 +915,16 @@ static INT32 WheelrunFrame()
 		CPU_RUN(0, Vez);
 		if (i == (nInterleave - 1) && nmi_enable) VezSetIRQLineAndVector(0x20, 0, CPU_IRQSTATUS_AUTO);
 
-		BurnTimerUpdateYM3526((i + 1) * (nCyclesTotal[1] / nInterleave));
+		CPU_RUN_TIMER(1);
 	}
 
-	BurnTimerEndFrameYM3526(nCyclesTotal[1]);
+	ZetClose();
+	VezClose();
 
 	if (pBurnSoundOut) {
 		BurnYM3526Update(pBurnSoundOut, nBurnSoundLen);
         SN76496Update(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	ZetClose();
-	VezClose();
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -935,6 +962,11 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 		if (game_select == 2)
 		{
 			ZetScan(nAction);
+
+			BurnTrackballScan();
+
+			SCAN_VAR(wheel_adder);
+			SCAN_VAR(wheel_target);
 
 			ZetOpen(0);
 			BurnYM3526Scan(nAction, pnMin);
@@ -981,7 +1013,7 @@ struct BurnDriver BurnDrvFantland = {
 	"fantland", NULL, NULL, NULL, "19??",
 	"Fantasy Land (set 1)\0", NULL, "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, fantlandRomInfo, fantlandRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, FantlandDIPInfo,
 	FantlandInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	352, 256, 4, 3
@@ -1018,7 +1050,7 @@ struct BurnDriver BurnDrvFantlanda = {
 	"fantlanda", "fantland", NULL, NULL, "19??",
 	"Fantasy Land (set 2)\0", NULL, "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_PLATFORM, 0,
 	NULL, fantlandaRomInfo, fantlandaRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, FantlandDIPInfo,
 	FantlandInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	352, 256, 4, 3
@@ -1070,8 +1102,63 @@ struct BurnDriver BurnDrvGalaxygn = {
 	"galaxygn", NULL, NULL, NULL, "1989",
 	"Galaxy Gunners\0", "Imperfect sound", "Electronic Devices Italy", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, galaxygnRomInfo, galaxygnRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, GalaxygnDIPInfo,
+	GalaxygnInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
+	256, 352, 3, 4
+};
+
+
+// Galaxy Gunners (1990 year hack)
+
+static struct BurnRomInfo galaxygnhRomDesc[] = {
+	{ "3_en_a.bin",		0x10000, 0x9e469189, 1 | BRF_PRG | BRF_ESS }, //  0 I8086 code
+	{ "2_eo_a.bin",		0x10000, 0x9d893ea5, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "1_eq_a.bin",		0x10000, 0xad0e5b29, 1 | BRF_PRG | BRF_ESS }, //  2
+
+	{ "31_u10_b.bin",	0x10000, 0xf5c65a85, 2 | BRF_PRG | BRF_ESS }, //  3 I8088 code
+
+	{ "4_ck0_b.bin",		0x10000, 0xb3621119, 3 | BRF_GRA },           //  4 Sprites
+	{ "13_cj0_b.bin",		0x10000, 0x52b70f3e, 3 | BRF_GRA },           //  5
+	{ "22_ci0_b.bin",		0x10000, 0xea49fee4, 3 | BRF_GRA },           //  6
+	{ "5_ck1_b.bin",		0x10000, 0xbffe278f, 3 | BRF_GRA },           //  7
+	{ "14_cj1_b.bin",		0x10000, 0x3f7df1e6, 3 | BRF_GRA },           //  8
+	{ "23_ci1_b.bin",		0x10000, 0x4dcbbc99, 3 | BRF_GRA },           //  9
+	{ "6_ck2_b.bin",		0x10000, 0x0306069e, 3 | BRF_GRA },           // 10
+	{ "15_cj2_b.bin",		0x10000, 0xf635aa7e, 3 | BRF_GRA },           // 11
+	{ "24_ci2_b.bin",		0x10000, 0x733f5dcf, 3 | BRF_GRA },           // 12
+	{ "7_ck3_b.bin",		0x10000, 0xc3919bef, 3 | BRF_GRA },           // 13
+	{ "16_cj3_b.bin",		0x10000, 0xff9a3872, 3 | BRF_GRA },           // 14
+	{ "25_ci3_b.bin",		0x10000, 0x1d094f95, 3 | BRF_GRA },           // 15
+	{ "8_ck4_b.bin",		0x10000, 0x4a459cb8, 3 | BRF_GRA },           // 16
+	{ "17_cj4_b.bin",		0x10000, 0xae7a8e1e, 3 | BRF_GRA },           // 17
+	{ "26_ci4_b.bin",		0x10000, 0xc2f310b4, 3 | BRF_GRA },           // 18
+	{ "9_ck5_b.bin",		0x10000, 0xc8d4fbc2, 3 | BRF_GRA },           // 19
+	{ "18_cj5_b.bin",		0x10000, 0x74d3a0df, 3 | BRF_GRA },           // 20
+	{ "27_ci5_b.bin",		0x10000, 0xc2cfd3f9, 3 | BRF_GRA },           // 21
+	{ "10_ck6_b.bin",		0x10000, 0x6e32b549, 3 | BRF_GRA },           // 22
+	{ "19_cj6_b.bin",		0x10000, 0xfcda6efa, 3 | BRF_GRA },           // 23
+	{ "28_ci6_b.bin",		0x10000, 0x4d4fc01c, 3 | BRF_GRA },           // 24
+	{ "11_ck7_b.bin",		0x10000, 0x177a767a, 3 | BRF_GRA },           // 25
+	{ "20_cj7_b.bin",		0x10000, 0x2ba49d47, 3 | BRF_GRA },           // 26
+	{ "29_ci7_b.bin",		0x10000, 0xc1c68148, 3 | BRF_GRA },           // 27
+	{ "12_ck8_b.bin",		0x10000, 0x0fb2d41a, 3 | BRF_GRA },           // 28
+	{ "21_cj8_b.bin",		0x10000, 0x5f1bf8ad, 3 | BRF_GRA },           // 29
+	{ "30_ci8_b.bin",		0x10000, 0xded7cacf, 3 | BRF_GRA },           // 30
+
+	{ "pal4_u7_b_palce16v8h-25pc.bin",	0x117, 0x3472975d, 4 | BRF_OPT }, // 31 plds
+	{ "pal17_b_a_palce16v8h-25pc.bin",	0x117, 0x4793ed97, 4 | BRF_OPT }, // 32
+};
+
+STD_ROM_PICK(galaxygnh)
+STD_ROM_FN(galaxygnh)
+
+struct BurnDriver BurnDrvGalaxygnh = {
+	"galaxygnh", "galaxygn", NULL, NULL, "1990",
+	"Galaxy Gunners (1990 year hack)\0", "Imperfect sound", "Electronic Devices Italy", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	NULL, galaxygnhRomInfo, galaxygnhRomName, NULL, NULL, NULL, NULL, FantlandInputInfo, GalaxygnDIPInfo,
 	GalaxygnInit, DrvExit, FantlandFrame, DrvDraw, DrvScan, &DrvRecalc, 0x100,
 	256, 352, 3, 4
 };

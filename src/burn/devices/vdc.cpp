@@ -313,7 +313,7 @@ void vce_reset()
 enum vdc_regs {MAWR = 0, MARR, VxR, reg3, reg4, CR, RCR, BXR, BYR, MWR, HSR, HDR, VPR, VDW, VCR, DCR, SOUR, DESR, LENR, DVSSR };
 
 
-static void conv_obj(INT32 which, INT32 i, INT32 l, INT32 hf, INT32 vf, UINT8 *buf)
+static void conv_obj(INT32 which, INT32 halfplane, INT32 i, INT32 l, INT32 hf, INT32 vf, UINT8 *buf)
 {
 	INT32 b0, b1, b2, b3, i0, i1, i2, i3, x;
 	INT32 xi;
@@ -333,6 +333,15 @@ static void conv_obj(INT32 which, INT32 i, INT32 l, INT32 hf, INT32 vf, UINT8 *b
 	b3  = vdc_vidram[which][(tmp + 0x30) * 2 + 0];
 	b3 |= vdc_vidram[which][(tmp + 0x30) * 2 + 1]<<8;
 
+	if (halfplane & 0x80) {
+		if (halfplane & 1) {
+			b0 = b2;
+			b1 = b3;
+		}
+
+		b2 = b3 = 0;
+	}
+
 	for(x=0;x<16;x++)
 	{
 		if(hf) xi = x; else xi = (15 - x);
@@ -351,6 +360,7 @@ static void pce_refresh_sprites(INT32 which, INT32 line, UINT8 *drawn, UINT16 *l
 
 	/* Are we in greyscale mode or in color mode? */
 	INT32 color_base = vce_control & 0x80 ? 512 : 0;
+	INT32 half_plane = ((vdc_data[which][MWR] & 0x0c) == 0x04) << 7;
 
 	/* count up: Highest priority is Sprite 0 */
 	for(i = 0; i < 64; i++)
@@ -360,6 +370,7 @@ static void pce_refresh_sprites(INT32 which, INT32 line, UINT8 *drawn, UINT16 *l
 		INT32 obj_y = (vdc_sprite_ram[which][(i << 2) + 0] & 0x03FF) - 64;
 		INT32 obj_x = (vdc_sprite_ram[which][(i << 2) + 1] & 0x03FF) - 32;
 		INT32 obj_i = (vdc_sprite_ram[which][(i << 2) + 2] & 0x07FE);
+		INT32 obj_lsb = (vdc_sprite_ram[which][(i << 2) + 2] & 0x0001) | half_plane;
 		INT32 obj_a = (vdc_sprite_ram[which][(i << 2) + 3]);
 		INT32 cgx   = (obj_a >> 8) & 1;   /* sprite width */
 		INT32 cgy   = (obj_a >> 12) & 3;  /* sprite height */
@@ -416,7 +427,7 @@ static void pce_refresh_sprites(INT32 which, INT32 line, UINT8 *drawn, UINT16 *l
 				INT32 x;
 				INT32 pixel_x = ( ( obj_x * main_width ) / vdc_width[which] );
 
-				conv_obj(which, obj_i + (cgypos << 2), obj_l, hf, vf, buf);
+				conv_obj(which, obj_lsb, obj_i + (cgypos << 2), obj_l, hf, vf, buf);
 
 				for(x = 0; x < 16; x++)
 				{
@@ -471,7 +482,7 @@ static void pce_refresh_sprites(INT32 which, INT32 line, UINT8 *drawn, UINT16 *l
 				INT32 x;
 				INT32 pixel_x = ( ( obj_x * main_width ) / vdc_width[which] );
 
-				conv_obj(which, obj_i + (cgypos << 2) + (hf ? 2 : 0), obj_l, hf, vf, buf);
+				conv_obj(which, obj_lsb, obj_i + (cgypos << 2) + (hf ? 2 : 0), obj_l, hf, vf, buf);
 
 				for(x = 0; x < 16; x++)
 				{
@@ -540,7 +551,7 @@ static void pce_refresh_sprites(INT32 which, INT32 line, UINT8 *drawn, UINT16 *l
 				}
 				
 				{
-					conv_obj(which, obj_i + (cgypos << 2) + (hf ? 0 : 2), obj_l, hf, vf, buf);
+					conv_obj(which, obj_lsb, obj_i + (cgypos << 2) + (hf ? 0 : 2), obj_l, hf, vf, buf);
 					for(x = 0; x < 16; x++)
 					{
 						if(((obj_x + 0x10 + x) < (vdc_width[which])) && ((obj_x + 0x10 + x) >= 0))
@@ -624,7 +635,7 @@ void vdc_check_hblank_raster_irq(INT32 which)
 	if ( vdc_raster_count[which] == (vdc_data[which][RCR] & 0x3ff) && vdc_data[which][CR] & CR_RC )
 	{
 #if DINK_DEBUG
-		bprintf(0, _T("raster @ %d\tscanline %d\n"),vdc_raster_count[which], vce_current_line);
+		bprintf(0, _T("raster @ %d\traw scanline %d\n"),vdc_raster_count[which] - 0x40, vce_current_line);
 #endif
 		vdc_status[which] |= VDC_RR;
 		h6280SetIRQLine(0, CPU_IRQSTATUS_ACK);
@@ -642,7 +653,7 @@ static void do_vblank(INT32 which)
 	if ( vdc_data[which][CR] & CR_VR )
 	{
 #if DINK_DEBUG
-		bprintf(0, _T("vbl @ scanline %d\n"), vce_current_line);
+		bprintf(0, _T("vbl @ %d\traw scanline %d\n"), vdc_raster_count[which] - 0x40, vce_current_line);
 #endif
 		h6280Run(30/3); // 30 m-cycles past start of line
 		vdc_status[which] |= VDC_VD;
@@ -695,12 +706,9 @@ static void vdc_advance_line(INT32 which)
 		vdc_current_segment[which] = STATE_VSW;
 		vdc_current_segment_line[which] = 0;
 		vdc_vblank_triggered[which] = 0;
-		if (vce_current_line != 0) {
-			bprintf(0, _T("vdc_advance_line(): vce_current_line == %d - desynch.\n"), vce_current_line);
-		}
+
 #if DINK_DEBUG
-		bprintf(0, _T("vsw @ %d\tvds @ %d\n"), ((vdc_data[which][VPR]&0xff) & 0x1F), (vdc_data[which][VPR] >> 8));
-		bprintf(0, _T("vdw length is %d\n"), ( vdc_data[which][VDW] & 0x01FF ));
+		bprintf(0, _T("-frame start- VSW @ %d\tVDS @ %d\tVDW %d\n"), ((vdc_data[which][VPR]&0xff) & 0x1F), (vdc_data[which][VPR] >> 8), (vdc_data[which][VDW] & 0x01FF));
 #endif
 	}
 
@@ -722,11 +730,14 @@ static void vdc_advance_line(INT32 which)
 	{
 		vdc_current_segment[which] = STATE_VCR;
 		vdc_current_segment_line[which] = 0;
+	}
 
+	if ( STATE_VCR == vdc_current_segment[which] && vdc_current_segment_line[which] == 1 ) {
 		do_vblank(which);
 #if DINK_DEBUG
-		bprintf(0, _T("end vdw vblank, line %d, vdc_vblank_triggered[which] == %x\n"),vce_current_line, vdc_vblank_triggered[which]);
+		bprintf(0, _T("end vdw(vsw+1) vblank, line %d, vdc_vblank_triggered[which] == %x\n"),vce_current_line, vdc_vblank_triggered[which]);
 #endif
+
 	}
 
 	if ( STATE_VCR == vdc_current_segment[which] && vdc_current_segment_line[which] > (vdc_data[which][VCR]&0xff) ) {
@@ -736,7 +747,7 @@ static void vdc_advance_line(INT32 which)
 		vdc_current_segment_line[which] = 0;
 	}
 
-	if ( vce_current_line == vce_linecount() - 1 && !vdc_vblank_triggered[which] )
+	if ( vce_current_line == vce_linecount() - 2 && !vdc_vblank_triggered[which] )
 	{
 #if DINK_DEBUG
 		bprintf(0, _T("forced vblank :: line %d, vdc_vblank_triggered[which] == %x\n"),vce_current_line, vdc_vblank_triggered[which]);

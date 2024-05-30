@@ -53,7 +53,21 @@ int MediaInit();
 int MediaExit();
 
 //inpdipsw.cpp
+#define DIP_MAX_NAME 64
+#define MAXDIPSWITCHES 32
+#define MAXDIPOPTIONS 32
+bool setDIPSwitchOption(int dipgroup, int dipoption);
+int InpDIPSWCreate();
 void InpDIPSWResetDIPs();
+
+struct GroupOfDIPSwitches
+{
+	BurnDIPInfo dipSwitch;
+	UINT16 DefaultDIPOption;
+	UINT16 SelectedDIPOption;
+	char OptionsNamesWithCheckBoxes[MAXDIPOPTIONS][DIP_MAX_NAME];
+	BurnDIPInfo dipSwitchesOptions[MAXDIPOPTIONS];
+};
 
 //interface/inp_interface.cpp
 int InputInit();
@@ -61,7 +75,7 @@ int InputExit();
 int InputMake(bool bCopy);
 
 //TODO:
-#define szAppBurnVer 1
+#define szAppBurnVer "1"
 
 //stringset.cpp
 class StringSet {

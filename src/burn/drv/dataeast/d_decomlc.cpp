@@ -1,4 +1,4 @@
-// FB Alpha Data East MLC Hardware driver module
+// FB Neo Data East MLC Hardware driver module
 // Based on MAME driver by Bryan Mcphail
 
 #include "tiles_generic.h"
@@ -423,6 +423,8 @@ static INT32 DrvDoReset()
 
 	scanline_timer = -1;
 	vblank_flip = ~0;
+
+	HiscoreReset();
 
 	return 0;
 }
@@ -1244,7 +1246,7 @@ static INT32 DrvScan(INT32 nAction, INT32 *pnMin)
 }
 
 
-// Avengers In Galactic Storm (US)
+// Avengers In Galactic Storm (US/Europe 1.0)
 
 static struct BurnRomInfo avengrgsRomDesc[] = {
 	{ "sf_00-0.7k",			0x080000, 0x7d20e2df, 1 | BRF_PRG | BRF_ESS }, //  0 SH2 Code
@@ -1269,7 +1271,7 @@ static struct BurnRomInfo avengrgsRomDesc[] = {
 	{ "mcg-13.9k",			0x200000, 0x92301551, 4 | BRF_GRA },           // 16
 	{ "mcg-14.6a",			0x200000, 0xc0d8b5f0, 4 | BRF_GRA },           // 17
 
-	{ "avengrgs.nv",		0x000080, 0xc0e84b4e, 0 | BRF_PRG | BRF_OPT }, // 18 Default Settings
+	{ "avengrgs.nv",		0x000080, 0xc0e84b4e, 5 | BRF_PRG }, // 18 Default Settings
 };
 
 STD_ROM_PICK(avengrgs)
@@ -1282,16 +1284,16 @@ static INT32 AvengrgsInit()
 
 struct BurnDriver BurnDrvAvengrgs = {
 	"avengrgs", NULL, NULL, NULL, "1995",
-	"Avengers In Galactic Storm (US)\0", NULL, "Data East Corporation", "DECO MLC",
+	"Avengers In Galactic Storm (US/Europe 1.0)\0", NULL, "Data East Corporation", "DECO MLC",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 4, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
 	NULL, avengrgsRomInfo, avengrgsRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	AvengrgsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
 
 
-// Avengers In Galactic Storm (Japan)
+// Avengers In Galactic Storm (Japan 1.2)
 
 static struct BurnRomInfo avengrgsjRomDesc[] = {
 	{ "sd_00-2.7k",			0x080000, 0x136be46a, 1 | BRF_PRG | BRF_ESS }, //  0 SH2 Code
@@ -1316,7 +1318,7 @@ static struct BurnRomInfo avengrgsjRomDesc[] = {
 	{ "mcg-13.9k",			0x200000, 0x92301551, 4 | BRF_GRA },           // 16
 	{ "mcg-14.6a",			0x200000, 0xc0d8b5f0, 4 | BRF_GRA },           // 17
 
-	{ "avengrgsj.nv",		0x000080, 0x7ea70843, 0 | BRF_PRG | BRF_OPT }, // 18 Default Settings
+	{ "avengrgsj.nv",		0x000080, 0x7ea70843, 5 | BRF_PRG }, // 18 Default Settings
 };
 
 STD_ROM_PICK(avengrgsj)
@@ -1324,16 +1326,57 @@ STD_ROM_FN(avengrgsj)
 
 struct BurnDriver BurnDrvAvengrgsj = {
 	"avengrgsj", "avengrgs", NULL, NULL, "1995",
-	"Avengers In Galactic Storm (Japan)\0", NULL, "Data East Corporation", "DECO MLC",
+	"Avengers In Galactic Storm (Japan 1.2)\0", NULL, "Data East Corporation", "DECO MLC",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE, 4, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
 	NULL, avengrgsjRomInfo, avengrgsjRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	AvengrgsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
 
+// Avengers In Galactic Storm (Playable Boss)
+// https://www.romhacking.net/hacks/7050/
 
-// Skull Fang (World)
+static struct BurnRomInfo avengrgsbhRomDesc[] = {
+	{ "sfbh_00-0.7k",			0x080000, 0x83eae27c, 1 | BRF_PRG | BRF_ESS }, //  0 SH2 Code
+	{ "sfbh_01-0.7l",			0x080000, 0x6ef1380a, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "mcg-00.1j",				0x200000, 0x99129d9a, 2 | BRF_GRA },           //  2 Sprites
+	{ "mcg-02.1f",				0x200000, 0x29af9866, 2 | BRF_GRA },           //  3
+	{ "mcg-01.1d",				0x200000, 0x3638861b, 2 | BRF_GRA },           //  4
+	{ "mcg-03.7m",				0x200000, 0x4a0c965f, 2 | BRF_GRA },           //  5
+	{ "mcg-08.7p",				0x200000, 0xc253943e, 2 | BRF_GRA },           //  6
+	{ "mcg-09.7n",				0x200000, 0x8fb9870b, 2 | BRF_GRA },           //  7
+	{ "mcg-04.3j",				0x200000, 0xa4954c0e, 2 | BRF_GRA },           //  8
+	{ "mcg-06.3f",				0x200000, 0x01571cf6, 2 | BRF_GRA },           //  9
+	{ "mcg-05.3d",				0x200000, 0x182c2b49, 2 | BRF_GRA },           // 10
+	{ "mcg-07.8m",				0x200000, 0xd09a3635, 2 | BRF_GRA },           // 11
+	{ "mcg-10.8p",				0x200000, 0x1383f524, 2 | BRF_GRA },           // 12
+	{ "mcg-11.8n",				0x200000, 0x8f7fc281, 2 | BRF_GRA },           // 13
+
+	{ "sf_02-0.6j",				0x080000, 0xc98585dd, 3 | BRF_GRA },           // 14 Sprite Look-up Table
+
+	{ "mcg-12.5a",				0x200000, 0xbef9b28f, 4 | BRF_GRA },           // 15 YMZ280b Samples
+	{ "mcg-13.9k",				0x200000, 0x92301551, 4 | BRF_GRA },           // 16
+	{ "mcg-14.6a",				0x200000, 0xc0d8b5f0, 4 | BRF_GRA },           // 17
+
+	{ "avengrgs.nv",			0x000080, 0xc0e84b4e, 5 | BRF_PRG }, // 18 Default Settings
+};
+
+STD_ROM_PICK(avengrgsbh)
+STD_ROM_FN(avengrgsbh)
+
+struct BurnDriver BurnDrvAvengrgsbh = {
+	"avengrgsbh", "avengrgs", NULL, NULL, "2022",
+	"Avengers In Galactic Storm (Playable Boss, Hack)\0", NULL, "hack", "DECO MLC",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK, 4, HARDWARE_PREFIX_DATAEAST, GBF_VSFIGHT, 0,
+	NULL, avengrgsbhRomInfo, avengrgsbhRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
+	AvengrgsInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 240, 4, 3
+};
+
+// Skull Fang (Europe 1.13)
 
 static struct BurnRomInfo skullfngRomDesc[] = {
 	{ "sw00-0.2a",			0x080000, 0x9658d9ce, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
@@ -1351,7 +1394,7 @@ static struct BurnRomInfo skullfngRomDesc[] = {
 	{ "mch-06.6a",			0x200000, 0xb2efe4ae, 4 | BRF_SND },           //  9 YMZ280b Samples
 	{ "mch-07.11j",			0x200000, 0xbc1a50a1, 4 | BRF_SND },           // 10
 
-	{ "skullfng.eeprom",		0x000080, 0x240d882e, 0 | BRF_PRG | BRF_OPT }, // 11 Default Settings
+	{ "skullfng.eeprom",		0x000080, 0x240d882e, 5 | BRF_PRG }, // 11 Default Settings
 };
 
 STD_ROM_PICK(skullfng)
@@ -1364,16 +1407,16 @@ static INT32 SkullfngInit()
 
 struct BurnDriver BurnDrvSkullfng = {
 	"skullfng", NULL, NULL, NULL, "1996",
-	"Skull Fang (World)\0", NULL, "Data East Corporation", "DECO MLC",
+	"Skull Fang (Europe 1.13)\0", NULL, "Data East Corporation", "DECO MLC",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, skullfngRomInfo, skullfngRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	SkullfngInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
 
 
-// Skull Fang (Japan)
+// Skull Fang - Kuhga Gaiden (Japan 1.09)
 
 static struct BurnRomInfo skullfngjRomDesc[] = {
 	{ "sh00-0.2a",			0x080000, 0xe50358e8, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
@@ -1391,7 +1434,7 @@ static struct BurnRomInfo skullfngjRomDesc[] = {
 	{ "mch-06.6a",			0x200000, 0xb2efe4ae, 4 | BRF_GRA },           //  9 YMZ280b Samples
 	{ "mch-07.11j",			0x200000, 0xbc1a50a1, 4 | BRF_GRA },           // 10
 
-	{ "skullfng.eeprom",		0x000080, 0x240d882e, 0 | BRF_PRG | BRF_OPT }, // 11 Default Settings
+	{ "skullfng.eeprom",		0x000080, 0x240d882e, 5 | BRF_PRG }, // 11 Default Settings
 };
 
 STD_ROM_PICK(skullfngj)
@@ -1399,16 +1442,16 @@ STD_ROM_FN(skullfngj)
 
 struct BurnDriver BurnDrvSkullfngj = {
 	"skullfngj", "skullfng", NULL, NULL, "1996",
-	"Skull Fang (Japan)\0", NULL, "Data East Corporation", "Miscellaneous",
+	"Skull Fang - Kuhga Gaiden (Japan 1.09)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, skullfngjRomInfo, skullfngjRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	SkullfngInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
 
 
-// Skull Fang (Asia)
+// Skull Fang - Kuhga Gaiden (Asia 1.13)
 
 static struct BurnRomInfo skullfngaRomDesc[] = {
 	{ "sx00-0.2a",			0x080000, 0x749c0972, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
@@ -1426,7 +1469,7 @@ static struct BurnRomInfo skullfngaRomDesc[] = {
 	{ "mch-06.6a",			0x200000, 0xb2efe4ae, 4 | BRF_GRA },           //  9 YMZ280b Samples
 	{ "mch-07.11j",			0x200000, 0xbc1a50a1, 4 | BRF_GRA },           // 10
 
-	{ "skullfng.eeprom",		0x000080, 0x240d882e, 0 | BRF_PRG | BRF_OPT }, // 11 Default Settings
+	{ "skullfng.eeprom",		0x000080, 0x240d882e, 5 | BRF_PRG }, // 11 Default Settings
 };
 
 STD_ROM_PICK(skullfnga)
@@ -1434,16 +1477,16 @@ STD_ROM_FN(skullfnga)
 
 struct BurnDriver BurnDrvSkullfnga = {
 	"skullfnga", "skullfng", NULL, NULL, "1996",
-	"Skull Fang (Asia)\0", NULL, "Data East Corporation", "Miscellaneous",
+	"Skull Fang - Kuhga Gaiden (Asia 1.13)\0", NULL, "Data East Corporation", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 4, HARDWARE_PREFIX_DATAEAST, GBF_VERSHOOT, 0,
 	NULL, skullfngaRomInfo, skullfngaRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	SkullfngInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
 
 
-// Stadium Hero '96 (World, EAJ)
+// Stadium Hero '96 (Europe, EAJ)
 
 static struct BurnRomInfo stadhr96RomDesc[] = {
 	{ "sh-eaj.2a",			0x080000, 0x10d1496a, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
@@ -1460,7 +1503,7 @@ static struct BurnRomInfo stadhr96RomDesc[] = {
 
 	{ "mcm-06.6a",			0x400000, 0xfbc178f3, 4 | BRF_GRA },           //  9 YMZ280b Samples
 
-	{ "eeprom-stadhr96.bin",	0x000080, 0x77861793, 0 | BRF_PRG | BRF_OPT }, // 10 Default Settings
+	{ "eeprom-stadhr96.bin",	0x000080, 0x77861793, 5 | BRF_PRG }, // 10 Default Settings
 };
 
 STD_ROM_PICK(stadhr96)
@@ -1473,7 +1516,7 @@ static INT32 Stadhr96Init()
 
 struct BurnDriver BurnDrvStadhr96 = {
 	"stadhr96", NULL, NULL, NULL, "1996",
-	"Stadium Hero '96 (World, EAJ)\0", NULL, "Data East Corporation", "DECO MLC",
+	"Stadium Hero '96 (Europe, EAJ, Tuning license)\0", NULL, "Data East Corporation", "DECO MLC",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
 	NULL, stadhr96RomInfo, stadhr96RomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
@@ -1499,7 +1542,7 @@ static struct BurnRomInfo stadhr96uRomDesc[] = {
 
 	{ "mcm-06.6a",			0x400000, 0xfbc178f3, 4 | BRF_GRA },           //  9 YMZ280b Samples
 
-	{ "eeprom-stadhr96u.bin",	0x000080, 0x71d796ba, 0 | BRF_PRG | BRF_OPT }, // 10 Default Settings
+	{ "eeprom-stadhr96u.bin",	0x000080, 0x71d796ba, 5 | BRF_PRG }, // 10 Default Settings
 };
 
 STD_ROM_PICK(stadhr96u)
@@ -1533,7 +1576,7 @@ static struct BurnRomInfo stadhr96jRomDesc[] = {
 
 	{ "mcm-06.6a",			0x400000, 0xfbc178f3, 4 | BRF_GRA },           //  9 YMZ280b Samples
 
-	{ "eeprom-stadhr96j.bin",	0x000080, 0xcf98098f, 0 | BRF_PRG | BRF_OPT }, // 10 Default Settings
+	{ "eeprom-stadhr96j.bin",	0x000080, 0xcf98098f, 5 | BRF_PRG }, // 10 Default Settings
 };
 
 STD_ROM_PICK(stadhr96j)
@@ -1545,6 +1588,74 @@ struct BurnDriver BurnDrvStadhr96j = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
 	NULL, stadhr96jRomInfo, stadhr96jRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
+	Stadhr96Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 240, 4, 3
+};
+
+
+// Stadium Hero '96 (Japan?, EAE)
+// currently not working: 'This game board is not compatible with country code of mother board. Do not use, or damage will occur and void warranty of both boards.'
+// according to a dumper: 'I ran into this issue a few years ago when I was "updating" some Stadium heros 96 boards to English. Some converted with an EPROM swap and other gave me the error.
+// It wound up being a small serial EEPROM that was added to the PCB(it was socketed IIRC, on the bottom side of the PCB) and when I removed, it booted fine.
+// The other SH 96's didn't have this part and was the only difference.
+
+static struct BurnRomInfo stadhr96j2RomDesc[] = {
+	{ "eae00-5.2a",		0x080000, 0x902b84e9, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
+	{ "eae01-5.2b",		0x080000, 0x16245497, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "mcm-00.2e",		0x400000, 0xc1919c3c, 2 | BRF_GRA },           //  2 Sprites
+	{ "mcm-01.8m",		0x400000, 0x2255d47d, 2 | BRF_GRA },           //  3
+	{ "mcm-02.4e",		0x400000, 0x38c39822, 2 | BRF_GRA },           //  4
+	{ "mcm-03.10m",		0x400000, 0x4bd84ca7, 2 | BRF_GRA },           //  5
+	{ "mcm-04.6e",		0x400000, 0x7c0bd84c, 2 | BRF_GRA },           //  6
+	{ "mcm-05.11m",		0x400000, 0x476f03d7, 2 | BRF_GRA },           //  7
+
+	{ "eae02-0.6h",		0x080000, 0x57c30ca8, 3 | BRF_GRA },           //  8 Sprite Look-up Table
+
+	{ "mcm-06.6a",		0x400000, 0xfbc178f3, 4 | BRF_GRA },           //  9 YMZ280b Samples
+};
+
+STD_ROM_PICK(stadhr96j2)
+STD_ROM_FN(stadhr96j2)
+
+struct BurnDriver BurnDrvStadhr96j2 = {
+	"stadhr96j2", "stadhr96", NULL, NULL, "1996",
+	"Stadium Hero '96 (Japan?, EAE)\0", NULL, "Data East Corporation", "DECO MLC",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_NOT_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
+	NULL, stadhr96j2RomInfo, stadhr96j2RomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
+	Stadhr96Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 240, 4, 3
+};
+
+
+// Stadium Hero '96 (Korea, Dream Island license)
+
+static struct BurnRomInfo stadhr96kRomDesc[] = {
+	{ "sh_kr.2a",		0x080000, 0x5731a89c, 1 | BRF_PRG | BRF_ESS }, //  0 Arm Code (Encrypted)
+	{ "sh_kr.2b",		0x080000, 0x9f43d85a, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "mcm-00.2e",		0x400000, 0xc1919c3c, 2 | BRF_GRA },           //  2 Sprites
+	{ "mcm-01.8m",		0x400000, 0x2255d47d, 2 | BRF_GRA },           //  3
+	{ "mcm-02.4e",		0x400000, 0x38c39822, 2 | BRF_GRA },           //  4
+	{ "mcm-03.10m",		0x400000, 0x4bd84ca7, 2 | BRF_GRA },           //  5
+	{ "mcm-04.6e",		0x400000, 0x7c0bd84c, 2 | BRF_GRA },           //  6
+	{ "mcm-05.11m",		0x400000, 0x476f03d7, 2 | BRF_GRA },           //  7
+
+	{ "eae02-0.6h",		0x080000, 0x57c30ca8, 3 | BRF_GRA },           //  8 Sprite Look-up Table
+
+	{ "mcm-06.6a",		0x400000, 0xfbc178f3, 4 | BRF_GRA },           //  9 YMZ280b Samples
+};
+
+STD_ROM_PICK(stadhr96k)
+STD_ROM_FN(stadhr96k)
+
+struct BurnDriver BurnDrvStadhr96k = {
+	"stadhr96k", "stadhr96", NULL, NULL, "1996",
+	"Stadium Hero '96 (Korea, Dream Island license)\0", NULL, "Data East Corporation", "DECO MLC",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_PREFIX_DATAEAST, GBF_SPORTSMISC, 0,
+	NULL, stadhr96kRomInfo, stadhr96kRomName, NULL, NULL, NULL, NULL, MlcInputInfo, NULL,
 	Stadhr96Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 240, 4, 3
 };
@@ -1566,7 +1677,7 @@ static struct BurnRomInfo hoops96RomDesc[] = {
 
 	{ "mce-05.6a",			0x400000, 0xe7a9355a, 4 | BRF_GRA },           //  8 YMZ280b Samples
 
-	{ "hoops.nv",			0x000080, 0x67b18457, 0 | BRF_PRG | BRF_OPT }, //  9 Default Settings
+	{ "hoops.nv",			0x000080, 0x67b18457, 5 | BRF_PRG }, //  9 Default Settings
 };
 
 STD_ROM_PICK(hoops96)
@@ -1604,7 +1715,7 @@ static struct BurnRomInfo hoops95RomDesc[] = {
 
 	{ "mce-05.6a",			0x400000, 0xe7a9355a, 4 | BRF_GRA },           //  8 YMZ280b Samples
 
-	{ "hoops.nv",			0x000080, 0x67b18457, 0 | BRF_PRG | BRF_OPT }, //  9 Default Settings
+	{ "hoops.nv",			0x000080, 0x67b18457, 5 | BRF_PRG }, //  9 Default Settings
 };
 
 STD_ROM_PICK(hoops95)
@@ -1637,7 +1748,7 @@ static struct BurnRomInfo ddream95RomDesc[] = {
 
 	{ "mce-05.6a",			0x400000, 0xe7a9355a, 4 | BRF_GRA },           //  8 YMZ280b Samples
 
-	{ "hoops.nv",			0x000080, 0x67b18457, 0 | BRF_PRG | BRF_OPT }, //  9 Default Settings
+	{ "hoops.nv",			0x000080, 0x67b18457, 5 | BRF_PRG }, //  9 Default Settings
 };
 
 STD_ROM_PICK(ddream95)

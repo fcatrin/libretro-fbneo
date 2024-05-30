@@ -74,6 +74,8 @@ struct _nec_state_t
 	UINT32  cycles_total;
 	INT32  cycles_remaining;
 	INT8	stop_run;
+
+	UINT8 (*getvector_cb)();
 };
 
 typedef enum { DS1, PS, SS_, DS0 } SREGS;
@@ -144,9 +146,8 @@ typedef enum {
 
 /* prefetch timing */
 
-//#define FETCHWORD() 		(cpu_readop_arg((Sreg(PS)<<4) + sChipsPtr->ip)+(cpu_readop_arg(((Sreg(PS)<<4) + sChipsPtr->ip+1))<<8)); sChipsPtr->ip+=2
-#define FETCH() 		cpu_readop_arg((Sreg(PS)<<4) + sChipsPtr->ip++)
-#define FETCHWORD()		(FETCH() + FETCH() * 256)
+#define FETCH() 			fetch(nec_state)
+#define FETCHWORD()			fetchword(nec_state)
 #define EMPTY_PREFETCH()	nec_state->prefetch_reset = 1
 
 

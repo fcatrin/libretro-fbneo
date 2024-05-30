@@ -9,6 +9,8 @@ static int nMemoryCount = 0;
 static struct retro_memory_descriptor sMemoryDescriptors[10] = {};
 static bool bMemoryMapFound = false;
 
+bool bLibretroSupportsSavestateContext = false;
+
 static int StateGetMainRamAcb(BurnArea *pba)
 {
 	if(!pba->szName)
@@ -135,6 +137,13 @@ static int StateGetMainRamAcb(BurnArea *pba)
 				nMemoryCount++;
 			}
 			return 0;
+		case HARDWARE_TOAPLAN_RAIZING:
+			if ((strcmp(pba->szName, "All Ram") == 0) || (strcmp(pba->szName, "All RAM") == 0) || (strcmp(pba->szName, "RAM") == 0)) {
+				pMainRamData = pba->Data;
+				nMainRamSize = pba->nLen;
+				bMainRamFound = true;
+			}
+			return 0;
 		default:
 			// For all other systems (?), main ram seems to be identified by either "All Ram" or "All RAM"
 			if ((strcmp(pba->szName, "All Ram") == 0) || (strcmp(pba->szName, "All RAM") == 0)) {
@@ -185,9 +194,13 @@ size_t retro_get_memory_size(unsigned id)
 // Savestates support
 static UINT8 *pStateBuffer;
 static UINT32 nStateLen;
+static UINT32 nStateTmpLen;
 
 static int StateWriteAcb(BurnArea *pba)
 {
+	nStateTmpLen += pba->nLen;
+	if (nStateTmpLen > nStateLen)
+		return 1;
 	memcpy(pStateBuffer, pba->Data, pba->nLen);
 	pStateBuffer += pba->nLen;
 
@@ -196,6 +209,9 @@ static int StateWriteAcb(BurnArea *pba)
 
 static int StateReadAcb(BurnArea *pba)
 {
+	nStateTmpLen += pba->nLen;
+	if (nStateTmpLen > nStateLen)
+		return 1;
 	memcpy(pba->Data, pStateBuffer, pba->nLen);
 	pStateBuffer += pba->nLen;
 
@@ -204,25 +220,68 @@ static int StateReadAcb(BurnArea *pba)
 
 static int StateLenAcb(BurnArea *pba)
 {
-#ifdef FBNEO_DEBUG
-	HandleMessage(RETRO_LOG_INFO, "state debug: name %s, len %d\n", pba->szName, pba->nLen);
-#endif
 	nStateLen += pba->nLen;
+#ifdef FBNEO_DEBUG
+	HandleMessage(RETRO_LOG_INFO, "state debug: name %s, len %d, total %d\n", pba->szName, pba->nLen, nStateLen);
+#endif
 
 	return 0;
 }
 
 static INT32 LibretroAreaScan(INT32 nAction)
 {
+	nStateTmpLen = 0;
+
 	// The following value is sometimes used in game logic (xmen6p, ...),
 	// and will lead to various issues if not handled properly.
-	// On standalone, this value is stored in savestate files headers,
-	// and has special logic in runahead feature.
+	// On standalone, this value is stored in savestate files headers
+	// (and has special logic in runahead feature ?).
+	// Due to core's logic, this value is increased at each frame iteration,
+	// including multiple iterations of the same frame through runahead,
+	// but it needs to stay synced between multiple iterations of a given frame
 	SCAN_VAR(nCurrentFrame);
 
 	BurnAreaScan(nAction, 0);
 
 	return 0;
+}
+
+static void TweakScanFlags(INT32 &nAction)
+{
+	// note: due to the fact all hosts would require the same version of hiscore.dat to properly scan the same memory ranges,
+	//       hiscores can't work reliably in a netplay environment, and we should never enable them in that context
+	if (bLibretroSupportsSavestateContext)
+	{
+		int nSavestateContext = RETRO_SAVESTATE_CONTEXT_NORMAL;
+		environ_cb(RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, &nSavestateContext);
+		// With RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, we can guess accurately
+		switch (nSavestateContext)
+		{
+			case RETRO_SAVESTATE_CONTEXT_RUNAHEAD_SAME_INSTANCE:
+				nAction |= ACB_RUNAHEAD;
+				break;
+			case RETRO_SAVESTATE_CONTEXT_RUNAHEAD_SAME_BINARY:
+				nAction |= ACB_2RUNAHEAD;
+				break;
+			case RETRO_SAVESTATE_CONTEXT_ROLLBACK_NETPLAY:
+				EnableHiscores = false;
+				kNetGame = 1;
+				nAction |= ACB_NET_OPT;
+				break;
+		}
+	}
+	else
+	{
+		// With RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE, we can't guess accurately, so let's use the safest tweaks (netplay)
+		int nAudioVideoEnable = -1;
+		environ_cb(RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE, &nAudioVideoEnable);
+		kNetGame = nAudioVideoEnable & 4 ? 1 : 0;
+		if (kNetGame == 1)
+		{
+			EnableHiscores = false;
+			nAction |= ACB_NET_OPT;
+		}
+	}
 }
 
 size_t retro_serialize_size()
@@ -235,21 +294,31 @@ size_t retro_serialize_size()
 	INT32 nAction = ACB_FULLSCAN | ACB_READ;
 
 	// Tweaking from context
-	int nAudioVideoEnable = -1;
-	environ_cb(RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE, &nAudioVideoEnable);
-	kNetGame = nAudioVideoEnable & 4 ? 1 : 0;
-	if (kNetGame == 1) {
-		// Hiscores are causing desync in netplay
-		EnableHiscores = false;
-		// Some data isn't required for netplay
-		nAction |= ACB_NET_OPT;
-	}
+	TweakScanFlags(nAction);
 
-	// Don't try to cache state size, it's causing more issues than it solves (ngp)
+	// Store previous size
+	//INT32 nStateLenPrev = nStateLen;
+
+	// Compute size
 	nStateLen = 0;
 	BurnAcb = StateLenAcb;
-
 	LibretroAreaScan(nAction);
+
+	// cv1k and ngp/ngpc need overallocation
+	switch (BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK)
+	{
+		case HARDWARE_CAVE_CV1000:
+		case HARDWARE_SNK_NGP:
+		case HARDWARE_SNK_NGPC:
+			nStateLen += (128*1024);
+			break;
+	}
+
+	// The frontend doesn't handle it well when different savestates
+	// with different sizes are used concurrently for runahead & rewind,
+	// so we always keep the largest computed size
+	//if (nStateLenPrev > nStateLen)
+	//	nStateLen = nStateLenPrev;
 
 	return nStateLen;
 }
@@ -270,20 +339,16 @@ bool retro_serialize(void *data, size_t size)
 	INT32 nAction = ACB_FULLSCAN | ACB_READ;
 
 	// Tweaking from context
-	int nAudioVideoEnable = -1;
-	environ_cb(RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE, &nAudioVideoEnable);
-	kNetGame = nAudioVideoEnable & 4 ? 1 : 0;
-	if (kNetGame == 1) {
-		// Hiscores are causing desync in netplay
-		EnableHiscores = false;
-		// Some data isn't required for netplay
-		nAction |= ACB_NET_OPT;
-	}
+	TweakScanFlags(nAction);
 
 	BurnAcb = StateWriteAcb;
 	pStateBuffer = (UINT8*)data;
 
 	LibretroAreaScan(nAction);
+
+	// size is bigger than expected
+	if (nStateTmpLen > size)
+		return false;
 
 	return true;
 }
@@ -297,20 +362,22 @@ bool retro_unserialize(const void *data, size_t size)
 	INT32 nAction = ACB_FULLSCAN | ACB_WRITE;
 
 	// Tweaking from context
-	int nAudioVideoEnable = -1;
-	environ_cb(RETRO_ENVIRONMENT_GET_AUDIO_VIDEO_ENABLE, &nAudioVideoEnable);
-	kNetGame = nAudioVideoEnable & 4 ? 1 : 0;
-	if (kNetGame == 1) {
-		// Hiscores are causing desync in netplay
-		EnableHiscores = false;
-		// Some data isn't required for netplay
-		nAction |= ACB_NET_OPT;
-	}
+	TweakScanFlags(nAction);
+
+	// second instance runahead never calls retro_serialize_size(),
+	// but to avoid overflows nStateLen is required in this core's savestate logic,
+	// so we use "size" to update nStateLen
+	if (size > nStateLen)
+		nStateLen = size;
 
 	BurnAcb = StateReadAcb;
 	pStateBuffer = (UINT8*)data;
 
 	LibretroAreaScan(nAction);
+
+	// size is bigger than expected
+	if (nStateTmpLen > size)
+		return false;
 
 	// Some driver require to recalc palette after loading savestates
 	BurnRecalcPal();

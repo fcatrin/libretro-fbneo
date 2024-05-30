@@ -1234,7 +1234,7 @@ static int FBALocaliseParseFile(TCHAR* pszFilename)
 			MultiByteToWideChar(nFBACodepage, 0, szTemp, -1, szLine, sizeof(szLine) / sizeof(TCHAR));
 #ifdef _UNICODE
 		} else {
-			if (_fgetts(szLine, sizeof(szLine), h) == NULL) {
+			if (_fgetts(szLine, 5120, h) == NULL) {
 				break;
 			}
 		}
@@ -1244,7 +1244,7 @@ static int FBALocaliseParseFile(TCHAR* pszFilename)
 
 		nLen = wcslen(szLine);
 		// Get rid of the linefeed at the end
-		while (szLine[nLen - 1] == 0x0A || szLine[nLen - 1] == 0x0D) {
+		while (nLen > 0 && (szLine[nLen - 1] == 0x0A || szLine[nLen - 1] == 0x0D)) {
 			szLine[nLen - 1] = 0;
 			nLen--;
 		}

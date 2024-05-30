@@ -24,7 +24,17 @@ static int nNormalFrac = 0;					// Extra fraction we did
 static bool bAppDoStep = 0;
 static bool bAppDoFast = 0;
 static bool bAppDoFasttoggled = 0;
+static bool bAppDoRewind = 0;
+
 static int nFastSpeed = 6;
+static void DisplayFPSInit(); // forward
+
+// in FFWD, the avi-writer still needs to write all frames (skipped or not)
+#define FFWD_GHOST_FRAME 0x8000
+
+// SlowMo T.A. feature
+int nSlowMo = 0;
+static int flippy = 0; // free running RunFrame() counter
 
 // For System Macros (below)
 static int prevPause = 0, prevFFWD = 0, prevFrame = 0, prevSState = 0, prevLState = 0, prevUState = 0;
@@ -68,10 +78,13 @@ static void CheckSystemMacros() // These are the Pause / FFWD macros added to th
 
 	if (!kNetGame) {
 		// FFWD
+		int bPrevAppDoFast = bAppDoFast;
 		if (macroSystemFFWD) {
 			bAppDoFast = 1; prevFFWD = 1;
+			if (!bPrevAppDoFast) DisplayFPSInit(); // resync fps display
 		} else if (prevFFWD) {
 			bAppDoFast = 0; prevFFWD = 0;
+			if (bPrevAppDoFast) DisplayFPSInit(); // resync fps display
 		}
 
 		// Frame
@@ -84,6 +97,19 @@ static void CheckSystemMacros() // These are the Pause / FFWD macros added to th
 		} else {
 			prevFrame = 0;
 		}
+
+		// SlowMo
+		int slow = macroSystemSlowMo[0] * 1 + macroSystemSlowMo[1] * 2 + macroSystemSlowMo[2] * 3 + macroSystemSlowMo[3] * 4 + macroSystemSlowMo[4] * 5;
+		if (slow) {
+			slow -= 1;
+			if (slow >= 0 && slow <= 4) {
+				nSlowMo = slow;
+				MenuUpdateSlowMo();
+			}
+		}
+
+		// Rewind handled in RunFrame()!
+
 		for (int hotkey_num = 0; hotkey_debounces[hotkey_num].macroSystemLuaHotkey_ref != NULL; hotkey_num++) {
 			// Use the reference to the hotkey variable in order to update our stored value
 			// Because the hotkeys are hard coded into variables this allows us to iterate on them
@@ -139,24 +165,24 @@ static void DisplayFPSInit()
 {
 	nDoFPS = 0;
 	fpstimer = 0;
-	nPreviousFrames = nFramesRendered;
+	nPreviousFrames = (bAppDoFast) ? nFramesEmulated : nFramesRendered;
 }
 
 static void DisplayFPS()
 {
-	TCHAR fpsstring[8];
+	const int nFPSTotal = (bAppDoFast) ? nFramesEmulated : nFramesRendered;
+
+	TCHAR fpsstring[20];
 	time_t temptime = clock();
-	double fps = (double)(nFramesRendered - nPreviousFrames) * CLOCKS_PER_SEC / (temptime - fpstimer);
-	if (bAppDoFast) {
-		fps *= nFastSpeed+1;
-	}
+	double fps = (double)(nFPSTotal - nPreviousFrames) * CLOCKS_PER_SEC / (temptime - fpstimer);
+
 	_sntprintf(fpsstring, 7, _T("%2.2lf"), fps);
 	if (fpstimer && temptime - fpstimer>0) { // avoid strange fps values
 		VidSNewShortMsg(fpsstring, 0xDFDFFF, 480, 0);
 	}
 
 	fpstimer = temptime;
-	nPreviousFrames = nFramesRendered;
+	nPreviousFrames = nFPSTotal;
 }
 
 // define this function somewhere above RunMessageLoop()
@@ -166,6 +192,28 @@ void ToggleLayer(unsigned char thisLayer)
 	VidRedraw();
 	VidPaint(0);
 }
+
+#ifdef FBNEO_DEBUG
+void do_shonky_profile()
+{
+	bShonkyProfileMode = false; // run once!
+	pBurnDraw = NULL; //pVidImage;
+
+	const int total_frames = 5000;
+	unsigned int start_time = timeGetTime();
+
+	for (int i = 0; i < total_frames; i++) {
+		BurnDrvFrame();
+	}
+	unsigned int end_time = timeGetTime();
+
+	unsigned int total_time = end_time - start_time;
+	int total_seconds = total_time / 1000;
+
+	bprintf(0, _T("shonky profile mode %d\n"), total_frames);
+	bprintf(0, _T("shonky profile:  %d frames,  %dms,  %dfps\n"), total_frames, total_time, total_frames / total_seconds);
+}
+#endif
 
 // With or without sound, run one frame.
 // If bDraw is true, it's the last frame before we are up to date, and so we should draw the screen
@@ -179,6 +227,12 @@ int RunFrame(int bDraw, int bPause)
 
 		if (!nVidFullscreen && bVidDWMSync)     // Sync to DWM (Win7+, windowed)
 			SuperWaitVBlank();
+	}
+
+	flippy++;
+	if (nSlowMo) { // SlowMo T.A.
+		if (nSlowMo == 1) {	if ((flippy % 4) == 0) return 0; } // 75% speed
+		else if ((flippy % ((nSlowMo-1) * 2)) < (((nSlowMo-1) * 2) - 1)) return 0; // 50% and less
 	}
 
 	if (!bDrvOkay) {
@@ -226,10 +280,21 @@ int RunFrame(int bDraw, int bPause)
 		}
 
 		if (bDraw) {                            // Draw Frame
-			nFramesRendered++;
+			if ((bDraw & FFWD_GHOST_FRAME) == 0)
+				nFramesRendered++;
 
-			if (!bRunAhead || (BurnDrvGetFlags() & BDF_RUNAHEAD_DISABLED)) { // || bAppDoFast) { *todink: put this back in the if clause when not in WIP.
-				if (VidFrame()) {				// Do one frame w/o RunAhead
+			if (!bRunAhead || (BurnDrvGetFlags() & BDF_RUNAHEAD_DISABLED) || bAppDoFast) {
+#ifdef FBNEO_DEBUG
+				if (bShonkyProfileMode) do_shonky_profile();
+#endif
+				if (VidFrame()) {				// Do one normal frame (w/o RunAhead)
+
+					// VidFrame() failed, but we must run a driver frame because we have
+					// a clocked input.  Possibly from recording or netplay(!)
+					// Note: VidFrame() calls BurnDrvFrame() on success.
+					pBurnDraw = NULL;			// Make sure no image is drawn
+					BurnDrvFrame();
+
 					AudBlankSound();
 				}
 			} else {
@@ -240,21 +305,32 @@ int RunFrame(int bDraw, int bPause)
 				pBurnSoundOut = NULL;
 				nCurrentFrame++;
 				bBurnRunAheadFrame = 1;
-				VidFrame();
+
+				if (VidFrame()) {
+					// VidFrame() failed, but we must run a driver frame because we have
+					// an input.  Possibly from recording or netplay(!)
+					pBurnDraw = NULL;			// Make sure no image is drawn, since video failed this time 'round.
+					BurnDrvFrame();
+				}
+
 				bBurnRunAheadFrame = 0;
 				nCurrentFrame--;
 				StateRunAheadLoad();
 				pBurnSoundOut = pBurnSoundOut_temp; // restore pointer, for wav & avi writer
 			}
-		} else {								// frame skipping
+		} else {								// frame skipping / ffwd-frame (without avi writing)
 			pBurnDraw = NULL;					// Make sure no image is drawn
 			BurnDrvFrame();
+		}
+
+		if (kNetGame == 0) {                    // Rewind Implementation
+			StateRewindDoFrame(macroSystemRewind || bAppDoRewind, macroSystemRewindCancel, bRunPause);
 		}
 
 		if (bShowFPS) {
 			if (nDoFPS < nFramesRendered) {
 				DisplayFPS();
-				nDoFPS = nFramesRendered + 30;
+				nDoFPS = nFramesRendered + ((bAppDoFast) ? 15 : 30);
 			}
 		}
 
@@ -271,6 +347,7 @@ int RunFrame(int bDraw, int bPause)
 	}
 
 	bPrevPause = bPause;
+	if (bDraw & FFWD_GHOST_FRAME) bDraw = 0; // ffwd-frame w/avi write, do not draw!
 	bPrevDraw = bDraw;
 
 	return 0;
@@ -306,7 +383,7 @@ static int RunGetNextSound(int bDraw)
 			if (nAviStatus) {
 				// Render frame with sound
 				pBurnSoundOut = nAudNextSound;
-				RunFrame(bDraw, 0);
+				RunFrame(bDraw | FFWD_GHOST_FRAME, 0);
 			} else {
 				RunFrame(0, 0);
 			}
@@ -432,6 +509,7 @@ static int RunExit()
 
 	bAppDoFast = 0;
 	bAppDoFasttoggled = 0;
+	bAppDoRewind = 0;
 
 	return 0;
 }
@@ -450,6 +528,14 @@ static void BurnerHandlerKeyCallback(MSG *Msg, INT32 KeyDown, INT32 KeyType)
 		cBurnerKeyCallback(charvalue[0], shifted|KeyType, KeyDown);
 	}
 }
+
+// Kaillera signals
+// they usually come from a different thread, so we have to keep it simple
+// (and not involve the windows message pump)
+int k_bLoadNetgame = 0;          // (1) signal to start net-game, (2) update menus
+int k_player_id = 0;             // data from the Kaillera Client
+int k_numplayers = 0;            // ""
+char k_game_str[255] = { 0, };   // ""
 
 // The main message loop
 int RunMessageLoop()
@@ -491,6 +577,59 @@ int RunMessageLoop()
 		}
 
 		while (1) {
+			if (k_bLoadNetgame) {
+				if (k_bLoadNetgame == 2) {
+					k_bLoadNetgame = 0;
+					MenuEnableItems();
+					continue;
+				}
+				k_bLoadNetgame = 0;
+
+				if (bDrvOkay) {
+					StopReplay();
+#ifdef INCLUDE_AVI_RECORDING
+					AviStop();
+#endif
+					AudSoundStop();										// Stop while we load roms
+					DrvExit();
+				}
+
+				// find the game
+				bool bFound = false;
+
+				for (nBurnDrvActive = 0; nBurnDrvActive < nBurnDrvCount; nBurnDrvActive++) {
+					char* szDecoratedName = DecorateKailleraGameName(nBurnDrvActive);
+
+					if (!strcmp(szDecoratedName, k_game_str)) {
+						bFound = true;
+						break;
+					}
+				}
+
+				if (!bFound) {
+					bprintf(PRINT_ERROR, _T("Kaillera: Can't find game in list!\n"));
+					Kaillera_End_Game();
+					continue; // carry on!
+				}
+
+				kNetGame = 1;
+
+				bCheatsAllowed = false;								// Disable cheats during netplay
+				AudSoundStop();										// Stop while we load roms
+				DrvInit(nBurnDrvActive, false);						// Init the game driver
+
+				AudSoundPlay();										// Restart sound
+				SetFocus(hScrnWnd);
+				POST_INITIALISE_MESSAGE;                            // Re-create main window with selected game's dimensions
+
+				TCHAR szTemp1[256];
+				TCHAR szTemp2[256];
+				VidSAddChatMsg(FBALoadStringEx(hAppInst, IDS_NETPLAY_START, true), 0xFFFFFF, BurnDrvGetText(DRV_FULLNAME), 0xFFBFBF);
+				_sntprintf(szTemp1, 256, FBALoadStringEx(hAppInst, IDS_NETPLAY_START_YOU, true), k_player_id);
+				_sntprintf(szTemp2, 256, FBALoadStringEx(hAppInst, IDS_NETPLAY_START_TOTAL, true), k_numplayers);
+				VidSAddChatMsg(szTemp1, 0xFFFFFF, szTemp2, 0xFFBFBF);
+			}
+
 			if (PeekMessage(&Msg, NULL, 0, 0, PM_REMOVE)) {
 				// A message is waiting to be processed
 				if (Msg.message == WM_QUIT)	{											// Quit program
@@ -684,6 +823,10 @@ int RunMessageLoop()
 
 								break;
 							}
+							case VK_PRIOR: {
+								bAppDoRewind = 1;
+								break;
+							}
 							case VK_F1: {
 								bool bOldAppDoFast = bAppDoFast;
 
@@ -746,6 +889,11 @@ int RunMessageLoop()
 						switch (Msg.wParam) {
 							case VK_MENU:
 								continue;
+
+							case VK_PRIOR:
+								bAppDoRewind = 0;
+								break;
+
 							case VK_F1: {
 								bool bOldAppDoFast = bAppDoFast;
 

@@ -76,7 +76,7 @@ static INT32 ConfigParseFile(TCHAR* pszFilename)
 	}
 
 	while (1) {
-		if (_fgetts(szLine, sizeof(szLine), h) == NULL) {
+		if (_fgetts(szLine, 8192, h) == NULL) {
 			break;
 		}
 
@@ -392,7 +392,7 @@ static INT32 ConfigParseNebulaFile(TCHAR* pszFilename)
 		while (i < nLen)
 		{
 			if (szLine[i] == '=' && i < 4) j = i+1;
-			if (szLine[i] == ',' || szLine[i] == '\n')
+			if (szLine[i] == ',' || szLine[i] == '\r' || szLine[i] == '\n')
 			{
 				if (pCurrentCheat->pOption[n] == NULL) {
 					pCurrentCheat->pOption[n] = (CheatOption*)malloc(sizeof(CheatOption));
@@ -413,7 +413,7 @@ static INT32 ConfigParseNebulaFile(TCHAR* pszFilename)
 		{
 			if (i == nLen) break;
 
-			if (szLine[i] == ',' || szLine[i] == '\n')
+			if (szLine[i] == ',' || szLine[i] == '\r' || szLine[i] == '\n')
 			{
 				_tcsncpy (tmp, szLine + j, i-j);
 				tmp[i-j] = '\0';
@@ -457,8 +457,10 @@ static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 {
 #define AddressInfo()	\
 	INT32 k = (flags >> 20) & 3;	\
+	INT32 cpu = (flags >> 24) & 0x1f; \
+	if (cpu > 3) cpu = 0; \
 	for (INT32 i = 0; i < k+1; i++) {	\
-		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nCPU = 0;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nCPU = cpu;	\
 		if ((flags & 0xf0000000) == 0x80000000) { \
 			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].bRelAddress = 1; \
 			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nRelAddressOffset = nAttrib; \
@@ -466,18 +468,10 @@ static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 		} \
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nAddress = (pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].bRelAddress) ? nAddress : nAddress + i;	\
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nExtended = nAttrib; \
-		if (IS_MIDWAY && k > 0) { /* multi-byte needs swapping on tms34010 (cheat data is BE cpu is LE *guess*) -dink */ \
-			INT32 swap = 0; \
-			switch (k) { \
-				case 1: swap = 1; break; \
-				case 2: \
-				case 3: swap = 3; break; \
-			}\
-			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nValue = (nValue >> ((k*8)-((i^swap)*8))) & 0xff;	\
-		} else {\
-			pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nValue = (nValue >> ((k*8)-(i*8))) & 0xff;	\
-		} \
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nValue = (nValue >> ((k*8)-(i*8))) & 0xff;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nMask = (nAttrib >> ((k*8)-(i*8))) & 0xff;	\
 		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nMultiByte = i;	\
+		pCurrentCheat->pOption[n]->AddressInfo[nCurrentAddress].nTotalByte = k+1;	\
 		nCurrentAddress++;	\
 	}	\
 
@@ -550,7 +544,7 @@ static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 
 		INT32 c0[16], c1 = 0;					// find colons / break
 		for (INT32 i = 0; i < nLen; i++)
-			if (szLine[i] == ':' || szLine[i] == '\n')
+			if (szLine[i] == ':' || szLine[i] == '\r' || szLine[i] == '\n')
 				c0[c1++] = i;
 
 		tmpcpy(1);						// control flags
@@ -638,6 +632,9 @@ static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 			OptionName(_T("Disabled"));
 
 			if (nAddress) {
+				if ((flags & 0x80018) == 0 && nAttrib != 0xffffffff) {
+					pCurrentCheat->bWriteWithMask = 1; // nAttrib field is the mask
+				}
 				if (flags & 0x1) {
 					pCurrentCheat->bOneShot = 1; // apply once and stop
 				}
@@ -690,6 +687,9 @@ static INT32 ConfigParseMAMEFile_internal(FILE *fz, const TCHAR *name)
 			n++;
 			nCurrentAddress = 0;
 
+			if ((flags & 0x80018) == 0 && nAttrib != 0xffffffff) {
+				pCurrentCheat->bWriteWithMask = 1; // nAttrib field is the mask
+			}
 			if (flags & 0x1) {
 				pCurrentCheat->bOneShot = 1; // apply once and stop
 			}

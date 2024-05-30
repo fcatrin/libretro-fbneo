@@ -1,11 +1,7 @@
 // Driver Save State module
 #include "burner.h"
 
-// from dynhuff.cpp
-INT32 FreezeDecode(UINT8 **buffer, INT32 *size);
-INT32 UnfreezeDecode(const UINT8* buffer, INT32 size);
-INT32 FreezeEncode(UINT8 **buffer, INT32 *size);
-INT32 UnfreezeEncode(const UINT8* buffer, INT32 size);
+#include "inputbuf.h"
 
 // from replay.cpp
 INT32 FreezeInput(UINT8** buf, int* size);
@@ -16,6 +12,8 @@ extern bool bReplayReadOnly;
 extern INT32 nReplayUndoCount;
 extern UINT32 nReplayCurrentFrame;
 extern UINT32 nStartFrame;
+
+bool bWithEEPROM = false; // used at beginning of a movie playback or record, to embed EEPROM (which is usually saved as a file)
 
 // If bAll=0 save/load all non-volatile ram to .fs
 // If bAll=1 save/load all ram to .fs
@@ -36,8 +34,10 @@ static INT32 StateInfo(int* pnLen, int* pnMinVer, INT32 bAll, INT32 bRead = 1)
 	nTotalLen = 0;
 	BurnAcb = StateLenAcb;
 
+	UINT32 nAddEEPROM = (bWithEEPROM) ? ACB_EEPROM : 0;
+
 	// we need to know the read/write context here, otherwise drivers like ngp won't return anything -barbudreadmon
-	BurnAreaScan(ACB_NVRAM | (bRead ? ACB_READ : ACB_WRITE), &nMin);						// Scan nvram
+	BurnAreaScan(ACB_NVRAM | nAddEEPROM | (bRead ? ACB_READ : ACB_WRITE), &nMin);						// Scan nvram
 	if (bAll) {
 		INT32 m;
 		BurnAreaScan(ACB_MEMCARD | (bRead ? ACB_READ : ACB_WRITE), &m);					// Scan memory card
@@ -213,7 +213,7 @@ INT32 BurnStateLoad(TCHAR* szName, INT32 bAll, INT32 (*pLoadGame)())
 	if(nReplayStatus)
 	{
 		const char szMovieExtra[] = "MOV ";
-		const char szDecodeChunk[] = "HUFF";
+		const char szDecodeChunk[] = "INPB";
 		const char szInputChunk[] = "INP ";
 
 		INT32 nChunkSize;
@@ -235,12 +235,12 @@ INT32 BurnStateLoad(TCHAR* szName, INT32 bAll, INT32 (*pLoadGame)())
 			INT32 ret=-1;
 			if(nReplayStatus == 1)
 			{
-				ret = UnfreezeEncode(buf, nChunkSize);
+				ret = inputbuf_unfreeze(buf, nChunkSize);
 				++nReplayUndoCount;
 			}
 			else if(nReplayStatus == 2)
 			{
-				ret = UnfreezeDecode(buf, nChunkSize);
+				ret = inputbuf_unfreeze(buf, nChunkSize);
 			}
 			if(ret)                                             { nRet = -1;  break; }
 
@@ -477,18 +477,18 @@ INT32 BurnStateSave(TCHAR* szName, INT32 bAll)
 
 		if(nReplayStatus == 1)
 		{
-			ret = FreezeEncode(&huff_buf, &huff_size);
+			ret = inputbuf_freeze(&huff_buf, &huff_size);
 		}
 		else if(nReplayStatus == 2)
 		{
-			ret = FreezeDecode(&huff_buf, &huff_size);
+			ret = inputbuf_freeze(&huff_buf, &huff_size);
 		}
 
 		if(!ret &&
 			!FreezeInput(&input_buf, &input_size))
 		{
 			const char szMovieExtra[] = "MOV ";
-			const char szDecodeChunk[] = "HUFF";
+			const char szDecodeChunk[] = "INPB";
 			const char szInputChunk[] = "INP ";
 
 			INT32 nZero = 0;

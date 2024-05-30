@@ -15,8 +15,11 @@ INT32 nAnalogSpeed;
 
 INT32 nFireButtons = 0;
 
+INT32 nSubDrvSelected = -1;	// Cmdline parameter
+
 bool bStreetFighterLayout = false;
 bool bLeftAltkeyMapped = false;
+bool bResetDrv = false;
 
 // These are mappable global macros for mapping Pause/FFWD etc to controls in the input mapping dialogue. -dink
 UINT8 macroSystemPause = 0;
@@ -25,6 +28,9 @@ UINT8 macroSystemFrame = 0;
 UINT8 macroSystemSaveState = 0;
 UINT8 macroSystemLoadState = 0;
 UINT8 macroSystemUNDOState = 0;
+UINT8 macroSystemSlowMo[5] = { 0, 0, 0, 0, 0 };
+UINT8 macroSystemRewind = 0;
+UINT8 macroSystemRewindCancel = 0;
 UINT8 macroSystemLuaHotkey1 = 0;
 UINT8 macroSystemLuaHotkey2 = 0;
 UINT8 macroSystemLuaHotkey3 = 0;
@@ -163,6 +169,7 @@ INT32 GameInpBlank(INT32 bDipSwitch)
 		struct BurnInputInfo bii;
 		memset(&bii, 0, sizeof(bii));
 		BurnDrvGetInputInfo(&bii, i);
+
 		if (bDipSwitch == 0 && (bii.nType & BIT_GROUP_CONSTANT)) {		// Don't blank the dip switches
 			continue;
 		}
@@ -176,6 +183,48 @@ INT32 GameInpBlank(INT32 bDipSwitch)
 			pgi->nInput = GIT_CONSTANT;
 			pgi->Input.Constant.nConst = *bii.pVal;
 		}
+
+		// Resolve game's key identities
+		// TODO: analogs, figure out what to do with multiple axis games (luckywld, metlhawk, ...)
+		if (0 == strcmp(bii.szInfo, "reset")) {
+			pgi->nIdent = GK_RESET;
+		}
+		if (0 == strcmp(bii.szInfo, "diag")) {
+			pgi->nIdent = GK_SERVICE_MODE;
+		}
+		if (0 == strcmp(bii.szInfo, "tilt")) {
+			pgi->nIdent = GK_TILT;
+		}
+
+		if (toupper(bii.szInfo[0]) == 'P' && bii.szInfo[1] >= '1' && bii.szInfo[1] <= '8') {
+			int nPlayer = bii.szInfo[1] - '0';
+
+			pgi->nIdent = gi_Player2nIdent(nPlayer);
+
+			if (0 == strcmp(bii.szInfo + 3, "coin")) {
+				pgi->nIdent |= GK_COIN;
+			}
+			if (0 == strcmp(bii.szInfo + 3, "start")) {
+				pgi->nIdent |= GK_START;
+			}
+			if (0 == strcmp(bii.szInfo + 3, "up")) {
+				pgi->nIdent |= GK_UP;
+			}
+			if (0 == strcmp(bii.szInfo + 3, "down")) {
+				pgi->nIdent |= GK_DOWN;
+			}
+			if (0 == strcmp(bii.szInfo + 3, "left")) {
+				pgi->nIdent |= GK_LEFT;
+			}
+			if (0 == strcmp(bii.szInfo + 3, "right")) {
+				pgi->nIdent |= GK_RIGHT;
+			}
+			if (0 == strncmp(bii.szInfo + 3, "fire", 4)) {
+				int fire = atoi(bii.szInfo + 8);
+				pgi->nIdent |= gi_Button2nIdent(fire);
+			}
+		}
+		//bprintf(0, _T("gami_debug:  %S - %x\n"), bii.szInfo, pgi->nIdent);
 	}
 
 	for (i = 0; i < nMacroCount; i++, pgi++) {
@@ -362,6 +411,76 @@ static void GameInpInitMacros()
 			pgi->Macro.nVal[0] = 1;
 			nMacroCount++;
 			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System Rewind");
+			pgi->Macro.pVal[0] = &macroSystemRewind;
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System Rewind Cancel");
+			pgi->Macro.pVal[0] = &macroSystemRewindCancel;
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System SlowMo Normal");
+			pgi->Macro.pVal[0] = &macroSystemSlowMo[0];
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System SlowMo Slow");
+			pgi->Macro.pVal[0] = &macroSystemSlowMo[1];
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System SlowMo Slower");
+			pgi->Macro.pVal[0] = &macroSystemSlowMo[2];
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System SlowMo Slowest");
+			pgi->Macro.pVal[0] = &macroSystemSlowMo[3];
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
+
+			pgi->nInput = GIT_MACRO_AUTO;
+			pgi->nType = BIT_DIGITAL;
+			pgi->Macro.nMode = 0;
+			pgi->Macro.nSysMacro = 1;
+			sprintf(pgi->Macro.szName, "System SlowMo Slowerest");
+			pgi->Macro.pVal[0] = &macroSystemSlowMo[4];
+			pgi->Macro.nVal[0] = 1;
+			nMacroCount++;
+			pgi++;
 	}
 
 	// Remove two keys for volume adjustment of cps2
@@ -380,10 +499,8 @@ static void GameInpInitMacros()
 			if (bii.szName == NULL) {
 				bii.szName = "";
 			}
-			if (_stricmp(" Up", bii.szName + 2) == 0 ||
-				_stricmp(" Down", bii.szName + 2) == 0 ||
-				_stricmp(" Left", bii.szName + 2) == 0 ||
-				_stricmp(" Right", bii.szName + 2) == 0)
+			// Check if current input to be added matches player number to prevents duplicate macros
+			if ((UINT32) (bii.szName[1] - '0') == (nPlayer + 1))
 			{
 				sprintf(pgi->Macro.szName, "%s", bii.szName);
 
@@ -1068,6 +1185,8 @@ INT32 GameInpExit()
 	bStreetFighterLayout = false;
 	bLeftAltkeyMapped = false;
 
+	bResetDrv = false;
+
 	return 0;
 }
 
@@ -1253,6 +1372,29 @@ static INT32 StringToInp(struct GameInp* pgi, TCHAR* s)
 	}
 
 	return 1;
+}
+
+static INT32 ConfigSubDrv(struct GameInp* pgi, TCHAR* s)
+{
+	if (nSubDrvSelected >= 0) {
+		if (nSubDrvSelected > 8) nSubDrvSelected = 8;
+
+		UINT8 nIndex[9] = { 0x00,0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80 };
+		TCHAR* szRet = NULL;
+
+		szRet = LabelCheck(s, _T("constant"));
+		if (szRet) {
+			pgi->nInput = GIT_CONSTANT;
+			pgi->Input.Constant.nConst = nIndex[nSubDrvSelected];
+			*(pgi->Input.pVal) = pgi->Input.Constant.nConst;
+
+			nSubDrvSelected = -1;
+			return 0;	// Succeed
+		}
+	}
+
+	nSubDrvSelected = -1;
+	return 1;	// Failed
 }
 
 // ---------------------------------------------------------------------------
@@ -1694,12 +1836,45 @@ static UINT32 MacroNameToNum(TCHAR* szName)
 }
 
 // ---------------------------------------------------------------------------
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+extern int usejoy;
+extern INT32 MapJoystick(struct GameInp* pgi, char* szi, INT32 nPlayer, INT32 nDevice);
+#endif
 
 static INT32 GameInpAutoOne(struct GameInp* pgi, char* szi)
 {
 	for (INT32 i = 0; i < nMaxPlayers; i++) {
 		INT32 nSlide = nPlayerDefaultControls[i] >> 4;
 		switch (nPlayerDefaultControls[i] & 0x0F) {
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+			case 0:
+				// Trying to avoing calling another function to map an already mapped input
+				if (usejoy) {
+					if (GamcAnalogJoy(pgi, szi, i, 0, nSlide) && MapJoystick(pgi, szi, i, 1) && GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 0);
+				} else if (GamcAnalogKey(pgi, szi, i, nSlide) && GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, -1);
+				break;
+			case 1:
+				if (GamcAnalogJoy(pgi, szi, i, usejoy, nSlide)) {
+					if (usejoy) {
+						if (MapJoystick(pgi, szi, i, 2) && GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 1);
+					} else if (GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 0);
+				}
+				break;
+			case 2:
+				if (GamcAnalogJoy(pgi, szi, i, usejoy + 1, nSlide)) {
+					if (usejoy) {
+						if (MapJoystick(pgi, szi, i, 3) && GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 2);
+					} else if (GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 1);
+				}
+				break;
+			case 3:
+				if (GamcAnalogJoy(pgi, szi, i, usejoy + 2, nSlide)) {
+					if (usejoy) {
+						if (MapJoystick(pgi, szi, i, 4) && GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 3);
+					} else if (GamcMisc(pgi, szi, i)) GamcPlayer(pgi, szi, i, 2);
+				}
+				break;
+#else
 			case 0:										// Keyboard
 				GamcAnalogKey(pgi, szi, i, nSlide);
 				GamcPlayer(pgi, szi, i, -1);
@@ -1720,6 +1895,7 @@ static INT32 GameInpAutoOne(struct GameInp* pgi, char* szi)
 				GamcPlayer(pgi, szi, i, 2);
 				GamcMisc(pgi, szi, i);
 				break;
+#endif
 			case 4:										// X-Arcade left side
 				GamcMisc(pgi, szi, i);
 				GamcPlayerHotRod(pgi, szi, i, 0x10, nSlide);
@@ -1856,12 +2032,17 @@ INT32 GameInputAutoIni(INT32 nPlayer, TCHAR* lpszFile, bool bOverWrite)
 	}
 
 	// Go through each line of the config file and process inputs
-	while (_fgetts(szLine, sizeof(szLine), h)) {
+	while (_fgetts(szLine, 1024, h)) {
 		TCHAR* szValue;
 		INT32 nLen = _tcslen(szLine);
 
-		// Get rid of the linefeed at the end
-		if (szLine[nLen - 1] == 10) {
+		// Get rid of the linefeed and carriage return at the end
+		if (nLen > 0 && szLine[nLen - 1] == 10) {
+			szLine[nLen - 1] = 0;
+			nLen--;
+		}
+		if (nLen > 0 && szLine[nLen - 1] == 13)
+		{
 			szLine[nLen - 1] = 0;
 			nLen--;
 		}
@@ -1955,24 +2136,24 @@ INT32 GameInputAutoIni(INT32 nPlayer, TCHAR* lpszFile, bool bOverWrite)
 
 // Hardware description, preset file, {hardware, codes}, history.dat token
 tIniStruct gamehw_cfg[] = {
-	{_T("CPS-1/CPS-2/CPS-3 hardware"),	_T("config/presets/cps.ini"),		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, HARDWARE_CAPCOM_CPS2, HARDWARE_CAPCOM_CPS3, 0 }, "$info=" },
-	{_T("Neo-Geo hardware"),			_T("config/presets/neogeo.ini"),	{ HARDWARE_SNK_NEOGEO, 0 }, 		"$info="		},
-	{_T("Neo-Geo hardware"),			_T("config/presets/neogeo.ini"),	{ HARDWARE_SNK_NEOCD, 0 },			"$neocd="		},
-	{_T("Neo Geo Pocket hardware"),     _T("config/presets/ngp.ini"),       { HARDWARE_SNK_NGP, 0 },			"$ngp="			},
-	{_T("Neo Geo Pocket hardware"),		_T("config/presets/ngp.ini"),		{ HARDWARE_SNK_NGPC, 0 },			"$ngpc="		},
-	{_T("NES hardware"),				_T("config/presets/nes.ini"),		{ HARDWARE_NES, 0 },				"$nes="			},
-	{_T("FDS hardware"),				_T("config/presets/fds.ini"),		{ HARDWARE_FDS, 0 },				"$famicom_flop="},
-	{_T("PGM hardware"),				_T("config/presets/pgm.ini"),		{ HARDWARE_IGS_PGM, 0 },			"$info="        },
-	{_T("MegaDrive hardware"),			_T("config/presets/megadrive.ini"),	{ HARDWARE_SEGA_MEGADRIVE, 0 },		"$megadriv="	},
-	{_T("PCE/SGX hardware"),			_T("config/presets/pce.ini"),		{ HARDWARE_PCENGINE_PCENGINE, 0 },	"$pce="			},
-	{_T("TG16 hardware"),				_T("config/presets/pce.ini"),		{ HARDWARE_PCENGINE_TG16, 0 },		"$tg16="		},
-	{_T("MSX1 hardware"),				_T("config/presets/msx.ini"),		{ HARDWARE_MSX, 0 },				"$msx1_cart="	},
-	{_T("Coleco hardware"),				_T("config/presets/coleco.ini"),	{ HARDWARE_COLECO, 0 },				"$coleco="		},
-	{_T("SG1000 hardware"),				_T("config/presets/sg1000.ini"),	{ HARDWARE_SEGA_SG1000, 0 },		"$sg1000="		},
-	{_T("Sega Master System hardware"),	_T("config/presets/sms.ini"),		{ HARDWARE_SEGA_MASTER_SYSTEM, 0 },	"$sms="			},
-	{_T("Sega Game Gear hardware"),		_T("config/presets/gg.ini"),		{ HARDWARE_SEGA_GAME_GEAR, 0 },		"$gamegear="	},
-	{_T("Sinclair Spectrum hardware"),	_T("config/presets/spectrum.ini"),	{ HARDWARE_SPECTRUM, 0 },			"$spectrum_cass=" },
-	{_T("Fairchild Channel F hardware"),_T("config/presets/channelf.ini"),	{ HARDWARE_CHANNELF, 0 },			"$channelf="	},
+	{_T("CPS-1/CPS-2/CPS-3 hardware"),	_T("config/presets/cps.ini"),		{ HARDWARE_CAPCOM_CPS1, HARDWARE_CAPCOM_CPS1_QSOUND, HARDWARE_CAPCOM_CPS1_GENERIC, HARDWARE_CAPCOM_CPSCHANGER, HARDWARE_CAPCOM_CPS2, HARDWARE_CAPCOM_CPS3, 0 }, "\t\t\t<system name=\"" },
+	{_T("Neo-Geo hardware"),			_T("config/presets/neogeo.ini"),	{ HARDWARE_SNK_NEOGEO, 0 }, 		"\t\t\t<system name=\""						},
+	{_T("Neo-Geo CD hardware"),			_T("config/presets/neogeocd.ini"),	{ HARDWARE_SNK_NEOCD, 0 },			"\t\t\t<item list=\"neocd\" name=\""		},
+	{_T("Neo Geo Pocket hardware"),     _T("config/presets/ngp.ini"),       { HARDWARE_SNK_NGP, 0 },			"\t\t\t<item list=\"ngp\" name=\""			},
+	{_T("Neo Geo Pocket C hardware"),	_T("config/presets/ngp.ini"),		{ HARDWARE_SNK_NGPC, 0 },			"\t\t\t<item list=\"ngpc\" name=\""			},
+	{_T("NES hardware"),				_T("config/presets/nes.ini"),		{ HARDWARE_NES, 0 },				"\t\t\t<item list=\"nes\" name=\""			},
+	{_T("FDS hardware"),				_T("config/presets/fds.ini"),		{ HARDWARE_FDS, 0 },				"\t\t\t<item list=\"famicom_flop\" name=\""	},
+	{_T("PGM hardware"),				_T("config/presets/pgm.ini"),		{ HARDWARE_IGS_PGM, 0 },			"\t\t\t<system name=\""        				},
+	{_T("MegaDrive hardware"),			_T("config/presets/megadrive.ini"),	{ HARDWARE_SEGA_MEGADRIVE, 0 },		"\t\t\t<item list=\"megadriv\" name=\""		},
+	{_T("PCE/SGX hardware"),			_T("config/presets/pce.ini"),		{ HARDWARE_PCENGINE_PCENGINE, 0 },	"\t\t\t<item list=\"pce\" name=\""			},
+	{_T("TG16 hardware"),				_T("config/presets/pce.ini"),		{ HARDWARE_PCENGINE_TG16, 0 },		"\t\t\t<item list=\"tg16\" name=\""			},
+	{_T("MSX1 hardware"),				_T("config/presets/msx.ini"),		{ HARDWARE_MSX, 0 },				"\t\t\t<item list=\"msx1_cart\" name=\""	},
+	{_T("Coleco hardware"),				_T("config/presets/coleco.ini"),	{ HARDWARE_COLECO, 0 },				"\t\t\t<item list=\"coleco\" name=\""		},
+	{_T("SG1000 hardware"),				_T("config/presets/sg1000.ini"),	{ HARDWARE_SEGA_SG1000, 0 },		"\t\t\t<item list=\"sg1000\" name=\""		},
+	{_T("Sega Master System hardware"),	_T("config/presets/sms.ini"),		{ HARDWARE_SEGA_MASTER_SYSTEM, 0 },	"\t\t\t<item list=\"sms\" name=\""			},
+	{_T("Sega Game Gear hardware"),		_T("config/presets/gg.ini"),		{ HARDWARE_SEGA_GAME_GEAR, 0 },		"\t\t\t<item list=\"gamegear\" name=\""		},
+	{_T("Sinclair Spectrum hardware"),	_T("config/presets/spectrum.ini"),	{ HARDWARE_SPECTRUM, 0 },			"\t\t\t<item list=\"spectrum_cass\" name=\""},
+	{_T("Fairchild Channel F hardware"),_T("config/presets/channelf.ini"),	{ HARDWARE_CHANNELF, 0 },			"\t\t\t<item list=\"channelf\" name=\""		},
 	{_T("\0"), _T("\0"), { 0 }, "" } // END of list
 };
 
@@ -1992,12 +2173,18 @@ void GetHistoryDatHardwareToken(char *to_string)
 	}
 
 	// HW not found, default to "$info=" (arcade game)
-	strcpy(to_string, "$info=");
+	strcpy(to_string, "\t\t\t<system name=\"");
 }
 
 INT32 ConfigGameLoadHardwareDefaults()
 {
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	TCHAR *szFolderName = NULL;
+	TCHAR szFileName[MAX_PATH] = _T("");
+	szFolderName = SDL_GetPrefPath(NULL, "fbneo");		// Get fbneo folder path
+#else
 	TCHAR *szFileName = _T("");
+#endif
 	INT32 nApplyHardwareDefaults = 0;
 
 	INT32 nHardwareFlag = (BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK);
@@ -2007,7 +2194,11 @@ INT32 ConfigGameLoadHardwareDefaults()
 		for (INT32 hw = 0; gamehw_cfg[i].hw[hw] != 0; hw++) {
 			if (gamehw_cfg[i].hw[hw] == nHardwareFlag)
 			{
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+				_stprintf(szFileName, _T("%s%s"), szFolderName, gamehw_cfg[i].ini);
+#else
 				szFileName = gamehw_cfg[i].ini;
+#endif
 				nApplyHardwareDefaults = 1;
 				break;
 			}
@@ -2020,6 +2211,9 @@ INT32 ConfigGameLoadHardwareDefaults()
 		}
 	}
 
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	SDL_free(szFolderName);
+#endif
 	return 0;
 }
 
@@ -2030,6 +2224,18 @@ INT32 GameInpDefault()
 	struct BurnInputInfo bii;
 	UINT32 i;
 
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	TCHAR *szSDLconfigPath = NULL;
+	szSDLconfigPath = SDL_GetPrefPath("fbneo", "config");
+	for (INT32 nPlayer = 0; nPlayer < 4; nPlayer++) {
+		_stprintf(szPlayerDefaultIni[nPlayer], _T("%sp%ddefaults.ini"), szSDLconfigPath, nPlayer + 1);
+	}
+	SDL_free(szSDLconfigPath);
+
+	for (INT32 nPlayer = 0; nPlayer < nMaxPlayers; nPlayer++) {
+		GameInputAutoIni(nPlayer, szPlayerDefaultIni[nPlayer], false);
+	}
+#else
 	for (INT32 nPlayer = 0; nPlayer < nMaxPlayers; nPlayer++) {
 
 		if ((nPlayerDefaultControls[nPlayer] & 0x0F) != 0x0F) {
@@ -2038,9 +2244,11 @@ INT32 GameInpDefault()
 
 		GameInputAutoIni(nPlayer, szPlayerDefaultIni[nPlayer], false);
 	}
+#endif
 
 	// Fill all inputs still undefined
 	for (i = 0, pgi = GameInp; i < nGameInpCount; i++, pgi++) {
+
 		if (pgi->nInput) {											// Already defined - leave it alone
 			continue;
 		}
@@ -2065,6 +2273,7 @@ INT32 GameInpDefault()
             continue; // NOTE: prevents 'GameInpAutoOne' from being called
         }
 #endif
+
 		GameInpAutoOne(pgi, bii.szInfo);
 	}
 
@@ -2152,6 +2361,13 @@ INT32 GameInpRead(TCHAR* szVal, bool bOverWrite)
 	}
 
 	if (bOverWrite || GameInp[i].nInput == 0) {
+		// Command line to start a subgame - find the game configuration
+		if ((0 == _tcscmp(_T("Dip Ex"), szQuote)) && (nSubDrvSelected >= 0)) {
+			if (0 == ConfigSubDrv(GameInp + i, szEnd)) {
+				return 0;
+			}
+		}
+
 		// Parse the input description into the GameInp structure
 		StringToInp(GameInp + i, szEnd);
 	}

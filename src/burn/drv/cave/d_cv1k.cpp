@@ -36,6 +36,8 @@ static UINT8 DrvInputs[5];
 static UINT8 DrvReset;
 static HoldCoin<2> hold_coin;
 
+static INT32 is_type_d;
+
 // cpu speed changing
 static INT32 DriverClock; // selected cpu clockrate
 static INT32 nPrevBurnCPUSpeedAdjust;
@@ -79,101 +81,117 @@ STDINPUTINFO(Cv1k)
 
 static struct BurnDIPInfo DefaultDIPList[]=
 {
-	{0   , 0xfe, 0   ,    2, "Thread Blitter"},
-	{0x01, 0x01, 0x01, 0x00, "Off"			},
-	{0x01, 0x01, 0x01, 0x01, "On"			},
+	{0   , 0xfe, 0   ,    2, "Thread Blitter"	},
+	{0x01, 0x01, 0x01, 0x00, "Off"				},
+	{0x01, 0x01, 0x01, 0x01, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "Speed Hacks"	},
-	{0x01, 0x01, 0x02, 0x00, "Off"			},
-	{0x01, 0x01, 0x02, 0x02, "On"			},
+	{0   , 0xfe, 0   ,    2, "Speed Hacks"		},
+	{0x01, 0x01, 0x02, 0x00, "Off"				},
+	{0x01, 0x01, 0x02, 0x02, "On"				},
 
-	{0   , 0xfe, 0   , 0x20, "Blitter Delay"},
-	{0x02, 0x01, 0x1f, 0x00, "Off"			},
-	{0x02, 0x01, 0x1f, 0x01, "50"			},
-	{0x02, 0x01, 0x1f, 0x02, "51"			},
-	{0x02, 0x01, 0x1f, 0x03, "52"			},
-	{0x02, 0x01, 0x1f, 0x04, "53"			},
-	{0x02, 0x01, 0x1f, 0x05, "54"			},
-	{0x02, 0x01, 0x1f, 0x06, "55"			},
-	{0x02, 0x01, 0x1f, 0x07, "56"			},
-	{0x02, 0x01, 0x1f, 0x08, "57"			},
-	{0x02, 0x01, 0x1f, 0x09, "58"			},
-	{0x02, 0x01, 0x1f, 0x0a, "59"			},
-	{0x02, 0x01, 0x1f, 0x0b, "60"			},
-	{0x02, 0x01, 0x1f, 0x0c, "61"			},
-	{0x02, 0x01, 0x1f, 0x0d, "62"			},
-	{0x02, 0x01, 0x1f, 0x0e, "63"			},
-	{0x02, 0x01, 0x1f, 0x0f, "64"			},
-	{0x02, 0x01, 0x1f, 0x10, "65"			},
-	{0x02, 0x01, 0x1f, 0x11, "66"			},
-	{0x02, 0x01, 0x1f, 0x12, "67"			},
-	{0x02, 0x01, 0x1f, 0x13, "68"			},
-	{0x02, 0x01, 0x1f, 0x14, "69"			},
-	{0x02, 0x01, 0x1f, 0x15, "70"			},
-	{0x02, 0x01, 0x1f, 0x16, "71"			},
-	{0x02, 0x01, 0x1f, 0x17, "72"			},
-	{0x02, 0x01, 0x1f, 0x18, "73"			},
-	{0x02, 0x01, 0x1f, 0x19, "74"			},
-	{0x02, 0x01, 0x1f, 0x1a, "75"			},
-	{0x02, 0x01, 0x1f, 0x1b, "76"			},
-	{0x02, 0x01, 0x1f, 0x1c, "77"			},
-	{0x02, 0x01, 0x1f, 0x1d, "78"			},
-	{0x02, 0x01, 0x1f, 0x1e, "79"			},
-	{0x02, 0x01, 0x1f, 0x1f, "80"			},
+	{0   , 0xfe, 0   ,    2, "Thread Sync"		},
+	{0x01, 0x01, 0x04, 0x00, "Before Exec"		},
+	{0x01, 0x01, 0x04, 0x04, "Before Draw"		},
+
+	{0   , 0xfe, 0   ,    2, "Blitter Timing"	},
+	{0x02, 0x01, 0x20, 0x00, "Accurate (Buffis)"},
+	{0x02, 0x01, 0x20, 0x20, "Antiquity"		},
+
+	{0   , 0xfe, 0   ,    2, "Clip Margin (test)"},
+	{0x02, 0x01, 0x40, 0x40, "0  (off)"			},
+	{0x02, 0x01, 0x40, 0x00, "32 (on)"			},
+
+	{0   , 0xfe, 0   ,    2, "Busy Sleep (test)"},
+	{0x02, 0x01, 0x80, 0x80, "Off"				},
+	{0x02, 0x01, 0x80, 0x00, "On"				},
+
+	{0   , 0xfe, 0   , 0x20, "Blitter Delay"	},
+	{0x02, 0x01, 0x1f, 0x00, "Off"				},
+	{0x02, 0x01, 0x1f, 0x01, "50"				},
+	{0x02, 0x01, 0x1f, 0x02, "51"				},
+	{0x02, 0x01, 0x1f, 0x03, "52"				},
+	{0x02, 0x01, 0x1f, 0x04, "53"				},
+	{0x02, 0x01, 0x1f, 0x05, "54"				},
+	{0x02, 0x01, 0x1f, 0x06, "55"				},
+	{0x02, 0x01, 0x1f, 0x07, "56"				},
+	{0x02, 0x01, 0x1f, 0x08, "57"				},
+	{0x02, 0x01, 0x1f, 0x09, "58"				},
+	{0x02, 0x01, 0x1f, 0x0a, "59"				},
+	{0x02, 0x01, 0x1f, 0x0b, "60"				},
+	{0x02, 0x01, 0x1f, 0x0c, "61"				},
+	{0x02, 0x01, 0x1f, 0x0d, "62"				},
+	{0x02, 0x01, 0x1f, 0x0e, "63"				},
+	{0x02, 0x01, 0x1f, 0x0f, "64"				},
+	{0x02, 0x01, 0x1f, 0x10, "65"				},
+	{0x02, 0x01, 0x1f, 0x11, "66"				},
+	{0x02, 0x01, 0x1f, 0x12, "67"				},
+	{0x02, 0x01, 0x1f, 0x13, "68"				},
+	{0x02, 0x01, 0x1f, 0x14, "69"				},
+	{0x02, 0x01, 0x1f, 0x15, "70"				},
+	{0x02, 0x01, 0x1f, 0x16, "71"				},
+	{0x02, 0x01, 0x1f, 0x17, "72"				},
+	{0x02, 0x01, 0x1f, 0x18, "73"				},
+	{0x02, 0x01, 0x1f, 0x19, "74"				},
+	{0x02, 0x01, 0x1f, 0x1a, "75"				},
+	{0x02, 0x01, 0x1f, 0x1b, "76"				},
+	{0x02, 0x01, 0x1f, 0x1c, "77"				},
+	{0x02, 0x01, 0x1f, 0x1d, "78"				},
+	{0x02, 0x01, 0x1f, 0x1e, "79"				},
+	{0x02, 0x01, 0x1f, 0x1f, "80"				},
 
 	{0   , 0xfe, 0   ,   10, "el_rika's CPU Rate tenth-percent adjust"},
-	{0x03, 0x01, 0x0f, 0x00, ".0"			},
-	{0x03, 0x01, 0x0f, 0x01, ".1"			},
-	{0x03, 0x01, 0x0f, 0x02, ".2"			},
-	{0x03, 0x01, 0x0f, 0x03, ".3"			},
-	{0x03, 0x01, 0x0f, 0x04, ".4"			},
-	{0x03, 0x01, 0x0f, 0x05, ".5"			},
-	{0x03, 0x01, 0x0f, 0x06, ".6"			},
-	{0x03, 0x01, 0x0f, 0x07, ".7"			},
-	{0x03, 0x01, 0x0f, 0x08, ".8"			},
-	{0x03, 0x01, 0x0f, 0x09, ".9"			},
+	{0x03, 0x01, 0x0f, 0x00, ".0"				},
+	{0x03, 0x01, 0x0f, 0x01, ".1"				},
+	{0x03, 0x01, 0x0f, 0x02, ".2"				},
+	{0x03, 0x01, 0x0f, 0x03, ".3"				},
+	{0x03, 0x01, 0x0f, 0x04, ".4"				},
+	{0x03, 0x01, 0x0f, 0x05, ".5"				},
+	{0x03, 0x01, 0x0f, 0x06, ".6"				},
+	{0x03, 0x01, 0x0f, 0x07, ".7"				},
+	{0x03, 0x01, 0x0f, 0x08, ".8"				},
+	{0x03, 0x01, 0x0f, 0x09, ".9"				},
 };
 
 static struct BurnDIPInfo Cv1kDIPList[]=
 {
 	DIP_OFFSET(0x18)
-	{0x00, 0xff, 0xff, 0x00, NULL			},
-	{0x01, 0xff, 0xff, 0x03, NULL			},
-	{0x02, 0xff, 0xff, 0x00, NULL			},
-	{0x03, 0xff, 0xff, 0x00, NULL			},
+	{0x00, 0xff, 0xff, 0x00, NULL				},
+	{0x01, 0xff, 0xff, 0x07, NULL				},
+	{0x02, 0xff, 0xff, 0x00, NULL				},
+	{0x03, 0xff, 0xff, 0x00, NULL				},
 
-	{0   , 0xfe, 0   ,    2, "S2:1"			},
-	{0x00, 0x01, 0x01, 0x00, "Off"			},
-	{0x00, 0x01, 0x01, 0x01, "On"			},
+	{0   , 0xfe, 0   ,    2, "S2:1"				},
+	{0x00, 0x01, 0x01, 0x00, "Off"				},
+	{0x00, 0x01, 0x01, 0x01, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "S2:2"			},
-	{0x00, 0x01, 0x02, 0x00, "Off"			},
-	{0x00, 0x01, 0x02, 0x02, "On"			},
+	{0   , 0xfe, 0   ,    2, "S2:2"				},
+	{0x00, 0x01, 0x02, 0x00, "Off"				},
+	{0x00, 0x01, 0x02, 0x02, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "S2:3"			},
-	{0x00, 0x01, 0x04, 0x00, "Off"			},
-	{0x00, 0x01, 0x04, 0x04, "On"			},
+	{0   , 0xfe, 0   ,    2, "S2:3"				},
+	{0x00, 0x01, 0x04, 0x00, "Off"				},
+	{0x00, 0x01, 0x04, 0x04, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "S2:4"			},
-	{0x00, 0x01, 0x08, 0x00, "Off"			},
-	{0x00, 0x01, 0x08, 0x08, "On"			},
+	{0   , 0xfe, 0   ,    2, "S2:4"				},
+	{0x00, 0x01, 0x08, 0x00, "Off"				},
+	{0x00, 0x01, 0x08, 0x08, "On"				},
 };
 
 static struct BurnDIPInfo Cv1ksDIPList[]=
 {
 	DIP_OFFSET(0x18)
-	{0x00, 0xff, 0xff, 0x00, NULL			},
-	{0x01, 0xff, 0xff, 0x03, NULL			},
-	{0x02, 0xff, 0xff, 0x00, NULL			},
-	{0x03, 0xff, 0xff, 0x00, NULL			},
+	{0x00, 0xff, 0xff, 0x00, NULL				},
+	{0x01, 0xff, 0xff, 0x07, NULL				},
+	{0x02, 0xff, 0xff, 0x00, NULL				},
+	{0x03, 0xff, 0xff, 0x00, NULL				},
 
-	{0   , 0xfe, 0   ,    2, "Service Mode"	},
-	{0x00, 0x01, 0x01, 0x00, "Off"			},
-	{0x00, 0x01, 0x01, 0x01, "On"			},
+	{0   , 0xfe, 0   ,    2, "Service Mode"		},
+	{0x00, 0x01, 0x01, 0x00, "Off"				},
+	{0x00, 0x01, 0x01, 0x01, "On"				},
 
-	{0   , 0xfe, 0   ,    2, "Special Mode"	},
-	{0x00, 0x01, 0x02, 0x00, "Off"			},
-	{0x00, 0x01, 0x02, 0x02, "On"			},
+	{0   , 0xfe, 0   ,    2, "Special Mode"		},
+	{0x00, 0x01, 0x02, 0x00, "Off"				},
+	{0x00, 0x01, 0x02, 0x02, "On"				},
 };
 
 STDDIPINFOEXT(Cv1k, Cv1k, Default)
@@ -306,21 +324,27 @@ static UINT32 __fastcall speedhack_read_long(UINT32 offset)
 
 static UINT16 __fastcall speedhack_read_word(UINT32 offset)
 {
+#if 0
+	// speedhack for all games uses long handler, just passthru for word/byte
+	// reads since this is a high-traffic area. (0xc000000 - 0xc00ffff)
 	UINT32 pc = Sh3GetPC(-1);
 	if ( offset == hacky_idle_ram && (pc == hacky_idle_pc || pc == hacky_idle_pc+2)) {
 		//bprintf(0, _T("w"));
 		Sh3BurnCycles(speedhack_burn);
 	}
+#endif
 	return *((UINT16 *)(DrvMainRAM + (offset & 0xfffffe)));
 }
 
 static UINT8 __fastcall speedhack_read_byte(UINT32 offset)
 {
+#if 0
 	UINT32 pc = Sh3GetPC(-1);
 	if ( offset == hacky_idle_ram && (pc == hacky_idle_pc || pc == hacky_idle_pc+2)) {
 		//bprintf(0, _T("b"));
 		Sh3BurnCycles(speedhack_burn);
 	}
+#endif
 	return DrvMainRAM[(offset & 0xffffff) ^ 1];
 }
 
@@ -370,8 +394,12 @@ static INT32 MemIndex()
 
 	AllRam			= Next;
 
-	DrvMainRAM		= Next; Next += 0x1000000;
-	DrvCacheRAM		= Next; Next += 0x1000000;
+	if (is_type_d) {
+		DrvMainRAM		= Next; Next += 0x1000000;
+	} else {
+		DrvMainRAM		= Next; Next +=  0x800000;
+	}
+	DrvCacheRAM		= Next; Next += 0x0004000;
 
 	RamEnd			= Next;
 
@@ -380,14 +408,14 @@ static INT32 MemIndex()
 	return 0;
 }
 
-static INT32 DrvLoadRoms(INT32 &type_d)
+static INT32 DrvLoadRoms()
 {
 	struct BurnRomInfo ri;
 	BurnDrvGetRomInfo(&ri, 0);
 
 	if (BurnLoadRom(DrvMainROM,  0, 1)) return 1;
 	if (ri.nLen == 0x200000) memcpy (DrvMainROM + 0x200000, DrvMainROM, 0x200000);
-	if (ri.nLen >= 0x400000) type_d = 1;
+	//if (ri.nLen >= 0x400000) type_d = 1;
 
 	if (BurnLoadRom(DrvFlashROM, 1, 1)) return 1;
 
@@ -406,8 +434,8 @@ struct speedy_s {
 
 static speedy_s gamelist[] = {
 	{ {"mushisam", "mushisamb", "\0", }, 				0xc04a2aa, 0xc0024d8 },
-	{ {"ibara", "mushisama", "\0", }, 					0xc04a0aa, 0xc0022f0 },
-	{ {"espgal2", "\0", }, 								0xc05177a, 0xc002310 },
+	{ {"ibara", "ibarao", "mushisama", "\0", }, 		0xc04a0aa, 0xc0022f0 },
+	{ {"espgal2", "espgal2a", "espgal2b", "\0", }, 		0xc05177a, 0xc002310 },
 	{ {"mushitam", "mushitama", "\0", }, 				0xc04a0da, 0xc0022f0 },
 	{ {"ibarablk", "ibarablka", "\0", }, 				0xc05176a, 0xc002310 },
 	{ {"futari15", "futari15a", "futari10", "\0", }, 	0xc05176a, 0xc002310 },
@@ -447,12 +475,14 @@ static void init_speedhack()
 
 static INT32 DrvInit()
 {
-	INT32 is_type_d = 0;
+	struct BurnRomInfo ri;
+	BurnDrvGetRomInfo(&ri, 0);
+	if (ri.nLen >= 0x400000) is_type_d = 1;
 
 	BurnAllocMemIndex();
 	GenericTilesInit();
 
-	if (DrvLoadRoms(is_type_d)) { return 1; }
+	if (DrvLoadRoms()) { return 1; }
 
 	Sh3Init(0, SH3_CLOCK, 0, 0, 0, 0, 0, 1, 0, 1, 0);
 	Sh3Open(0);
@@ -464,7 +494,7 @@ static INT32 DrvInit()
 	} else {
 		Sh3MapMemory(DrvMainRAM,	0xc000000, 	0xcffffff,	MAP_RAM);
 	}
-	Sh3MapMemory(DrvCacheRAM,		0xf0000000,	0xf0ffffff,	MAP_RAM);
+	Sh3MapMemory(DrvCacheRAM,		0xf0000000,	0xf0003fff,	MAP_RAM); // this 16k cache area used as ram
 
 	Sh3SetReadByteHandler (0, main_read_byte);
 	Sh3SetReadWordHandler (0, main_read_word);
@@ -504,6 +534,8 @@ static INT32 DrvExit()
 	BurnFreeMemIndex();
 	GenericTilesExit();
 
+	is_type_d = 0;
+
 	return 0;
 }
 
@@ -541,9 +573,14 @@ static INT32 DrvFrame()
 	{
 		INT32 delay = DrvDips[2] & 0x1f;
 
+		epic12_set_blitterdelay_method(DrvDips[2] & 0x20);
 		epic12_set_blitterdelay((delay) ? ((delay - 1) + 50) : 0, speedhack_burn);
 		epic12_set_blitterthreading(DrvDips[1] & 1);
 		Sh3SetTimerGranularity(DrvDips[1] & 2);
+
+		// test stuff for el_rika
+		epic12_set_blitter_clipping_margin(!(DrvDips[2] & 0x40));
+		epic12_set_blitter_sleep_on_busy(!(DrvDips[2] & 0x80));
 	}
 
 	{
@@ -588,7 +625,9 @@ static INT32 DrvFrame()
 
 	rtc9701_once_per_frame();
 
-	epic12_wait_blitterthread();
+	if (DrvDips[1] & 4) { // Thread Sync: Before Draw
+		epic12_wait_blitterthread();
+	}
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -700,10 +739,10 @@ struct BurnDriver BurnDrvMushisamb = {
 };
 
 
-// Espgaluda II (2005/11/14 MASTER VER, newer CV1000-B PCB)
+// Espgaluda II (2005/11/14.MASTER VER.)
 
 static struct BurnRomInfo espgal2RomDesc[] = {
-	{ "espgal2_u4",	0x0200000, 0x843608b8, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
+	{ "espgal2_u4",	0x0200000, 0x2cb37c03, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
 
 	{ "u2",			0x8400000, 0x222f58c7, 2 | BRF_PRG | BRF_ESS }, //  1 Flash
 
@@ -716,8 +755,8 @@ STD_ROM_FN(espgal2)
 
 struct BurnDriver BurnDrvEspgal2 = {
 	"espgal2", NULL, NULL, NULL, "2005",
-	"Espgaluda II (2005/11/14 MASTER VER, newer CV1000-B PCB)\0", NULL, "Cave (AMI license)", "CA013",
-	L"Espgaluda II\0\u30a8\u30b9\u30d7\u30ac\u30eb\u30fc\u30c0II (2005/11/14 MASTER VER, newer CV1000-B PCB)\0", NULL, NULL, NULL,
+	"Espgaluda II (2005/11/14.MASTER VER.)\0", NULL, "Cave (AMI license)", "CA013",
+	L"Espgaluda II\0\u30a8\u30b9\u30d7\u30ac\u30eb\u30fc\u30c0II (2005/11/14.MASTER VER.)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
 	NULL, espgal2RomInfo, espgal2RomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
@@ -725,10 +764,10 @@ struct BurnDriver BurnDrvEspgal2 = {
 };
 
 
-// Espgaluda II (2005/11/14 MASTER VER, original CV1000-B PCB)
+// Espgaluda II (2005/11/14 MASTER VER, newer CV1000-B PCB)
 
 static struct BurnRomInfo espgal2aRomDesc[] = {
-	{ "espgal2a_u4",	0x0200000, 0x09c908bb, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
+	{ "espgal2a_u4",	0x0200000, 0x843608b8, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
 
 	{ "u2",				0x8400000, 0x222f58c7, 2 | BRF_PRG | BRF_ESS }, //  1 Flash
 
@@ -741,10 +780,35 @@ STD_ROM_FN(espgal2a)
 
 struct BurnDriver BurnDrvEspgal2a = {
 	"espgal2a", "espgal2", NULL, NULL, "2005",
+	"Espgaluda II (2005/11/14 MASTER VER, newer CV1000-B PCB)\0", NULL, "Cave (AMI license)", "CA013",
+	L"Espgaluda II\0\u30a8\u30b9\u30d7\u30ac\u30eb\u30fc\u30c0II (2005/11/14 MASTER VER, newer CV1000-B PCB)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
+	NULL, espgal2aRomInfo, espgal2aRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
+	240, 320, 3, 4
+};
+
+
+// Espgaluda II (2005/11/14 MASTER VER, original CV1000-B PCB)
+
+static struct BurnRomInfo espgal2bRomDesc[] = {
+	{ "espgal2b_u4",	0x0200000, 0x09c908bb, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
+
+	{ "u2",				0x8400000, 0x222f58c7, 2 | BRF_PRG | BRF_ESS }, //  1 Flash
+
+	{ "u23",			0x0400000, 0xb9a10c22, 3 | BRF_SND },           //  2 YMZ770 Samples
+	{ "u24",			0x0400000, 0xc76b1ec4, 3 | BRF_SND },           //  3
+};
+
+STD_ROM_PICK(espgal2b)
+STD_ROM_FN(espgal2b)
+
+struct BurnDriver BurnDrvEspgal2b = {
+	"espgal2b", "espgal2", NULL, NULL, "2005",
 	"Espgaluda II (2005/11/14 MASTER VER, original CV1000-B PCB)\0", NULL, "Cave (AMI license)", "CA013",
 	L"Espgaluda II\0\u30a8\u30b9\u30d7\u30ac\u30eb\u30fc\u30c0II (2005/11/14 MASTER VER, original CV1000-B PCB)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
-	NULL, espgal2aRomInfo, espgal2aRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
+	NULL, espgal2bRomInfo, espgal2bRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	240, 320, 3, 4
 };
@@ -925,10 +989,10 @@ struct BurnDriver BurnDrvFutariblj = {
 };
 
 
-// Ibara (2005/03/22 MASTER VER..)
+// Ibara (2005/03/22 MASTER VER.., '06. 3. 7 ver.)
 
 static struct BurnRomInfo ibaraRomDesc[] = {
-	{ "u4",				0x0200000, 0x8e6c155d, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
+	{ "ibara_u4",		0x0200000, 0xd5fb6657, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
 
 	{ "u2",				0x8400000, 0x55840976, 2 | BRF_PRG | BRF_ESS }, //  1 Flash
 
@@ -941,10 +1005,35 @@ STD_ROM_FN(ibara)
 
 struct BurnDriver BurnDrvIbara = {
 	"ibara", NULL, NULL, NULL, "2005",
-	"Ibara (2005/03/22 MASTER VER..)\0", NULL, "Cave (AMI license)", "CA012",
-	L"Ibara\0\u92f3\u8594\u8587 (2005/03/22 MASTER VER..)\0", NULL, NULL, NULL,
+	"Ibara (2005/03/22 MASTER VER.., '06. 3. 7 ver.)\0", NULL, "Cave (AMI license)", "CA012",
+	L"Ibara\0\u92f3\u8594\u8587 (2005/03/22 MASTER VER.., '06. 3. 7 ver.)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
 	NULL, ibaraRomInfo, ibaraRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1ksDIPInfo,
+	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
+	240, 320, 3, 4
+};
+
+
+// Ibara (2005/03/22 MASTER VER..)
+
+static struct BurnRomInfo ibaraoRomDesc[] = {
+	{ "ibarao_u4",		0x0200000, 0x8e6c155d, 1 | BRF_PRG | BRF_ESS }, //  0 SH3 Code
+
+	{ "u2",				0x8400000, 0x55840976, 2 | BRF_PRG | BRF_ESS }, //  1 Flash
+
+	{ "u23",			0x0400000, 0xee5e585d, 3 | BRF_SND },           //  2 YMZ770 Samples
+	{ "u24",			0x0400000, 0xf0aa3cb6, 3 | BRF_SND },           //  3
+};
+
+STD_ROM_PICK(ibarao)
+STD_ROM_FN(ibarao)
+
+struct BurnDriver BurnDrvIbarao = {
+	"ibarao", "ibara", NULL, NULL, "2005",
+	"Ibara (2005/03/22 MASTER VER..)\0", NULL, "Cave (AMI license)", "CA012",
+	L"Ibara\0\u92f3\u8594\u8587 (2005/03/22 MASTER VER..)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
+	NULL, ibaraoRomInfo, ibaraoRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1ksDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	240, 320, 3, 4
 };
@@ -1268,7 +1357,7 @@ struct BurnDriver BurnDrvDsmbl = {
 	"dsmbl", NULL, NULL, NULL, "2008",
 	"Deathsmiles MegaBlack Label (2008/10/06 MEGABLACK LABEL VER)\0", NULL, "Cave (AMI license)", "CA017B",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_CAVE_CV1000, GBF_HORSHOOT, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_CV1000, GBF_HORSHOOT, 0,
 	NULL, dsmblRomInfo, dsmblRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	320, 240, 4, 3
@@ -1317,8 +1406,8 @@ STD_ROM_FN(ddpsdoj)
 struct BurnDriver BurnDrvDdpsdoj = {
 	"ddpsdoj", NULL, NULL, NULL, "2012",
 	"DoDonPachi SaiDaiOuJou (2012/ 4/20)\0", NULL, "Cave", "CA???",
-	L"DoDonPachi SaiDaiOuJou\0\u6012\u9996\u9818\u8702 \u5927\u5fa9\u6d3b (2012/4/20)\0", NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
+	L"DoDonPachi SaiDaiOuJou\0\u6012\u9996\u9818\u8702 \u6700\u5927\u5f80\u751f (2012/4/20)\0", NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
 	NULL, ddpsdojRomInfo, ddpsdojRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,
 	240, 320, 3, 4
@@ -1340,9 +1429,9 @@ STD_ROM_PICK(sdojak)
 STD_ROM_FN(sdojak)
 
 struct BurnDriver BurnDrvsdojak = {
-	"sdojak", "ddpsdoj", NULL, NULL, "2012",
-	"DoDonPachi SaiDaiOuJou & Knuckles (CaveDwellers Hack)\0", NULL, "Cave", "CA???",
-	L"DoDonPachi SaiDaiOuJou & Knuckles (CaveDwellers Hack)\0\u6012\u9996\u9818\u8702 \u5927\u5fa9\u6d3b (2012/4/20)\0", NULL, NULL, NULL,
+	"sdojak", "ddpsdoj", NULL, NULL, "2021",
+	"DoDonPachi SaiDaiOuJou & Knuckles (CaveDwellers Hack)\0", NULL, "hack", "CA???",
+	L"DoDonPachi SaiDaiOuJou & Knuckles (CaveDwellers Hack)\0\u6012\u9996\u9818\u8702 \u6700\u5927\u5f80\u751f & \u30ca\u30c3\u30af\u30eb\u30ba (CaveDwellers, 2021/12/01)\0", NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_CAVE_CV1000, GBF_VERSHOOT, 0,
 	NULL, sdojakRomInfo, sdojakRomName, NULL, NULL, NULL, NULL, Cv1kInputInfo, Cv1kDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x10000,

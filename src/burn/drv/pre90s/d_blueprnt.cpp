@@ -369,6 +369,8 @@ static INT32 DrvDoReset()
 	AY8910Reset(0);
 	AY8910Reset(1);
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -658,9 +660,9 @@ STD_ROM_FN(blueprnt)
 
 struct BurnDriver BurnDrvBlueprnt = {
 	"blueprnt", NULL, NULL, NULL, "1982",
-	"Blue Print (Midway)\0", NULL, "[Zilec Electronics] Bally Midway", "Miscellaneous",
+	"Blue Print (Midway)\0", NULL, "Zilec Electronics / Bally Midway", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, blueprntRomInfo, blueprntRomName, NULL, NULL, NULL, NULL, BlueprntInputInfo, BlueprntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -692,9 +694,9 @@ STD_ROM_FN(blueprnj)
 
 struct BurnDriver BurnDrvBlueprnj = {
 	"blueprntj", "blueprnt", NULL, NULL, "1982",
-	"Blue Print (Jaleco)\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
+	"Blue Print (Jaleco)\0", NULL, "Zilec Electronics / Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE, 0,
 	NULL, blueprnjRomInfo, blueprnjRomName, NULL, NULL, NULL, NULL, BlueprntInputInfo, BlueprntDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -727,9 +729,9 @@ STD_ROM_FN(saturnzi)
 
 struct BurnDriver BurnDrvSaturnzi = {
 	"saturnzi", NULL, NULL, NULL, "1983",
-	"Saturn\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
+	"Saturn\0", NULL, "Zilec Electronics / Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_SHOOT, 0,
 	NULL, saturnziRomInfo, saturnziRomName, NULL, NULL, NULL, NULL, SaturnInputInfo, SaturnDIPInfo,
 	DrvInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x208,
 	224, 256, 3, 4
@@ -767,9 +769,9 @@ static INT32 GrasspinInit()
 
 struct BurnDriver BurnDrvGrasspin = {
 	"grasspin", NULL, NULL, NULL, "1983",
-	"Grasspin\0", NULL, "[Zilec Electronics] Jaleco", "Miscellaneous",
+	"Grasspin\0", NULL, "Zilec Electronics / Jaleco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_MAZE | GBF_ACTION, 0,
 	NULL, grasspinRomInfo, grasspinRomName, NULL, NULL, NULL, NULL, GrasspinInputInfo, GrasspinDIPInfo,
 	GrasspinInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 256, 3, 4

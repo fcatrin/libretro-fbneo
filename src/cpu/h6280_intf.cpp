@@ -67,6 +67,8 @@ cpu_core_config H6280Config =
 	h6280Run,
 	h6280RunEnd,
 	h6280Reset,
+	h6280Scan,
+	h6280Exit,
 	0x200000,
 	0
 };
@@ -282,6 +284,8 @@ void h6280Init(INT32 nCpu)
 	sPointer->h6280Write = NULL;
 	sPointer->h6280Read = NULL;
 	sPointer->h6280WriteIO = NULL;
+
+	h6280SetVDCPenalty(1); // default on
 
 	CpuCheatRegister(nCpu, &H6280Config);
 }

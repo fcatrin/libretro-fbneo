@@ -12,6 +12,7 @@
 #define FRAC_MASK			(FRAC_ONE - 1)
 
 static INT32 SlaveMode = 0;
+static INT32 TimerIndex = 0;
 
 /* chip states */
 enum
@@ -351,7 +352,7 @@ static void UPD7759SlaveModeUpdate()
 	/* set a timer to go off when that is done */
 
 	if (Chip->state != STATE_IDLE) {
-		BurnTimerSetRetrig(0, (double)Chip->clocks_left * Chip->clock_period);
+		BurnTimerSetRetrig((TimerIndex << 1) + 0, (double)Chip->clocks_left * Chip->clock_period);
 	}
 }
 
@@ -479,12 +480,24 @@ void UPD7759Render(INT32 chip, INT16 *pSoundBuf, INT32 samples)
 	}
 
 	// resample to host rate
-	Chip->resamp.resample(Chip->out_buf_linear, Chip->out_buf_linear_resampled, samples, Chip->volume, Chip->output_dir);
+	Chip->resamp.resample_mono(Chip->out_buf_linear, Chip->out_buf_linear_resampled, samples, 1.00);
+
+	// filter
+	Chip->biquadL.filter_buffer(Chip->out_buf_linear_resampled, samples); // shelf
+	Chip->biquadR.filter_buffer(Chip->out_buf_linear_resampled, samples); // lowpass
 
 	// filter and mix into pSoundBuf
 	for (INT32 i = 0; i < samples; i++) {
-		INT32 l = Chip->biquadL.filter(Chip->out_buf_linear_resampled[i*2 + 0]);
-		INT32 r = Chip->biquadR.filter(Chip->out_buf_linear_resampled[i*2 + 1]);
+		INT32 l = 0, r = 0;
+		INT32 sample = Chip->out_buf_linear_resampled[i];
+
+		if ((Chip->output_dir & BURN_SND_ROUTE_LEFT) == BURN_SND_ROUTE_LEFT) {
+			l = (INT32)(sample * Chip->volume);
+		}
+		if ((Chip->output_dir & BURN_SND_ROUTE_RIGHT) == BURN_SND_ROUTE_RIGHT) {
+			r = (INT32)(sample * Chip->volume);
+		}
+		
 		pSoundBuf[i*2 + 0] = BURN_SND_CLIP(pSoundBuf[i*2 + 0] + l);
 		pSoundBuf[i*2 + 1] = BURN_SND_CLIP(pSoundBuf[i*2 + 1] + r);
 	}
@@ -546,8 +559,10 @@ void UPD7759Init(INT32 chip, INT32 clock, UINT8* pSoundData)
 	memset(Chip, 0, sizeof(upd7759_chip));
 
 	SlaveMode = 0;
+	TimerIndex = 0;
 
 	Chip->ChipNum = chip;
+
 	// init resampler
 	Chip->resamp.init(clock / 4, nBurnSoundRate, 0);
 
@@ -574,7 +589,7 @@ void UPD7759Init(INT32 chip, INT32 clock, UINT8* pSoundData)
 		SlaveMode = 0;
 	} else {
 		SlaveMode = 1;
-		BurnTimerInit(&slave_timer_cb, NULL); // for high-freq timer
+		TimerIndex = BurnTimerInit(&slave_timer_cb, NULL); // for high-freq timer
 	}
 	
 	Chip->reset = 1;
@@ -603,8 +618,8 @@ void UPD7759SetFilter(INT32 chip, INT32 nCutOff)
 
 	Chip = Chips[chip];
 
-	Chip->biquadL.init(FILT_LOWPASS, nBurnSoundRate, nCutOff, 0.554, 0.0);
-	Chip->biquadR.init(FILT_LOWPASS, nBurnSoundRate, nCutOff, 0.554, 0.0);
+	Chip->biquadL.init(FILT_HIGHSHELF, nBurnSoundRate, nCutOff, 0.0, -25.0);
+	Chip->biquadR.init(FILT_LOWPASS, nBurnSoundRate, 4000, 0.70, 0.0);
 }
 
 void UPD7759SetRoute(INT32 chip, double nVolume, INT32 nRouteDir)

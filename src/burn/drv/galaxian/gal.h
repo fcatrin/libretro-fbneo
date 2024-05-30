@@ -171,6 +171,7 @@ void RescueDrawBackground();
 void MinefldDrawBackground();
 void DambustrDrawBackground();
 void GalaxianDrawBullets(INT32 Offs, INT32 x, INT32 y);
+void RescueDrawBullets(INT32 Offs, INT32 x, INT32 y);
 void TheendDrawBullets(INT32 Offs, INT32 x, INT32 y);
 void ScrambleDrawBullets(INT32, INT32 x, INT32 y);
 void MoonwarDrawBullets(INT32, INT32 x, INT32 y);
@@ -197,6 +198,10 @@ extern UINT8 GalReset;
 extern UINT8 GalFakeDip;
 extern INT32           GalAnalogPort0;
 extern INT32           GalAnalogPort1;
+
+extern INT32 Gal4Way;
+extern UINT8 *GalUDLR[2][4];
+void GalSet4WAY(INT32 player, UINT8 *u, UINT8 *d, UINT8 *l, UINT8 *r);
 
 extern UINT8 *GalMem;
 extern UINT8 *GalMemEnd;

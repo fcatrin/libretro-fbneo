@@ -7,6 +7,7 @@
 
 UINT32 nInputSelect = 0;
 bool bInputOkay = false;
+INT32 nInputIntfMouseDivider = 1;
 
 static bool bCinpOkay;
 
@@ -125,7 +126,9 @@ static INT32 InputTick()
 		nAdd *= pgi->Input.Slider.nSliderSpeed;
 		nAdd /= 0x100;
 
-		if (pgi->Input.Slider.nSliderCenter && !bGotKey) {						// Attact to center
+		//		if (pgi->Input.Slider.nSliderCenter && !bGotKey) {						// Attact to center
+		// checking !bGotKey here causes the slider to lag -dink jan, 2023
+		if (pgi->Input.Slider.nSliderCenter) {						// Attact to center
 			if (pgi->Input.Slider.nSliderCenter == 1) {
 				// Fastest Auto-Center speed, center immediately when key/button is released
 				pgi->Input.Slider.nSliderValue = 0x8000;
@@ -140,11 +143,11 @@ static INT32 InputTick()
 
 		pgi->Input.Slider.nSliderValue += nAdd;
 		// Limit slider
-		if (pgi->Input.Slider.nSliderValue < 0x0000) {
-			pgi->Input.Slider.nSliderValue = 0x0000;
+		if (pgi->Input.Slider.nSliderValue < 0x0100) {
+			pgi->Input.Slider.nSliderValue = 0x0100;
 		}
-		if (pgi->Input.Slider.nSliderValue > 0xFFFF) {
-			pgi->Input.Slider.nSliderValue = 0xFFFF;
+		if (pgi->Input.Slider.nSliderValue > 0xFF00) {
+			pgi->Input.Slider.nSliderValue = 0xFF00;
 		}
 	}
 	return 0;
@@ -233,6 +236,15 @@ INT32 InputMake(bool bCopy)
 			continue;
 		}
 
+		if (pgi->nIdent == GK_RESET) {
+			if (bResetDrv) {
+				// Click the reset key (from UI)
+				*(pgi->Input.pVal) = 1;
+				bResetDrv = false;
+				break;
+			}
+		}
+
 		switch (pgi->nInput) {
 			case 0:									// Undefined
 				pgi->Input.nVal = 0;
@@ -297,6 +309,11 @@ INT32 InputMake(bool bCopy)
 			}
 			case GIT_MOUSEAXIS:	{					// Mouse axis
 				INT32 nMouse = CinpMouseAxis(pgi->Input.MouseAxis.nMouse, pgi->Input.MouseAxis.nAxis) * nAnalogSpeed;
+
+				if (pgi->Input.MouseAxis.nAxis != 2) { // X/Y axis only, exclude wheel
+					nMouse /= nInputIntfMouseDivider;
+				}
+
 				// Clip axis to 16 bits (signed)
 				if (nMouse < -32768) {
 					nMouse = -32768;
@@ -505,7 +522,7 @@ INT32 InputFind(const INT32 nFlags)
 				INT32 nMouseDelta = CinpMouseAxis((nInputCode >> 8) & 0x3F, (nInputCode >> 1) & 0x07);
 				if (nFind == -1 || ((nInputCode & 1) ? nMouseDelta > 0 : nMouseDelta < 0)) {
 					nDelay++;
-					if (nDelay > 128) {
+					if (nDelay > 64) {
 						return -1;
 					}
 				} else {

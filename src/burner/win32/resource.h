@@ -211,6 +211,7 @@
 #define IDC_LAYER3							20204
 #define IDC_LAYER4							20205
 #define IDC_SHOW							20206
+#define IDC_SHOTKEEP						20207
 
 #define IDC_LENGTH                      20255
 #define IDC_FRAMES                      20256
@@ -220,9 +221,11 @@
 #define IDC_FILENAME                    20260
 #define IDC_BROWSE                      20261
 #define IDC_REPLAYRESET                 20262
-#define IDC_REPLAYTIME                  20263
-#define IDC_SHOWMOVEMENT                20264
-#define IDC_STARTPAUSED                 20265
+#define IDC_REPLAYNVRAM                 20263
+#define IDC_REPLAYTIME                  20264
+#define IDC_SHOWMOVEMENT                20265
+#define IDC_STARTPAUSED                 20266
+#define IDC_NGCD_WARN                   20267
 
 #define IDC_STATIC_SYS                  	20300
 #define IDC_STATIC_OPT                  	20301
@@ -464,6 +467,8 @@
 #define MENU_SETCPUCLOCK					10010
 #define MENU_RESETCPUCLOCK					10011
 #define MENU_EXIT                       	10012
+#define MENU_RESET                       	10013
+#define MENU_LOAD_ROMDATA					10014
 #define MENU_MEMCARD_CREATE					10020
 #define MENU_MEMCARD_SELECT					10021
 #define MENU_MEMCARD_INSERT					10022
@@ -567,6 +572,13 @@
 #define MENU_ASPECTWIDEVERP					10276
 #define MENU_ASPECTWIDELCDVERP				10277
 
+#define MENU_INPUT_REWIND_ENABLED           10280
+#define MENU_INPUT_REWIND_128MB             10281
+#define MENU_INPUT_REWIND_256MB             10282
+#define MENU_INPUT_REWIND_512MB             10283
+#define MENU_INPUT_REWIND_768MB             10284
+#define MENU_INPUT_REWIND_1GB               10285
+
 #define MENU_AUTOPAUSE                 	 	10300
 #define MENU_PROCESSINPUT					10301
 #define MENU_DISPLAYINDICATOR				10302
@@ -631,6 +643,7 @@
 #define MENU_VIDEOVSYNC						10646
 #define MENU_MONITORAUTOCHECK				10650
 #define MENU_CLRMAME_PRO_XML				10651
+#define MENU_CLRMAME_PRO_XML_NEOGEO_ONLY	10652
 #define MENU_CLRMAME_PRO_XML_MD_ONLY		10653
 #define MENU_SAVEHISCORES					10654
 #define MENU_AUD_PLUGIN_1					10655
@@ -790,6 +803,9 @@
 #define MENU_ENHANCED_SOFT_4XBR_B			11233
 #define MENU_ENHANCED_SOFT_4XBR_C			11234
 #define MENU_ENHANCED_SOFT_DDT3X            11235
+#define MENU_ENHANCED_SOFT_CRTx22           11236
+#define MENU_ENHANCED_SOFT_CRTx33           11237
+#define MENU_ENHANCED_SOFT_CRTx44           11238
 #define MENU_ENHANCED_SOFT_AUTOSIZE			11290
 
 #define MENU_SOFTFX_SOFT_STRETCH			11301
@@ -827,6 +843,9 @@
 #define MENU_SOFTFX_SOFT_4XBR_B				11333
 #define MENU_SOFTFX_SOFT_4XBR_C				11334
 #define MENU_SOFTFX_SOFT_DDT3X              11335
+#define MENU_SOFTFX_SOFT_CRTx22             11336
+#define MENU_SOFTFX_SOFT_CRTx33             11337
+#define MENU_SOFTFX_SOFT_CRTx44             11338
 #define MENU_SOFTFX_SOFT_AUTOSIZE			11390
 #define MENU_SOFT_DIRECTACCESS				11391
 
@@ -865,6 +884,9 @@
 #define MENU_DX9_ALT_SOFT_4XBR_B			11433
 #define MENU_DX9_ALT_SOFT_4XBR_C			11434
 #define MENU_DX9_ALT_SOFT_DDT3X             11435
+#define MENU_DX9_ALT_SOFT_CRTx22            11436
+#define MENU_DX9_ALT_SOFT_CRTx33            11437
+#define MENU_DX9_ALT_SOFT_CRTx44            11438
 #define MENU_DX9_ALT_HARD_FX_NONE           11450
 #define MENU_DX9_ALT_HARD_FX_CRT_APERTURE   11451
 #define MENU_DX9_ALT_HARD_FX_CRT_CALIGARI   11452
@@ -905,6 +927,12 @@
 
 #define ID_LUA_OPEN							11812
 #define ID_LUA_CLOSE_ALL					11813
+
+#define ID_SLOMO_0                          11815
+#define ID_SLOMO_1                          11816
+#define ID_SLOMO_2                          11817
+#define ID_SLOMO_3                          11818
+#define ID_SLOMO_4                          11819
 
 #define MENU_AVISTART					    11827
 #define MENU_AVISTOP					    11828

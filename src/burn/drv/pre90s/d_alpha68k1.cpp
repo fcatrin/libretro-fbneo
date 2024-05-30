@@ -436,6 +436,8 @@ static INT32 DrvDoReset()
 	flipscreen = 0;
 	port_fc = 0;
 
+	HiscoreReset();
+
 	return 0;
 }
 
@@ -551,7 +553,7 @@ static INT32 PaddlemaInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	DrvDoReset();
@@ -639,7 +641,7 @@ static INT32 TnextspcInit()
 	ZetClose();
 
 	BurnYM3812Init(1, 4000000, &DrvFMIRQHandler, &DrvSynchroniseStream, 0);
-	BurnTimerAttachYM3812(&ZetConfig, 4000000);
+	BurnTimerAttach(&ZetConfig, 4000000);
 	BurnYM3812SetRoute(0, BURN_SND_YM3812_ROUTE, 1.00, BURN_SND_ROUTE_BOTH);
 
 	DrvDoReset();
@@ -767,17 +769,15 @@ static INT32 DrvFrame()
 		CPU_RUN(0, Sek);
 		if (i == 248) SekSetIRQLine(1, CPU_IRQSTATUS_AUTO);
 
-		BurnTimerUpdateYM3812((i + 1) * (nCyclesTotal[1] / nInterleave));
-	}
-
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
-
-	if (pBurnSoundOut) {
-		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
+		CPU_RUN_TIMER(1);
 	}
 
 	ZetClose();
 	SekClose();
+
+	if (pBurnSoundOut) {
+		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
+	}
 
 	if (pBurnDraw) {
 		DrvDraw();
@@ -846,7 +846,7 @@ static struct BurnRomInfo paddlemaRomDesc[] = {
 	{ "padlem.17j",		0x00400, 0x86170069, 6 | BRF_GRA },           // 17 Palette Look-up Data
 	{ "padlem.16j",		0x00400, 0x8da58e2c, 6 | BRF_GRA },           // 18
 
-	{ "padlem.18n",		0x08000, 0x06506200, 7 | BRF_GRA },           // 19 Color Look-up Data
+	{ "padlem.18n",		0x08000, 0x488df971, 7 | BRF_GRA },           // 19 Color Look-up Data
 };
 
 STD_ROM_PICK(paddlema)
@@ -856,7 +856,7 @@ struct BurnDriver BurnDrvPaddlema = {
 	"paddlema", NULL, NULL, NULL, "1988",
 	"Paddle Mania\0", NULL, "SNK", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_BALLPADDLE, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_BALLPADDLE, 0,
 	NULL, paddlemaRomInfo, paddlemaRomName, NULL, NULL, NULL, NULL, PaddlemaInputInfo, PaddlemaDIPInfo,
 	PaddlemaInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 256, 3, 4
@@ -867,7 +867,7 @@ struct BurnDriver BurnDrvPaddlema = {
 
 static struct BurnRomInfo tnextspcRomDesc[] = {
 	{ "ns_4.4",			0x20000, 0x4617cba3, 1 | BRF_PRG | BRF_ESS }, //  0 68K Code
-	{ "ns_3.4",			0x20000, 0xa6c47fef, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ns_3.3",			0x20000, 0xa6c47fef, 1 | BRF_PRG | BRF_ESS }, //  1
 
 	{ "ns_1.1",			0x10000, 0xfc26853c, 2 | BRF_PRG | BRF_ESS }, //  2 Z80 Code
 
@@ -890,7 +890,7 @@ struct BurnDriver BurnDrvTnextspc = {
 	"tnextspc", NULL, NULL, NULL, "1989",
 	"The Next Space (set 1)\0", NULL, "SNK", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, tnextspcRomInfo, tnextspcRomName, NULL, NULL, NULL, NULL, TnextspcInputInfo, TnextspcDIPInfo,
 	TnextspcInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 256, 3, 4
@@ -931,7 +931,7 @@ struct BurnDriver BurnDrvTnextspc2 = {
 	"tnextspc2", "tnextspc", NULL, NULL, "1989",
 	"The Next Space (set 2)\0", NULL, "SNK", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, tnextspc2RomInfo, tnextspc2RomName, NULL, NULL, NULL, NULL, TnextspcInputInfo, TnextspcDIPInfo,
 	Tnextspc2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 256, 3, 4
@@ -965,7 +965,7 @@ struct BurnDriver BurnDrvTnextspcj = {
 	"tnextspcj", "tnextspc", NULL, NULL, "1989",
 	"The Next Space (Japan)\0", NULL, "SNK (Pasadena International Corp. license)", "Alpha 68k",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_ORIENTATION_FLIPPED | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_PRE90S, GBF_VERSHOOT, 0,
 	NULL, tnextspcjRomInfo, tnextspcjRomName, NULL, NULL, NULL, NULL, TnextspcInputInfo, TnextspcDIPInfo,
 	TnextspcInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	224, 256, 3, 4

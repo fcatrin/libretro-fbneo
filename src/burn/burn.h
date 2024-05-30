@@ -39,9 +39,9 @@ extern TCHAR szAppEEPROMPath[MAX_PATH];
 // Give access to the CPUID function for various compilers
 #if defined (__GNUC__)
  #define CPUID(f,ra,rb,rc,rd) __asm__ __volatile__ ("cpuid"											\
- 													: "=a" (ra), "=b" (rb), "=c" (rc), "=d" (rd)	\
- 													: "a"  (f)										\
- 												   );
+													: "=a" (ra), "=b" (rb), "=c" (rc), "=d" (rd)	\
+													: "a"  (f)										\
+												   );
 #elif defined (_MSC_VER)
  #define CPUID(f,ra,rb,rc,rd) __asm { __asm mov		eax, f		\
 									  __asm cpuid				\
@@ -155,6 +155,30 @@ struct BurnHDDInfo {
 	UINT32 nCrc;
 };
 
+// ---------------------------------------------------------------------------
+
+// Rom Data
+
+struct RomDataInfo {
+	char szZipName[MAX_PATH];
+	char szDrvName[MAX_PATH];
+	char szExtraRom[MAX_PATH];
+	wchar_t szOldName[MAX_PATH];
+	wchar_t szFullName[MAX_PATH];
+	INT32 nDriverId;
+	INT32 nDescCount;
+};
+
+extern RomDataInfo* pRDI;
+extern BurnRomInfo* pDataRomDesc;
+
+char* RomdataGetDrvName();
+void RomDataSetFullName();
+void RomDataInit();
+void RomDataExit();
+
+// ---------------------------------------------------------------------------
+
 // Inputs
 
 #define BIT_DIGITAL			(1)
@@ -203,6 +227,9 @@ struct BurnDIPInfo {
 #define CPU_RUN_TIMER(num) do { BurnTimerUpdate((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrame(nCyclesTotal[num]); } while (0)
 #define CPU_RUN_TIMER_YM3812(num) do { BurnTimerUpdateYM3812((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrameYM3812(nCyclesTotal[num]); } while (0)
 #define CPU_RUN_TIMER_YM3526(num) do { BurnTimerUpdateYM3526((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrameYM3526(nCyclesTotal[num]); } while (0)
+#define CPU_RUN_TIMER_Y8950(num) do { BurnTimerUpdateY8950((i + 1) * nCyclesTotal[num] / nInterleave); if (i == nInterleave - 1) BurnTimerEndFrameY8950(nCyclesTotal[num]); } while (0)
+// speed adjuster
+INT32 BurnSpeedAdjust(INT32 cyc);
 
 #define CPU_IRQSTATUS_NONE	0
 #define CPU_IRQSTATUS_ACK	1
@@ -251,38 +278,50 @@ extern bool bBurnUseASMCPUEmulation;
 
 extern UINT32 nFramesEmulated;
 extern UINT32 nFramesRendered;
-extern clock_t starttime;					// system time when emulation started and after roms loaded
+extern clock_t starttime;			// system time when emulation started and after roms loaded
 
 extern bool bForce60Hz;
+extern bool bSpeedLimit60hz;
+extern double dForcedFrameRate;
+
 extern bool bBurnUseBlend;
 
 extern INT32 nBurnFPS;
 extern INT32 nBurnCPUSpeedAdjust;
 
-extern UINT32 nBurnDrvCount;			// Count of game drivers
-extern UINT32 nBurnDrvActive;			// Which game driver is selected
-extern UINT32 nBurnDrvSelect[8];		// Which games are selected (i.e. loaded but not necessarily active)
+extern UINT32 nBurnDrvCount;		// Count of game drivers
+extern UINT32 nBurnDrvActive;		// Which game driver is selected
+extern INT32 nBurnDrvSubActive;		// Which sub-game driver is selected
+extern UINT32 nBurnDrvSelect[8];	// Which games are selected (i.e. loaded but not necessarily active)
+
+extern char* pszCustomNameA;
+extern char szBackupNameA[MAX_PATH];
+extern TCHAR szBackupNameW[MAX_PATH];
+
+extern char** szShortNamesExArray;
+extern TCHAR** szLongNamesExArray;
+extern UINT32 nNamesExArray;
 
 extern INT32 nMaxPlayers;
 
 extern UINT8 *pBurnDraw;			// Pointer to correctly sized bitmap
-extern INT32 nBurnPitch;						// Pitch between each line
-extern INT32 nBurnBpp;						// Bytes per pixel (2, 3, or 4)
+extern INT32 nBurnPitch;			// Pitch between each line
+extern INT32 nBurnBpp;				// Bytes per pixel (2, 3, or 4)
 
 extern UINT8 nBurnLayer;			// Can be used externally to select which layers to show
 extern UINT8 nSpriteEnable;			// Can be used externally to select which Sprites to show
 
-extern INT32 bRunAhead;             // "Run Ahead" lag-reduction technique UI option (on/off)
+extern INT32 bRunAhead;				// "Run Ahead" lag-reduction technique UI option (on/off)
 
-extern INT32 bBurnRunAheadFrame;    // for drivers, hiscore, etc, to recognize that this is the "runahead frame"
-                                    // for instance, you wouldn't want to apply hi-score data on a "runahead frame"
+extern INT32 bBurnRunAheadFrame;	// for drivers, hiscore, etc, to recognize that this is the "runahead frame"
+									// for instance, you wouldn't want to apply hi-score data on a "runahead frame"
 
-extern INT32 nBurnSoundRate;					// Samplerate of sound
-extern INT32 nBurnSoundLen;					// Length in samples per frame
-extern INT16* pBurnSoundOut;				// Pointer to output buffer
+extern INT32 nBurnSoundRate;		// Samplerate of sound
+extern INT32 nBurnSoundLen;			// Length in samples per frame
+extern INT16* pBurnSoundOut;		// Pointer to output buffer
 
-extern INT32 nInterpolation;					// Desired interpolation level for ADPCM/PCM sound
-extern INT32 nFMInterpolation;				// Desired interpolation level for FM sound
+extern INT32 nInterpolation;		// Desired interpolation level for ADPCM/PCM sound
+extern INT32 nFMInterpolation;		// Desired interpolation level for FM sound
 
 extern UINT32 *pBurnDrvPalette;
 
@@ -337,17 +376,17 @@ double BurnGetTime();
 #if defined (FBNEO_DEBUG)
 void BurnDump_(char *filename, UINT8 *buffer, INT32 bufsize, INT32 append);
 #define BurnDump(fn, b, bs) do { \
-    bprintf(0, _T("Dumping %S (0x%x bytes) to %S\n"), #b, bs, #fn); \
-    BurnDump_(fn, b, bs, 0); } while (0)
+	bprintf(0, _T("Dumping %S (0x%x bytes) to %S\n"), #b, bs, #fn); \
+	BurnDump_(fn, b, bs, 0); } while (0)
 
 #define BurnDumpAppend(fn, b, bs) do { \
-    bprintf(0, _T("Dumping %S (0x%x bytes) to %S (append)\n"), #b, bs, #fn); \
-    BurnDump_(fn, b, bs, 1); } while (0)
+	bprintf(0, _T("Dumping %S (0x%x bytes) to %S (append)\n"), #b, bs, #fn); \
+	BurnDump_(fn, b, bs, 1); } while (0)
 
 void BurnDumpLoad_(char *filename, UINT8 *buffer, INT32 bufsize);
 #define BurnDumpLoad(fn, b, bs) do { \
-    bprintf(0, _T("Loading Dump %S (0x%x bytes) to %S\n"), #fn, bs, #b); \
-    BurnDumpLoad_(fn, b, bs); } while (0)
+	bprintf(0, _T("Loading Dump %S (0x%x bytes) to %S\n"), #fn, bs, #b); \
+	BurnDumpLoad_(fn, b, bs); } while (0)
 
 #endif
 
@@ -371,8 +410,11 @@ void BurnDumpLoad_(char *filename, UINT8 *buffer, INT32 bufsize);
 
 TCHAR* BurnDrvGetText(UINT32 i);
 char* BurnDrvGetTextA(UINT32 i);
+wchar_t* BurnDrvGetFullNameW(UINT32 i);
 
+INT32 BurnDrvGetIndex(char* szName);
 INT32 BurnDrvGetZipName(char** pszName, UINT32 i);
+INT32 BurnDrvSetZipName(char* szName, INT32 i);
 INT32 BurnDrvGetRomInfo(struct BurnRomInfo *pri, UINT32 i);
 INT32 BurnDrvGetRomName(char** pszName, UINT32 i, INT32 nAka);
 INT32 BurnDrvGetInputInfo(struct BurnInputInfo* pii, UINT32 i);
@@ -393,41 +435,34 @@ INT32 BurnDrvGetSampleInfo(struct BurnSampleInfo *pri, UINT32 i);
 INT32 BurnDrvGetSampleName(char** pszName, UINT32 i, INT32 nAka);
 INT32 BurnDrvGetHDDInfo(struct BurnHDDInfo *pri, UINT32 i);
 INT32 BurnDrvGetHDDName(char** pszName, UINT32 i, INT32 nAka);
+char* BurnDrvGetSourcefile();
 
 void Reinitialise();
 
 // ---------------------------------------------------------------------------
 // IPS Control
 
-#define IPS_USE_PROTECT		(1 <<  0)	// Control protection.
+#define IPS_NOT_PROTECT		(1 <<  0)	// Protection switche for NeoGeo, etc.
+#define IPS_PGM_SPRHACK		(1 <<  1)	// For PGM hacks...
+#define IPS_PGM_MAPHACK		(1 <<  2)	// Id.
+#define IPS_PGM_SNDOFFS		(1 <<  3)	// Id.
+#define IPS_LOAD_EXPAND		(1 <<  4)	// Break the ips 16MB addressing limit.
+#define IPS_EXTROM_INCL		(1 <<  5)	// Extra rom.
+#define IPS_PRG1_EXPAND		(1 <<  6)	// Additional request for prg length.
+#define IPS_PRG2_EXPAND		(1 <<  7)	// Id.
+#define IPS_GRA1_EXPAND		(1 <<  8)	// Additional request for gfx length.
+#define IPS_GRA2_EXPAND		(1 <<  9)	// Id.
+#define IPS_GRA3_EXPAND		(1 << 10)	// Id.
+#define IPS_ACPU_EXPAND		(1 << 11)	// Additional request for audio cpu length.
+#define IPS_SND1_EXPAND		(1 << 12)	// Additional request for snd length.
+#define IPS_SND2_EXPAND		(1 << 13)	// Id.
 
-#define IPS_NEOP3_20000		(1 <<  1)	// Extra Rom
-#define IPS_NEOP3_40000		(1 <<  2)
-
-#define IPS_PROG_100000		(1 <<  3)
-#define IPS_PROG_200000		(1 <<  4)
-#define IPS_PROG_300000		(1 <<  5)
-#define IPS_PROG_400000		(1 <<  6)
-#define IPS_PROG_500000		(1 <<  7)
-#define IPS_PROG_600000		(1 <<  8)
-#define IPS_PROG_700000		(1 <<  9)
-#define IPS_PROG_800000		(1 << 10)
-#define IPS_PROG_900000		(1 << 11)
-
-#define INCLUDE_NEOP3(x)	((x & IPS_NEOP3_20000) || (x & IPS_NEOP3_40000))
-#define INCLUDE_PROG(x)		((x & IPS_PROG_100000) || (x & IPS_PROG_200000) || (x & IPS_PROG_300000) || (x & IPS_PROG_400000) || (x & IPS_PROG_500000) ||	\
-							 (x & IPS_PROG_600000) || (x & IPS_PROG_700000) || (x & IPS_PROG_800000) || (x & IPS_PROG_900000))
-
-#define IPS_NEOP3_VALUE(x)	((x & IPS_NEOP3_20000) ? 0x020000  : ((x & IPS_NEOP3_40000) ? 0x040000  : 0))
-#define IPS_PROG_VALUE(x)	((x & IPS_PROG_100000) ? 0x100000  : ((x & IPS_PROG_200000) ? 0x200000  : ((x & IPS_PROG_300000) ? 0x300000  : ((x & IPS_PROG_400000) ? 0x400000 : ((x & IPS_PROG_500000) ? 0x500000 :	\
-							((x & IPS_PROG_600000) ? 0x600000  : ((x & IPS_PROG_700000) ? 0x700000  : ((x & IPS_PROG_800000) ? 0x800000  : ((x & IPS_PROG_900000) ? 0x900000 : 0)))))))))
+enum IpsRomTypes { EXP_FLAG, LOAD_ROM, EXTR_ROM, PRG1_ROM, PRG2_ROM, GRA1_ROM, GRA2_ROM, GRA3_ROM, ACPU_ROM, SND1_ROM, SND2_ROM };
+extern UINT32 nIpsDrvDefine, nIpsMemExpLen[SND2_ROM + 1];
 
 extern bool bDoIpsPatch;
-extern INT32 nIpsMaxFileLen;
 
-void IpsApplyPatches(UINT8* base, char* rom_name);
-UINT32 GetIpsDrvDefine();
-INT32 GetIpsesMaxLen(char* rom_name);
+void IpsApplyPatches(UINT8* base, char* rom_name, UINT32 rom_crc, bool readonly = false);
 
 // ---------------------------------------------------------------------------
 // Flags used with the Burndriver structure
@@ -455,7 +490,7 @@ INT32 GetIpsesMaxLen(char* rom_name);
 
 #define HARDWARE_PUBLIC_MASK							(0x7FFF0000)
 
-#define HARDWARE_PREFIX_CARTRIDGE						((INT32)0x80000000)
+#define HARDWARE_PREFIX_CARTRIDGE				 ((INT32)0x80000000)
 
 #define HARDWARE_PREFIX_MISC_PRE90S						(0x00000000)
 #define HARDWARE_PREFIX_CAPCOM							(0x01000000)
@@ -612,10 +647,12 @@ INT32 GetIpsesMaxLen(char* rom_name);
 #define HARDWARE_SMS_MAPPER_XIN1     					(0x08)
 #define HARDWARE_SMS_MAPPER_NONE     					(0x0F)
 
-#define HARDWARE_SMS_NO_CART_HEADER						(0x1000)
-#define HARDWARE_SMS_GG_SMS_MODE						(0x2000)
-#define HARDWARE_SMS_DISPLAY_PAL						(0x4000)
-#define HARDWARE_SMS_JAPANESE							(0x8000)
+#define HARDWARE_SMS_CONTROL_PADDLE						(0x00010)
+
+#define HARDWARE_SMS_NO_CART_HEADER						(0x01000)
+#define HARDWARE_SMS_GG_SMS_MODE						(0x02000)
+#define HARDWARE_SMS_DISPLAY_PAL						(0x04000)
+#define HARDWARE_SMS_JAPANESE							(0x08000)
 
 #define HARDWARE_SEGA_GAME_GEAR							(HARDWARE_PREFIX_SEGA_GAME_GEAR)
 
@@ -684,6 +721,7 @@ INT32 GetIpsesMaxLen(char* rom_name);
 #define HARDWARE_SEGA_MEGADRIVE_PCB_POKEMON2			(41)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_MULAN				(42)
 #define HARDWARE_SEGA_MEGADRIVE_PCB_16ZHANG             (43)
+#define HARDWARE_SEGA_MEGADRIVE_PCB_CHAOJIMJ            (44)
 #define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER              (0x40)
 #define HARDWARE_SEGA_MEGADRIVE_TEAMPLAYER_PORT2        (0x80)
 #define HARDWARE_SEGA_MEGADRIVE_FOURWAYPLAY             (0xc0)
@@ -758,6 +796,8 @@ INT32 GetIpsesMaxLen(char* rom_name);
 #define GBF_RPG                                         (1 << 24)
 #define GBF_SIM                                         (1 << 25)
 #define GBF_ADV                                         (1 << 26)
+#define GBF_CARD                                        (1 << 27)
+#define GBF_BOARD                                       (1 << 28)
 
 // flags for the family member
 #define FBF_MSLUG										(1 << 0)

@@ -65,6 +65,7 @@ UINT8 TUnitIsMK = 0;
 UINT8 TUnitIsMKTurbo = 0;
 UINT8 TUnitIsMK2 = 0;
 UINT8 TUnitIsNbajam = 0;
+UINT8 TUnitIsNbajamp = 0;
 UINT8 TUnitIsNbajamTe = 0;
 UINT8 TUnitIsJdreddp = 0;
 
@@ -992,11 +993,24 @@ INT32 TUnitInit()
 	MemIndex();
 
 	UINT32 nRet;
-	nRet = BurnLoadRom(DrvBootROM + 0, 0, 2);
-	if (nRet != 0) return 1;
 
-	nRet = BurnLoadRom(DrvBootROM + 1, 1, 2);
-	if (nRet != 0) return 1;
+	if (TUnitIsNbajamp) {
+		nRet = BurnLoadRom(DrvBootROM + 0x00000, 0, 2);
+		if (nRet != 0) return 1;
+		nRet = BurnLoadRom(DrvBootROM + 0x80000, 0, 2);
+		if (nRet != 0) return 1;
+
+		nRet = BurnLoadRom(DrvBootROM + 0x00001, 1, 2);
+		if (nRet != 0) return 1;
+		nRet = BurnLoadRom(DrvBootROM + 0x80001, 1, 2);
+		if (nRet != 0) return 1;
+	} else {
+		nRet = BurnLoadRom(DrvBootROM + 0, 0, 2);
+		if (nRet != 0) return 1;
+
+		nRet = BurnLoadRom(DrvBootROM + 1, 1, 2);
+		if (nRet != 0) return 1;
+	}
 
 	if (TUnitIsMK) {
 		nRet = LoadSoundProgRom();
@@ -1081,7 +1095,7 @@ INT32 TUnitInit()
 
 	if (TUnitIsMKTurbo) {
 		TMS34010SetReadHandler(13, MKTurboProtRead);
-		TMS34010MapHandler(13, 0xFF800000, 0xffffffff, MAP_READ);
+		TMS34010MapHandler(13, 0xffffe000, 0xffffffff, MAP_READ);
 	}
 
 	if (TUnitIsMK2) {
@@ -1117,11 +1131,7 @@ INT32 TUnitInit()
 		M6809Open(0);
 		M6809MapMemory(DrvSoundProgRAM, 0x0000, 0x1fff, MAP_RAM);
 		MKsound_bankswitch(0);
-		// _all_ ROM is dished out in the handler, had to do it this way
-		// because of the hidden prot ram. (and the separate op/oparg/read handlers..)
 		M6809SetReadHandler(MKSoundRead);
-		M6809SetReadOpHandler(MKSoundRead);
-		M6809SetReadOpArgHandler(MKSoundRead);
 		M6809SetWriteHandler(MKSoundWrite);
 		M6809Close();
 
@@ -1206,6 +1216,7 @@ INT32 TUnitExit()
 	TUnitIsMK2 = 0;
 	TUnitIsMKTurbo = 0;
 	TUnitIsNbajam = 0;
+	TUnitIsNbajamp = 0;
 	TUnitIsNbajamTe = 0;
 	TUnitIsJdreddp = 0;
 
@@ -1244,11 +1255,11 @@ INT32 TUnitFrame()
 	if (nSoundType == SOUND_ADPCM) M6809NewFrame();
 
 	INT32 nInterleave = 288;
-	INT32 nCyclesTotal[2] = { (INT32)(50000000/8/54.71), (INT32)(2000000 / 54.71) };
+	INT32 nCyclesTotal[2] = { (INT32)(50000000/8/(nBurnFPS/100)), (INT32)(2000000 / (nBurnFPS/100)) };
 	INT32 nCyclesDone[2] = { nExtraCycles, 0 };
 
 	if (nSoundType == SOUND_DCS) {
-		nCyclesTotal[1] = (INT32)(10000000 / 54.71);
+		nCyclesTotal[1] = (INT32)(10000000 / (nBurnFPS/100));
 		Dcs2kNewFrame();
 	}
 

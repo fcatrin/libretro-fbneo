@@ -131,6 +131,21 @@ INT32 GamcMisc(struct GameInp* pgi, char* szi, INT32 nPlayer)
 				return 0;
 			}
 
+			if (strcmp(szi, "mah big") == 0) {
+				KEY(FBK_RETURN);
+				return 0;
+			}
+
+			if (strcmp(szi, "mah wup") == 0) {
+				KEY(FBK_RSHIFT);
+				return 0;
+			}
+
+			if (strcmp(szi, "mah small") == 0) {
+				KEY(FBK_BACK);
+				return 0;
+			}
+
 			if (strcmp(szi, "mah kan") == 0) {
 				KEY(FBK_LCONTROL);
 				return 0;
@@ -531,8 +546,11 @@ INT32 GamcMisc(struct GameInp* pgi, char* szi, INT32 nPlayer)
 			return 0;
 		}
 	}
-
+#if defined(BUILD_SDL2) && !defined(SDL_WINDOWS)
+	return 1;
+#else
 	return 0;
+#endif
 }
 
 static void SetSliderKey(struct GameInp* pgi, INT32 k0, INT32 k1, INT32 nSlide)

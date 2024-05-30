@@ -1,4 +1,4 @@
-// FB Alpha Raiden II driver module
+// FB Neo Raiden II driver module
 // Based on MAME driver Olivier Galibert, Angelo Salese, David Haywood, Tomasz Slanina
 
 #include "tiles_generic.h"
@@ -47,11 +47,12 @@ static UINT16 layer_enable;
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
 static UINT8 DrvJoy3[16];
-static UINT8 DrvJoy4[4];
+static UINT8 DrvJoy4[16];
 static UINT8 DrvDips[4];
 static UINT16 DrvInputs[3];
 static UINT8 DrvReset;
-static INT32 hold_coin[4];
+
+static HoldCoin<4> hold_coin;
 
 static UINT16 prg_bank = 0;
 static UINT8 mg_bank = 0;
@@ -62,218 +63,218 @@ static UINT8 tx_bank = 0;
 static INT32 game_select = 0; // 0 raiden2, 1 raidendx, 2 zeroteam, 3 xsedae, 4 = r2dx, 5 nzeroteam, 6 zerotm2k
 
 static struct BurnInputInfo Raiden2InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Raiden2)
 
 static struct BurnInputInfo RaidendxInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Raidendx)
 
 static struct BurnInputInfo ZeroteamInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvJoy4 + 2,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy4 + 2,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	DrvJoy3 + 4,	"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	DrvJoy4 + 3,	"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	DrvJoy4 + 3,	"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	DrvJoy3 + 5,	"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	DrvJoy2 + 8,	"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	DrvJoy2 + 9,	"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	DrvJoy2 + 10,	"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	DrvJoy2 + 8,	"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	DrvJoy2 + 9,	"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	DrvJoy2 + 10,	"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	DrvJoy2 + 11,	"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy2 + 12,	"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy2 + 13,	"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	DrvJoy2 + 14,	"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 3,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Zeroteam)
 
 static struct BurnInputInfo Rdx_v33InputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy1 + 7,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy1 + 15,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy1 + 15,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Service 1",	BIT_DIGITAL,	DrvJoy2 + 3,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Service 1",		BIT_DIGITAL,	DrvJoy2 + 3,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
 };
 
 STDINPUTINFO(Rdx_v33)
 
 static struct BurnInputInfo NzeroteaInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy2 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy2 + 2,	"service"	},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
 };
 
 STDINPUTINFO(Nzerotea)
 
 static struct BurnInputInfo Zerotm2kInputList[] = {
-	{"P1 Coin",		BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
+	{"P1 Coin",			BIT_DIGITAL,	DrvJoy4 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 start"	},
-	{"P1 Up",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
-	{"P1 Down",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
-	{"P1 Left",		BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
+	{"P1 Up",			BIT_DIGITAL,	DrvJoy1 + 0,	"p1 up"		},
+	{"P1 Down",			BIT_DIGITAL,	DrvJoy1 + 1,	"p1 down"	},
+	{"P1 Left",			BIT_DIGITAL,	DrvJoy1 + 2,	"p1 left"	},
 	{"P1 Right",		BIT_DIGITAL,	DrvJoy1 + 3,	"p1 right"	},
 	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
 	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy1 + 6,	"p1 fire 3"	},
 
-	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
+	{"P2 Coin",			BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"	},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 1,	"p2 start"	},
-	{"P2 Up",		BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
-	{"P2 Down",		BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
-	{"P2 Left",		BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
+	{"P2 Up",			BIT_DIGITAL,	DrvJoy1 + 8,	"p2 up"		},
+	{"P2 Down",			BIT_DIGITAL,	DrvJoy1 + 9,	"p2 down"	},
+	{"P2 Left",			BIT_DIGITAL,	DrvJoy1 + 10,	"p2 left"	},
 	{"P2 Right",		BIT_DIGITAL,	DrvJoy1 + 11,	"p2 right"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 12,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 13,	"p2 fire 2"	},
 	{"P2 Button 3",		BIT_DIGITAL,	DrvJoy1 + 14,	"p2 fire 3"	},
 
-	{"P3 Coin",		BIT_DIGITAL,	DrvJoy4 + 2,	"p3 coin"	},
+	{"P3 Coin",			BIT_DIGITAL,	DrvJoy4 + 2,	"p3 coin"	},
 	{"P3 Start",		BIT_DIGITAL,	DrvJoy3 + 2,	"p3 start"	},
-	{"P3 Up",		BIT_DIGITAL,	DrvJoy2 + 0,	"p3 up"		},
-	{"P3 Down",		BIT_DIGITAL,	DrvJoy2 + 1,	"p3 down"	},
-	{"P3 Left",		BIT_DIGITAL,	DrvJoy2 + 2,	"p3 left"	},
+	{"P3 Up",			BIT_DIGITAL,	DrvJoy2 + 0,	"p3 up"		},
+	{"P3 Down",			BIT_DIGITAL,	DrvJoy2 + 1,	"p3 down"	},
+	{"P3 Left",			BIT_DIGITAL,	DrvJoy2 + 2,	"p3 left"	},
 	{"P3 Right",		BIT_DIGITAL,	DrvJoy2 + 3,	"p3 right"	},
 	{"P3 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p3 fire 1"	},
 	{"P3 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p3 fire 2"	},
 	{"P3 Button 3",		BIT_DIGITAL,	DrvJoy2 + 6,	"p3 fire 3"	},
 
-	{"P4 Coin",		BIT_DIGITAL,	DrvJoy4 + 3,	"p4 coin"	},
+	{"P4 Coin",			BIT_DIGITAL,	DrvJoy4 + 3,	"p4 coin"	},
 	{"P4 Start",		BIT_DIGITAL,	DrvJoy3 + 3,	"p4 start"	},
-	{"P4 Up",		BIT_DIGITAL,	DrvJoy2 + 8,	"p4 up"		},
-	{"P4 Down",		BIT_DIGITAL,	DrvJoy2 + 9,	"p4 down"	},
-	{"P4 Left",		BIT_DIGITAL,	DrvJoy2 + 10,	"p4 left"	},
+	{"P4 Up",			BIT_DIGITAL,	DrvJoy2 + 8,	"p4 up"		},
+	{"P4 Down",			BIT_DIGITAL,	DrvJoy2 + 9,	"p4 down"	},
+	{"P4 Left",			BIT_DIGITAL,	DrvJoy2 + 10,	"p4 left"	},
 	{"P4 Right",		BIT_DIGITAL,	DrvJoy2 + 11,	"p4 right"	},
 	{"P4 Button 1",		BIT_DIGITAL,	DrvJoy2 + 12,	"p4 fire 1"	},
 	{"P4 Button 2",		BIT_DIGITAL,	DrvJoy2 + 13,	"p4 fire 2"	},
 	{"P4 Button 3",		BIT_DIGITAL,	DrvJoy2 + 14,	"p4 fire 3"	},
 
-	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
-	{"Service",		BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
-	{"Service Mode",    BIT_DIGITAL,	DrvJoy3 + 5,	"diag"	},
-	{"Dip A",		BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
-	{"Dip B",		BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
-	{"Dip C",		BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
+	{"Reset",			BIT_DIGITAL,	&DrvReset,		"reset"		},
+	{"Service",			BIT_DIGITAL,	DrvJoy3 + 4,	"service"	},
+	{"Service Mode",    BIT_DIGITAL,	DrvJoy3 + 5,	"diag"		},
+	{"Dip A",			BIT_DIPSWITCH,	DrvDips + 0,	"dip"		},
+	{"Dip B",			BIT_DIPSWITCH,	DrvDips + 1,	"dip"		},
+	{"Dip C",			BIT_DIPSWITCH,	DrvDips + 2,	"dip"		},
 };
 
 STDINPUTINFO(Zerotm2k)
@@ -647,8 +648,8 @@ static struct {
 } cop_collision_info[2];
 
 static UINT16 cop_hit_status, cop_hit_baseadr;
-INT16 cop_hit_val[3];
-UINT16 cop_hit_val_stat;
+static INT16 cop_hit_val[3];
+static UINT16 cop_hit_val_stat;
 static UINT32 cop_sort_ram_addr, cop_sort_lookup;
 static UINT16 cop_sort_param;
 
@@ -1195,47 +1196,90 @@ static void cop_dma_trigger_write(UINT16)
 	}
 }
 
+struct cop_sortstr {
+	UINT32 sortby;
+	UINT16 data;
+};
+
+static void merge(cop_sortstr arr[], cop_sortstr left[], int left_size, cop_sortstr right[], int right_size, int ascending) {
+    int i = 0, j = 0, k = 0;
+    int comparison;
+
+    while (i < left_size && j < right_size) {
+        if (ascending) {
+            comparison = (left[i].sortby <= right[j].sortby);
+        } else {
+            comparison = (left[i].sortby >= right[j].sortby);
+        }
+
+        if (comparison) {
+            arr[k] = left[i];
+            i++;
+        } else {
+            arr[k] = right[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < left_size) {
+        arr[k] = left[i];
+        i++;
+        k++;
+    }
+
+    while (j < right_size) {
+        arr[k] = right[j];
+        j++;
+        k++;
+    }
+}
+
+static void mergeSort(cop_sortstr arr[], int size, int ascending) {
+    if (size <= 1)
+        return;
+
+    int mid = size / 2;
+    cop_sortstr* left = (cop_sortstr*)BurnMalloc(mid * sizeof(cop_sortstr));
+    cop_sortstr* right = (cop_sortstr*)BurnMalloc((size - mid) * sizeof(cop_sortstr));
+
+    for (int i = 0; i < mid; i++)
+        left[i] = arr[i];
+
+    for (int i = mid; i < size; i++)
+        right[i - mid] = arr[i];
+
+    mergeSort(left, mid, ascending);
+    mergeSort(right, size - mid, ascending);
+    merge(arr, left, mid, right, size - mid, ascending);
+
+    BurnFree(left);
+    BurnFree(right);
+}
+
 static void cop_sort_dma_trig_write(UINT16 data)
 {
-	UINT16 sort_size;
+	UINT16 sort_size = data;
 
-	sort_size = data;
+	cop_sortstr *ss = (cop_sortstr*)BurnMalloc(sort_size * sizeof(cop_sortstr));
 
-	{
-		INT32 i,j;
-		UINT8 xchg_flag;
-		UINT32 addri,addrj;
-		UINT16 vali,valj;
-
-		/* TODO: use a better algorithm than bubble sort! */
-		for(i=2;i<sort_size;i+=2)
-		{
-			for(j=i-2;j<sort_size;j+=2)
-			{
-				addri = cop_sort_ram_addr+VezReadWord(cop_sort_lookup+i);
-				addrj = cop_sort_ram_addr+VezReadWord(cop_sort_lookup+j);
-
-				vali = VezReadWord(addri);
-				valj = VezReadWord(addrj);
-
-				switch(cop_sort_param)
-				{
-					case 2: xchg_flag = (vali > valj); break;
-					case 1: xchg_flag = (vali < valj); break;
-					default: xchg_flag = 0; break;
-				}
-
-				if(xchg_flag)
-				{
-					UINT16 xch_val;
-
-					xch_val = VezReadWord(cop_sort_lookup+i);
-					VezWriteWord(cop_sort_lookup+i,VezReadWord(cop_sort_lookup+j));
-					VezWriteWord(cop_sort_lookup+j,xch_val);
-				}
-			}
-		}
+	for (INT32 i = 0; i < sort_size; i++) {
+		ss[i].data = VezReadWord(cop_sort_lookup + (i << 1));
+		ss[i].sortby = VezReadLong(cop_sort_ram_addr + ss[i].data);
 	}
+
+	switch (cop_sort_param) {
+		case 1: mergeSort(ss, sort_size, 1); // <
+			break;
+		case 2: mergeSort(ss, sort_size, 0); // >
+			break;
+	}
+
+	for (INT32 i = 0; i < sort_size; i++) {
+		VezWriteWord(cop_sort_lookup + (i << 1), ss[i].data);
+	}
+
+	BurnFree(ss);
 }
 
 static void raiden2_crtc_write(INT32 offset, UINT8 data)
@@ -1636,6 +1680,36 @@ static void __fastcall zeroteam_main_write(UINT32 address, UINT8 data)
 	}
 }
 
+static void __fastcall xsedae_main_write(UINT32 address, UINT8 data)
+{
+	if ((address & 0xff000) == 0x0e000) {
+		DrvPalRAM[address & 0xfff] = data;
+		palette_update_entry(address & 0xffe);
+		return;
+	}
+
+	if ((address & 0xffc00) == 0x00000) {
+		DrvMainRAM[address] = data;
+		return;
+	}
+
+	switch (address)
+	{
+		case 0x0470:
+		case 0x0471:
+		case 0x06cc:
+		case 0x06cd:
+		case 0x068e:
+		case 0x068f:
+		return;		// nop
+	}
+
+	if ((address & 0xffc00) == 0x00400) {
+		DrvMainRAM[address] = data;
+		rd2_cop_write(address, data);
+	}
+}
+
 static UINT8 __fastcall raiden2_main_read(UINT32 address)
 {
 	if ((address & 0xffc00) == 0x00000) {
@@ -1806,6 +1880,52 @@ static UINT8 __fastcall nzeroteam_main_read(UINT32 address)
 
 		case 0x74d:
 			return DrvInputs[1] >> 8; 
+	}
+
+	return 0;
+}
+
+static UINT8 __fastcall xsedae_main_read(UINT32 address)
+{
+	if ((address & 0xffc00) == 0x00000) {
+		return DrvMainRAM[address];
+	}
+
+	switch (address)
+	{
+		case 0x0740:
+			return DrvDips[0];
+			
+		case 0x0741:
+			return DrvDips[1];
+
+		case 0x0744:
+			return DrvInputs[0];
+			
+		case 0x0745:
+			return DrvInputs[0] >> 8;
+
+		case 0x0748:
+			return DrvInputs[1];
+			
+		case 0x0749:
+			return DrvInputs[1] >> 8;
+
+		case 0x074a:
+			return 0xff;
+			
+		case 0x074b:
+			return 0xff;
+
+		case 0x074c:
+			return DrvInputs[2];
+			
+		case 0x074d:
+			return DrvInputs[2] >> 8;
+	}
+
+	if ((address & 0xffc00) == 0x00400) {
+		return rd2_cop_read(address);
 	}
 
 	return 0;
@@ -2091,8 +2211,8 @@ static INT32 DrvDoReset()
 
 	if (game_select >= 4) sprites_cur_start = 0x1000 - 8; // or no sprites in newzeroteam
 
-	memset (hold_coin, 0, 4 * sizeof(INT32));
-	
+	hold_coin.reset();
+
 	HiscoreReset();
 
 	return 0;
@@ -2153,7 +2273,7 @@ static void DrvCreateAlphaTable(INT32 raiden2_alpha)
 {
 	memset (DrvAlphaTable, 0, 0x800); 
 
-	if (raiden2_alpha) { // raiden2/dx
+	if (raiden2_alpha == 1) { // raiden2/dx
 		DrvAlphaTable[0x380] = 1;
 		DrvAlphaTable[0x5de] = 1;
 		DrvAlphaTable[0x75c] = 1;
@@ -2178,7 +2298,7 @@ static void DrvCreateAlphaTable(INT32 raiden2_alpha)
 		memset (DrvAlphaTable + 0x77d, 1, 0x02);
 		memset (DrvAlphaTable + 0x7c8, 1, 0x08);
 	}
-	else // zero team
+	else if (raiden2_alpha == 0) // zero team
 	{
 		DrvAlphaTable[0x37e] = 1;
 		DrvAlphaTable[0x38e] = 1;
@@ -2537,6 +2657,44 @@ static void zeroteam_common_map()
 	VezClose();
 }
 
+static void xsedae_common_map()
+{
+	VezInit(0, V30_TYPE);
+	VezOpen(0);
+//	VezMapArea(0x00000, 0x007ff, 0, DrvMainRAM);
+//	VezMapArea(0x00000, 0x007ff, 1, DrvMainRAM); // handler
+	VezMapArea(0x00000, 0x007ff, 2, DrvMainRAM); // fetch (map shift is 11 bits (800))
+	VezMapArea(0x00800, 0x0b7ff, 0, DrvMainRAM + 0x00800);
+	VezMapArea(0x00800, 0x0b7ff, 1, DrvMainRAM + 0x00800);
+	VezMapArea(0x00800, 0x0b7ff, 2, DrvMainRAM + 0x00800);
+	VezMapArea(0x0b800, 0x0bfff, 0, DrvBgRAM);
+	VezMapArea(0x0b800, 0x0bfff, 1, DrvBgRAM);
+	VezMapArea(0x0b800, 0x0bfff, 2, DrvBgRAM);
+	VezMapArea(0x0c000, 0x0c7ff, 0, DrvFgRAM);
+	VezMapArea(0x0c000, 0x0c7ff, 1, DrvFgRAM);
+	VezMapArea(0x0c000, 0x0c7ff, 2, DrvFgRAM);
+	VezMapArea(0x0c800, 0x0cfff, 0, DrvMgRAM);
+	VezMapArea(0x0c800, 0x0cfff, 1, DrvMgRAM);
+	VezMapArea(0x0c800, 0x0cfff, 2, DrvMgRAM);
+	VezMapArea(0x0d000, 0x0dfff, 0, DrvTxRAM);
+	VezMapArea(0x0d000, 0x0dfff, 1, DrvTxRAM);
+	VezMapArea(0x0d000, 0x0dfff, 2, DrvTxRAM);
+	VezMapArea(0x0e000, 0x0efff, 0, DrvPalRAM);
+//	VezMapArea(0x0e000, 0x0efff, 1, DrvPalRAM); // handler
+	VezMapArea(0x0e000, 0x0efff, 2, DrvPalRAM);
+	VezMapArea(0x0f000, 0x0ffff, 0, DrvSprRAM);
+	VezMapArea(0x0f000, 0x0ffff, 1, DrvSprRAM);
+	VezMapArea(0x0f000, 0x0ffff, 2, DrvSprRAM);
+	VezMapArea(0x10000, 0x1ffff, 0, DrvMainRAM + 0x10000);
+	VezMapArea(0x10000, 0x1ffff, 1, DrvMainRAM + 0x10000);
+	VezMapArea(0x10000, 0x1ffff, 2, DrvMainRAM + 0x10000);
+	VezMapArea(0x20000, 0xfffff, 0, DrvMainROM + 0x20000);
+	VezMapArea(0x20000, 0xfffff, 2, DrvMainROM + 0x20000);
+	VezSetWriteHandler(xsedae_main_write);
+	VezSetReadHandler(xsedae_main_read);
+	VezClose();
+}
+
 static INT32 Raiden2Init()
 {
 	game_select = 0;
@@ -2864,12 +3022,13 @@ static INT32 XsedaeInit()
 
 		DrvGfxDecode();
 		DrvCreateTransTab();
-		DrvCreateAlphaTable(0);
+		DrvCreateAlphaTable(-1);
 	}
 
-	zeroteam_common_map();
+	xsedae_common_map();
 
 	seibu_sound_init(1|4, 0, 3579545, 3579545, 1022727 / 132);
+	BurnYM2151SetAllRoutes(1.00, BURN_SND_ROUTE_BOTH);
 
 	GenericTilesInit();
 
@@ -3363,8 +3522,12 @@ static INT32 DrvDraw()
 static INT32 ZeroteamDraw() // sprite priorities different
 {
 	if (DrvRecalc) {
-		for (INT32 i = 0; i < 0x1000; i+=2) {
-			palette_update_entry(i);
+		if (game_select == 2 || game_select == 3) {
+			for (INT32 i = 0; i < 0x1000; i+=2) {
+				palette_update_entry(i);
+			}
+		} else {
+			palettedma();
 		}
 		DrvRecalc = 0;
 	}
@@ -3390,42 +3553,25 @@ static INT32 ZeroteamDraw() // sprite priorities different
 
 	return 0;
 }
-static UINT32 framecntr = 0;
-static UINT32 seibu_start = 0;
 
 static void compile_inputs()
 {
 	memset (DrvInputs, 0xff, 3*sizeof(short));
+	UINT8 coin = 0xff;
 	for (INT32 i = 0; i < 16; i++) {
 		DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 		DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
 		DrvInputs[2] ^= (DrvJoy3[i] & 1) << i;
+		coin         ^= (DrvJoy4[i] & 1) << i;
 	}
 
 	DrvInputs[2] = (DrvInputs[2] & 0x00ff) | (DrvDips[2] << 8);
 
-	// hold coin down for a few frames so that it registers
-	static INT32 previous_coin = seibu_coin_input;
-	seibu_coin_input = 0xff;
-
-	for (INT32 i = 0; i < 4; i++) {
-		if ((previous_coin & (1 << i)) == 0 && DrvJoy4[i]) {
-			hold_coin[i] = 4;
-			framecntr = 0;
-		}
-
-		if (hold_coin[i]) { // only hold for 4 frames, with no extra from input holddown.
-			hold_coin[i]--;
-			if (framecntr & 1)
-				seibu_start = 1;
-			if (seibu_start)
-				seibu_coin_input ^= (1 << i);
-			if (!hold_coin[i])
-				seibu_start = 0;
-		}
-	}
-	//bprintf(0, _T("%X"), (seibu_coin_input == 0xff) ? 0 : seibu_coin_input);
-	framecntr++;
+	hold_coin.checklow(0, coin, 1<<0, 4);
+	hold_coin.checklow(1, coin, 1<<1, 4);
+	hold_coin.checklow(2, coin, 1<<2, 4);
+	hold_coin.checklow(3, coin, 1<<3, 4);
+	seibu_coin_input = coin;
 }
 
 static INT32 DrvFrame()
@@ -3440,85 +3586,26 @@ static INT32 DrvFrame()
 	compile_inputs();
 
 	INT32 nInterleave = 128;
-	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { (16000000 * 100) / 5547, (3579545 * 100) / 5547 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
 	ZetOpen(0);
 	VezOpen(0);
-	
+
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
-		INT32 nSegment = nCyclesTotal[0] / nInterleave;
+		CPU_RUN(0, Vez);
+		if (i == (nInterleave-2)) VezSetIRQLineAndVector(0, 0xc0/4, CPU_IRQSTATUS_ACK);
 
-		nCyclesDone[0] += VezRun(nSegment);
-		if (i == (nInterleave-2)) VezSetIRQLineAndVector(0, 0xc0/4, CPU_IRQSTATUS_AUTO);
-
-		nSegment = (nCyclesTotal[1] / nInterleave) * (i+1);
-		nCyclesDone[1] += ZetRun(nSegment - ZetTotalCycles());
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			seibu_sound_update(pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
+		CPU_RUN_TIMER(1);
 	}
 
-	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			seibu_sound_update(pSoundBuf, nSegmentLength);
-		}
-	}
-	
 	VezClose();
 	ZetClose();
-
-	if (pBurnDraw) {
-		BurnDrvRedraw();
-	}
-
-	return 0;
-}
-
-static INT32 ZeroteamFrame()
-{
-	if (DrvReset) {
-		DrvDoReset();
-	}
-
-	VezNewFrame();
-	ZetNewFrame();
-
-	compile_inputs();
-
-	INT32 nInterleave = 128;
-	INT32 nCyclesTotal[2] = { (16000000 * 100) / 5547, (3579545 * 100) / 5547 };
-	INT32 nCyclesDone[2] = { 0, 0 };
-
-	ZetOpen(0);
-	VezOpen(0);
-
-	for (INT32 i = 0; i < nInterleave; i++)
-	{
-		INT32 nSegment = nCyclesTotal[0] / nInterleave;
-
-		nCyclesDone[0] += VezRun(nSegment);
-		if (i == (nInterleave-2)) VezSetIRQLineAndVector(0, 0xc0/4, CPU_IRQSTATUS_AUTO);
-
-		BurnTimerUpdateYM3812(i * (nCyclesTotal[1] / nInterleave));
-	}
-
-	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 
 	if (pBurnSoundOut) {
 		seibu_sound_update(pBurnSoundOut, nBurnSoundLen);
 	}
-
-	VezClose();
-	ZetClose();
 
 	if (pBurnDraw) {
 		BurnDrvRedraw();
@@ -3589,10 +3676,17 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		SCAN_VAR(mg_bank);
 		SCAN_VAR(bg_bank);
 		SCAN_VAR(fg_bank);
+		SCAN_VAR(tx_bank);
 		SCAN_VAR(r2dx_gameselect);
 		SCAN_VAR(r2dx_okibank);
 
 		SeibuCopScan(nAction);
+
+		hold_coin.scan();
+
+		if (game_select == 4 || game_select == 6) {
+			EEPROMScan(nAction, pnMin);
+		}
 	}
 
 	if (nAction & ACB_WRITE) {
@@ -3606,12 +3700,6 @@ static INT32 DrvScan(INT32 nAction,INT32 *pnMin)
 		VezClose();
 
 		DrvRecalc = 1;
-	}
-
-	if (nAction & ACB_NVRAM) {
-		if (game_select == 4 || game_select == 6) {
-			EEPROMScan(nAction, pnMin);
-		}
 	}
 
 	return 0;
@@ -3821,7 +3909,7 @@ STD_ROM_FN(raiden2sw)
 
 struct BurnDriver BurnDrvRaiden2sw = {
 	"raiden2sw", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Switzerland)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
+	"Raiden II (Switzerland)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2swRomInfo, raiden2swRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -3910,6 +3998,48 @@ struct BurnDriver BurnDrvRaiden2nl = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2nlRomInfo, raiden2nlRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
+	Raiden2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	240, 320, 3, 4
+};
+
+
+// Raiden II (Australia)
+
+static struct BurnRomInfo raiden2auRomDesc[] = {
+	{ "1.u0211",						0x080000, 0xc1fc70f5, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "2.u0212",						0x080000, 0x396410f9, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "copx-d2.u0313",					0x040000, 0xa6732ff9, 2 | BRF_PRG | BRF_ESS }, //  2 COPX MCU data
+
+	{ "5.u1110",						0x010000, 0xc2028ba2, 3 | BRF_PRG | BRF_ESS }, //  3 Z80 Code
+
+	{ "7.u0724",						0x020000, 0xc9ec9469, 4 | BRF_GRA },           //  4 Characters
+
+	{ "raiden_2_seibu_bg-1.u0714",		0x200000, 0xe61ad38e, 5 | BRF_GRA },           //  5 Tiles
+	{ "raiden_2_seibu_bg-2.u075",		0x200000, 0xa694a4bb, 5 | BRF_GRA },           //  6
+
+	{ "raiden_2_seibu_obj-1.u0811",		0x200000, 0xff08ef0b, 6 | BRF_GRA },           //  7 Sprites (Encrypted)
+	{ "raiden_2_seibu_obj-2.u082",		0x200000, 0x638eb771, 6 | BRF_GRA },           //  8
+	{ "raiden_2_seibu_obj-3.u0837",		0x200000, 0x897a0322, 6 | BRF_GRA },           //  9
+	{ "raiden_2_seibu_obj-4.u0836",		0x200000, 0xb676e188, 6 | BRF_GRA },           // 10
+
+	{ "6.u1017",						0x040000, 0xfb0fca23, 7 | BRF_SND },           // 11 OKI #0 Samples
+
+	{ "voice_2.u1018",					0x040000, 0x8cf0d17e, 8 | BRF_SND },           // 12 OKI #1 Samples
+
+	{ "jj4b02__ami18cv8-15.u0342",		0x000155, 0x057a9cdc, 0 | BRF_OPT },           // 13 Pals
+	{ "jj4b01__mmipal16l8bcn.u0341",	0x000117, 0x20931f21, 0 | BRF_OPT },           // 14
+};
+
+STD_ROM_PICK(raiden2au)
+STD_ROM_FN(raiden2au)
+
+struct BurnDriver BurnDrvRaiden2au = {
+	"raiden2au", "raiden2", NULL, NULL, "1993",
+	"Raiden II (Australia)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	NULL, raiden2auRomInfo, raiden2auRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
 	Raiden2Init, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
 };
@@ -4041,7 +4171,7 @@ struct BurnDriver BurnDrvRaiden2i = {
 };
 
 
-// Raiden II (Korea)
+// Raiden II (harder, Korea)
 
 static struct BurnRomInfo raiden2kRomDesc[] = {
 	{ "k1.u0211",					0x080000, 0x1fcc08cf, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
@@ -4074,7 +4204,7 @@ STD_ROM_FN(raiden2k)
 
 struct BurnDriver BurnDrvRaiden2k = {
 	"raiden2k", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Korea)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	"Raiden II (harder, Korea)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2kRomInfo, raiden2kRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4099,7 +4229,7 @@ http://www.gamefaqs.com/coinop/arcade/game/10729.html
 
 */
 
-// Raiden II (Easy Version, Korea?)
+// Raiden II (easier, Korea)
 
 static struct BurnRomInfo raiden2eRomDesc[] = {
 	{ "r2_prg_0.u0211",				0x080000, 0x2abc848c, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
@@ -4132,7 +4262,7 @@ STD_ROM_FN(raiden2e)
 
 struct BurnDriver BurnDrvRaiden2e = {
 	"raiden2e", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Easy Version, Korea?)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	"Raiden II (easier, Korea)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2eRomInfo, raiden2eRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4141,7 +4271,7 @@ struct BurnDriver BurnDrvRaiden2e = {
 };
 
 
-// Raiden II (Easy Version, Japan?)
+// Raiden II (easier, Japan)
 
 static struct BurnRomInfo raiden2eaRomDesc[] = {
 	{ "r2.1.u0211",					0x080000, 0xd7041be4, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
@@ -4174,7 +4304,7 @@ STD_ROM_FN(raiden2ea)
 
 struct BurnDriver BurnDrvRaiden2ea = {
 	"raiden2ea", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Easy Version, Japan?)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	"Raiden II (easier, Japan)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2eaRomInfo, raiden2eaRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4183,7 +4313,7 @@ struct BurnDriver BurnDrvRaiden2ea = {
 };
 
 
-// Raiden II (Easy Version, US set 2)
+// Raiden II (easier, US set 2)
 // same as raiden2ea, different region
 
 static struct BurnRomInfo raiden2euRomDesc[] = {
@@ -4217,7 +4347,7 @@ STD_ROM_FN(raiden2eu)
 
 struct BurnDriver BurnDrvRaiden2eu = {
 	"raiden2eu", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Easy Version, US set 2)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
+	"Raiden II (easier, US set 2)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2euRomInfo, raiden2euRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4226,7 +4356,7 @@ struct BurnDriver BurnDrvRaiden2eu = {
 };
 
 
-// Raiden II (Easy Version, US set 1)
+// Raiden II (easier, US set 1)
 // sort of a mixture of raiden2e easy set with voice ROM of raiden2ea and 2f and a unique sound ROM
 
 static struct BurnRomInfo raiden2euaRomDesc[] = {
@@ -4262,7 +4392,7 @@ STD_ROM_FN(raiden2eua)
 
 struct BurnDriver BurnDrvRaiden2eua = {
 	"raiden2eua", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Easy Version, US set 1)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
+	"Raiden II (easier, US set 1)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2euaRomInfo, raiden2euaRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4271,7 +4401,7 @@ struct BurnDriver BurnDrvRaiden2eua = {
 };
 
 
-// Raiden II (Easy Version, Germany)
+// Raiden II (easier, Germany)
 // this is the same code revision as raiden2eua but a german region
 
 static struct BurnRomInfo raiden2egRomDesc[] = {
@@ -4307,7 +4437,7 @@ STD_ROM_FN(raiden2eg)
 
 struct BurnDriver BurnDrvRaiden2eg = {
 	"raiden2eg", "raiden2", NULL, NULL, "1993",
-	"Raiden II (Easy Version, Germany)\0", NULL, "Seibu Kaihatsu (Tuning license)", "Miscellaneous",
+	"Raiden II (easier, Germany)\0", NULL, "Seibu Kaihatsu (Tuning license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2egRomInfo, raiden2egRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4353,7 +4483,7 @@ struct BurnDriver BurnDrvRaiden2eup = {
 	"raiden2eup", "raiden2", NULL, NULL, "1993",
 	"Raiden II (easier, US, prototype? 11-16)\0", NULL, "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL | BDF_PROTOTYPE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2eupRomInfo, raiden2eupRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
 	Raiden2aInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
 	240, 320, 3, 4
@@ -4402,7 +4532,7 @@ struct BurnDriver BurnDrvRaiden2eub = {
 };
 
 
-// Raiden II (harder, Raiden DX Hardware)
+// Raiden II (harder, Raiden DX hardware, Korea)
 // this set is very weird, it's Raiden II on a Raiden DX board, I'm assuming for now that it uses Raiden DX graphics, but could be wrong.
 
 static struct BurnRomInfo raiden2dxRomDesc[] = {
@@ -4436,7 +4566,7 @@ STD_ROM_FN(raiden2dx)
 
 struct BurnDriver BurnDrvRaiden2dx = {
 	"raiden2dx", "raiden2", NULL, NULL, "1993",
-	"Raiden II (harder, Raiden DX Hardware)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
+	"Raiden II (harder, Raiden DX hardware, Korea)\0", NULL, "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE  | BDF_ORIENTATION_VERTICAL | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, raiden2dxRomInfo, raiden2dxRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, Raiden2DIPInfo,
@@ -4901,7 +5031,7 @@ struct BurnDriver BurnDrvRaidendxch = {
 
 /* Zero Team sets */
 
-// Zero Team USA (set 1, US, Fabtek license)
+// Zero Team USA (US)
 
 static struct BurnRomInfo zeroteamRomDesc[] = {
 	{ "seibu__1.u024.5k",		0x040000, 0x25aa5ba4, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
@@ -4935,16 +5065,16 @@ STD_ROM_FN(zeroteam)
 
 struct BurnDriver BurnDrvZeroteam = {
 	"zeroteam", NULL, NULL, NULL, "1993",
-	"Zero Team USA (set 1, US, Fabtek license)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	"Zero Team USA (US)\0", "Unemulated protection", "Seibu Kaihatsu (Fabtek license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamRomInfo, zeroteamRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
 
-// Zero Team (set 2, Japan? (earlier?))
+// Zero Team (Japan?, earlier?, set 1)
 // No licensee, original japan?
 
 static struct BurnRomInfo zeroteamaRomDesc[] = {
@@ -4979,11 +5109,11 @@ STD_ROM_FN(zeroteama)
 
 struct BurnDriver BurnDrvZeroteama = {
 	"zeroteama", "zeroteam", NULL, NULL, "1993",
-	"Zero Team (set 2, Japan? (earlier?))\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	"Zero Team (Japan?, earlier?, set 1)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamaRomInfo, zeroteamaRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -4996,7 +5126,7 @@ problem of the 3.6v lithium battery dying and the missing keys to cause the spri
 // sets, using the sound and char ROMs from us set and code from later japan set. This would make sense if it was dumped
 // from a 'fixed, suicide free' modified us board where someone swapped in the later suicideless japan code ROMs.
 
-// Zero Team (set 3, Japan? (later batteryless))
+// Zero Team (Japan?, later batteryless)
 // No licensee, later japan?
 
 static struct BurnRomInfo zeroteambRomDesc[] = {
@@ -5031,16 +5161,16 @@ STD_ROM_FN(zeroteamb)
 
 struct BurnDriver BurnDrvZeroteamb = {
 	"zeroteamb", "zeroteam", NULL, NULL, "1993",
-	"Zero Team (set 3, Japan? (later batteryless))\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	"Zero Team (Japan?, later batteryless)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteambRomInfo, zeroteambRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
 
-// Zero Team (set 4, Taiwan, Liang Hwa license)
+// Zero Team (Taiwan)
 // Liang Hwa, Taiwan licensee, no special word under logo on title
 
 static struct BurnRomInfo zeroteamcRomDesc[] = {
@@ -5075,16 +5205,16 @@ STD_ROM_FN(zeroteamc)
 
 struct BurnDriver BurnDrvZeroteamc = {
 	"zeroteamc", "zeroteam", NULL, NULL, "1993",
-	"Zero Team (set 4, Taiwan, Liang Hwa license)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	"Zero Team (Taiwan)\0", "Unemulated protection", "Seibu Kaihatsu (Liang Hwa license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamcRomInfo, zeroteamcRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
 
-// Zero Team (set 5, Korea, Dream Soft license)
+// Zero Team (Korea)
 // Dream Soft, Korea licensee, no special word under logo on title; board had serial 'no 1041' on it.
 // this is weird, on other zt sets the ROM order is 1 3 2 4, but this one is 1 3 4 2. blame seibu or whoever marked the ROMs, which were labeled in pen
 
@@ -5120,11 +5250,55 @@ STD_ROM_FN(zeroteamd)
 
 struct BurnDriver BurnDrvZeroteamd = {
 	"zeroteamd", "zeroteam", NULL, NULL, "1993",
-	"Zero Team (set 5, Korea, Dream Soft license)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	"Zero Team (Korea)\0", "Unemulated protection", "Seibu Kaihatsu (Dream Soft license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamdRomInfo, zeroteamdRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team (Japan?, earlier?, set 2)
+// shares chars ROMs with zeroteama
+
+static struct BurnRomInfo zeroteameRomDesc[] = {
+	{ "seibu_1_u024.5k",				0x040000, 0x76e69af5, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "seibu_3_u023.6k",				0x040000, 0x4a904880, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "seibu_2_u025.6l",				0x040000, 0xb97ab448, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "seibu_4_u026.5l",				0x040000, 0x1d43b9c1, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	{ "copx-d2.u0313.6n",				0x040000, 0xa6732ff9, 2 | BRF_PRG | BRF_OPT }, //  4 COPX MCU data
+
+	{ "seibu_5_u1110.5b",				0x010000, 0xefc484ca, 3 | BRF_PRG | BRF_ESS }, //  5 Z80 Code
+
+	{ "seibu_7_u072.5s",				0x010000, 0xeb10467f, 4 | BRF_GRA },           //  6 Characters
+	{ "seibu_8_u077.5r",				0x010000, 0xa0b2a09a, 4 | BRF_GRA },           //  7
+
+	{ "musha_back-1.u075.4s",			0x100000, 0x8b7f9219, 5 | BRF_GRA },           //  8 Tiles
+	{ "musha_back-2.u0714.2s",			0x080000, 0xce61c952, 5 | BRF_GRA },           //  9
+
+	{ "musha_obj-1.u0811.6f",			0x200000, 0x45be8029, 6 | BRF_GRA },           // 10 Sprites (Encrypted)
+	{ "musha_obj-2.u082.5f",			0x200000, 0xcb61c19d, 6 | BRF_GRA },           // 11
+
+	{ "seibu_6_u105.4a",				0x040000, 0x48be32b1, 7 | BRF_SND },           // 12 OKI Samples
+
+	{ "v3c001.pal.u0310",				0x000288, 0x00000000, 0 | BRF_NODUMP },        // 13 Pals
+	{ "v3c002.tibpal16l8-25.u0322",		0x000288, 0x00000000, 0 | BRF_NODUMP },        // 14
+	{ "v3c003.ami18cv8p-15.u0619",		0x000288, 0x00000000, 0 | BRF_NODUMP },        // 15
+	{ "v3c004x.ami18cv8pc-25.u0310",	0x000288, 0x00000000, 0 | BRF_NODUMP },        // 16
+};
+
+STD_ROM_PICK(zeroteame)
+STD_ROM_FN(zeroteame)
+
+struct BurnDriver BurnDrvZeroteame = {
+	"zeroteame", "zeroteam", NULL, NULL, "1993",
+	"Zero Team (Japan?, earlier?, set 2)\0", "Unemulated protection", "Seibu Kaihatsu", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zeroteameRomInfo, zeroteameRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -5168,7 +5342,7 @@ struct BurnDriver BurnDrvZeroteams = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamsRomInfo, zeroteamsRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -5222,7 +5396,7 @@ struct BurnDriver BurnDrvZeroteamsr = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zeroteamsrRomInfo, zeroteamsrRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
-	ZeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -5255,13 +5429,13 @@ static struct BurnRomInfo xsedaeRomDesc[] = {
 STD_ROM_PICK(xsedae)
 STD_ROM_FN(xsedae)
 
-struct BurnDriverD BurnDrvXsedae = {
-	"xsedae", NULL, NULL, NULL, "1993",
+struct BurnDriver BurnDrvXsedae = {
+	"xsedae", NULL, NULL, NULL, "1995",
 	"X Se Dae Quiz (Korea)\0", NULL, "Dream Island", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
-	0, 2, HARDWARE_MISC_POST90S, GBF_QUIZ, 0,
+	BDF_GAME_WORKING | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_QUIZ, 0,
 	NULL, xsedaeRomInfo, xsedaeRomName, NULL, NULL, NULL, NULL, Raiden2InputInfo, XsedaeDIPInfo,
-	XsedaeInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x800,
+	XsedaeInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -5366,14 +5540,53 @@ struct BurnDriver BurnDrvNzeroteam = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, nzeroteamRomInfo, nzeroteamRomName, NULL, NULL, NULL, NULL, NzeroteaInputInfo, NzeroteaDIPInfo,
-	NzeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	NzeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
 
-// New Zero Team (V33 SYSTEM TYPE_B hardware, China?)
+// New Zero Team (V33 SYSTEM TYPE_B hardware, Zhongguo Shantou Yihuang license)
 
 static struct BurnRomInfo nzeroteamaRomDesc[] = {
+	{ "seibu_1.u0224",			0x080000, 0xcb277b46, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "seibu_2.u0226",			0x080000, 0x6debbf78, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "copx-d3.bin",			0x020000, 0xfa2cf3ad, 2 | BRF_GRA },           //  2 Copx data
+
+	{ "seibu_3.u01019",			0x010000, 0x7ec1fbc3, 3 | BRF_PRG | BRF_ESS }, //  3 Z80 Code
+
+	{ "seibu_5.u0616",			0x010000, 0xce68ba3c, 4 | BRF_GRA },           //  4 Characters
+	{ "seibu_6.u0617",			0x010000, 0xcf44aea7, 4 | BRF_GRA },           //  5
+
+	{ "back-1",					0x100000, 0x8b7f9219, 5 | BRF_GRA },           //  6 Tiles
+	{ "back-2",					0x080000, 0xce61c952, 5 | BRF_GRA },           //  7
+
+	{ "obj-1",					0x200000, 0x45be8029, 6 | BRF_GRA },           //  8 Sprites (Encrypted)
+	{ "obj-2",					0x200000, 0xcb61c19d, 6 | BRF_GRA },           //  9
+
+	{ "seibu_4.u099",			0x040000, 0x48be32b1, 7 | BRF_SND },           // 10 OKI Samples
+	
+	{ "sysv33b-2.u0227.bin",	0x0117, 0xd9f4612f, 0 | BRF_OPT },
+	{ "sysv33b-1.u0222.bin",	0x0117, 0xf514a11f, 0 | BRF_OPT },
+};
+
+STD_ROM_PICK(nzeroteama)
+STD_ROM_FN(nzeroteama)
+
+struct BurnDriver BurnDrvNzeroteama = {
+	"nzeroteama", "zeroteam", NULL, NULL, "1997",
+	"New Zero Team (V33 SYSTEM TYPE_B hardware, Zhongguo Shantou Yihuang license)\0", NULL, "Seibu Kaihatsu (Zhongguo Shantou Yihuang license)", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, nzeroteamaRomInfo, nzeroteamaRomName, NULL, NULL, NULL, NULL, NzeroteaInputInfo, NzeroteaDIPInfo,
+	NzeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// New Zero Team (V33 SYSTEM TYPE_B hardware, Haoyunlai Trading Company license)
+
+static struct BurnRomInfo nzeroteambRomDesc[] = {
 	{ "prg1",				0x080000, 0x3c7d9410, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
 	{ "prg2",				0x080000, 0x6cba032d, 1 | BRF_PRG | BRF_ESS }, //  1
 
@@ -5396,16 +5609,16 @@ static struct BurnRomInfo nzeroteamaRomDesc[] = {
 	{ "sysv33b-1.u0222.bin",	0x0117, 0xf514a11f, 0 | BRF_OPT },
 };
 
-STD_ROM_PICK(nzeroteama)
-STD_ROM_FN(nzeroteama)
+STD_ROM_PICK(nzeroteamb)
+STD_ROM_FN(nzeroteamb)
 
-struct BurnDriver BurnDrvNzeroteama = {
-	"nzeroteama", "zeroteam", NULL, NULL, "1997",
-	"New Zero Team (V33 SYSTEM TYPE_B hardware, China?)\0", NULL, "Seibu Kaihatsu (Haoyunlai Trading Company license)", "Miscellaneous",
+struct BurnDriver BurnDrvNzeroteamb = {
+	"nzeroteamb", "zeroteam", NULL, NULL, "1997",
+	"New Zero Team (V33 SYSTEM TYPE_B hardware, Haoyunlai Trading Company license)\0", NULL, "Seibu Kaihatsu (Haoyunlai Trading Company license)", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
-	NULL, nzeroteamaRomInfo, nzeroteamaRomName, NULL, NULL, NULL, NULL, NzeroteaInputInfo, NzeroteaDIPInfo,
-	NzeroteamInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	NULL, nzeroteambRomInfo, nzeroteambRomName, NULL, NULL, NULL, NULL, NzeroteaInputInfo, NzeroteaDIPInfo,
+	NzeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };
 
@@ -5440,6 +5653,357 @@ struct BurnDriver BurnDrvZerotm2k = {
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
 	NULL, zerotm2kRomInfo, zerotm2kRomName, NULL, NULL, NULL, NULL, Zerotm2kInputInfo, NULL,
-	Zerotm2kInit, DrvExit, ZeroteamFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	Zerotm2kInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+#define ZEROTEAM_COMPONENTS																\
+	{ "copx-d2.u0313.6n",				0x040000, 0xa6732ff9, 2 | BRF_PRG | BRF_OPT },	\
+	{ "seibu__5.u1110.5b",				0x010000, 0x7ec1fbc3, 3 | BRF_PRG | BRF_ESS },	\
+	{ "seibu__7.u072.5s",				0x010000, 0x9f6aa0f0, 4 | BRF_GRA },			\
+	{ "seibu__8.u077.5r",				0x010000, 0x68f7dddc, 4 | BRF_GRA },			\
+	{ "musha_back-1.u075.4s",			0x100000, 0x8b7f9219, 5 | BRF_GRA },			\
+	{ "musha_back-2.u0714.2s",			0x080000, 0xce61c952, 5 | BRF_GRA },			\
+	{ "musha_obj-1.u0811.6f",			0x200000, 0x45be8029, 6 | BRF_GRA },			\
+	{ "musha_obj-2.u082.5f",			0x200000, 0xcb61c19d, 6 | BRF_GRA },			\
+	{ "seibu__6.u105.4a",				0x040000, 0x48be32b1, 7 | BRF_SND },			\
+	{ "v3c001.pal.u0310",				0x000288, 0x00000000, 0 | BRF_NODUMP },			\
+	{ "v3c002.tibpal16l8-25.u0322",		0x000288, 0x00000000, 0 | BRF_NODUMP },			\
+	{ "v3c003.ami18cv8p-15.u0619",		0x000288, 0x00000000, 0 | BRF_NODUMP },			\
+	{ "v3c004x.ami18cv8pc-25.u0310",	0x000288, 0x00000000, 0 | BRF_NODUMP },
+
+// Zero Team USA (Incubus, Hack)
+// Modified by YanYan
+// GOTVG 20240229
+
+static struct BurnRomInfo zteammmRomDesc[] = {
+	{ "ztmm__1.u024.5k",	0x040000, 0xc8bec908, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztmm__3.u023.6k",	0x040000, 0xb96f3a32, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztmm__2.u025.6l",	0x040000, 0x6fdfdf1c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztmm__4.u026.5l",	0x040000, 0x5dae1177, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteammm)
+STD_ROM_FN(zteammm)
+
+struct BurnDriver BurnDrvZteammm = {
+	"zteammm", "zeroteam", NULL, NULL, "2024",
+	"Zero Team USA (Incubus, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteammmRomInfo, zteammmRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Nightmare, Hack)
+// GOTVG 20181022
+
+static struct BurnRomInfo zteamemRomDesc[] = {
+	{ "ztem__1.u024.5k",	0x040000, 0xc1c66888, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztem__3.u023.6k",	0x040000, 0xf5c02ca4, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztem__2.u025.6l",	0x040000, 0x8ff58607, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztem__4.u026.5l",	0x040000, 0x58d7c48e, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamem)
+STD_ROM_FN(zteamem)
+
+struct BurnDriver BurnDrvZteamem = {
+	"zteamem", "zeroteam", NULL, NULL, "2018",
+	"Zero Team USA (Nightmare, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamemRomInfo, zteamemRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Warriors, Hack)
+// GOTVG 20180920
+
+static struct BurnRomInfo zteamdwRomDesc[] = {
+	{ "ztdw__1.u024.5k",	0x040000, 0xb47b73b7, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztdw__3.u023.6k",	0x040000, 0x81979a9b, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztdw__2.u025.6l",	0x040000, 0x7513250c, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztdw__4.u026.5l",	0x040000, 0x10341ede, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamdw)
+STD_ROM_FN(zteamdw)
+
+struct BurnDriver BurnDrvZteamdw = {
+	"zteamdw", "zeroteam", NULL, NULL, "2018",
+	"Zero Team USA (Warriors, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamdwRomInfo, zteamdwRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Providence, Hack)
+// Modified by YouTan
+// GOTVG 20240125
+
+static struct BurnRomInfo zteamdrRomDesc[] = {
+	{ "ztdr__1.u024.5k",	0x040000, 0xb2745c94, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztdr__3.u023.6k",	0x040000, 0x3a69d56e, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztdr__2.u025.6l",	0x040000, 0xbc42adf1, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztdr__4.u026.5l",	0x040000, 0x0d774a72, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamdr)
+STD_ROM_FN(zteamdr)
+
+struct BurnDriver BurnDrvZteamdr = {
+	"zteamdr", "zeroteam", NULL, NULL, "2024",
+	"Zero Team USA (Providence, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamdrRomInfo, zteamdrRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Question Mark, Hack)
+// Modified by iwhati
+// GOTVG 20220511
+
+static struct BurnRomInfo zteamwhRomDesc[] = {
+	{ "ztwh__1.u024.5k",	0x040000, 0x854149c1, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztwh__3.u023.6k",	0x040000, 0x0a8f8d95, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztwh__2.u025.6l",	0x040000, 0xd29c2966, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztwh__4.u026.5l",	0x040000, 0xeb3c3985, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamwh)
+STD_ROM_FN(zteamwh)
+
+struct BurnDriver BurnDrvZteamwh = {
+	"zteamwh", "zeroteam", NULL, NULL, "2022",
+	"Zero Team USA (Question Mark, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamwhRomInfo, zteamwhRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Infinite Cannon, Hack)
+// Modified by YanYan
+// GOTVG 20220220
+
+static struct BurnRomInfo zteamwxpRomDesc[] = {
+	{ "ztwxp__1.u024.5k",	0x040000, 0xaf84c07b, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztwxp__3.u023.6k",	0x040000, 0x89642d55, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztwxp__2.u025.6l",	0x040000, 0x29214880, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztwxp__4.u026.5l",	0x040000, 0x62a6acad, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamwxp)
+STD_ROM_FN(zteamwxp)
+
+struct BurnDriver BurnDrvZteamwxp = {
+	"zteamwxp", "zeroteam", NULL, NULL, "2022",
+	"Zero Team USA (Infinite Cannon, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamwxpRomInfo, zteamwxpRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Devil, Hack)
+// Modified by YanYan
+// GOTVG 20231118
+
+static struct BurnRomInfo zteamymRomDesc[] = {
+	{ "ztym__1.u024.5k",	0x040000, 0xbcf0c74f, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztym__3.u023.6k",	0x040000, 0x0e97523a, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztym__2.u025.6l",	0x040000, 0x01c5f0f4, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztym__4.u026.5l",	0x040000, 0xd5a90262, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamym)
+STD_ROM_FN(zteamym)
+
+struct BurnDriver BurnDrvZteamym = {
+	"zteamym", "zeroteam", NULL, NULL, "2023",
+	"Zero Team USA (Devil, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamymRomInfo, zteamymRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (God, Hack)
+// Modified by YanYan
+// GOTVG 20240227
+
+static struct BurnRomInfo zteamysRomDesc[] = {
+	{ "ztys__1.u024.5k",	0x040000, 0xb18507f8, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztys__3.u023.6k",	0x040000, 0x085be47f, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztys__2.u025.6l",	0x040000, 0x40483d13, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztys__4.u026.5l",	0x040000, 0x28237717, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamys)
+STD_ROM_FN(zteamys)
+
+struct BurnDriver BurnDrvZteamys = {
+	"zteamys", "zeroteam", NULL, NULL, "2024",
+	"Zero Team USA (God, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamysRomInfo, zteamysRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (God of War, Hack)
+// Modified by DouYan
+// GOTVG 20210611
+
+static struct BurnRomInfo zteamzsRomDesc[] = {
+	{ "ztzs__1.u024.5k",	0x040000, 0xc1308a39, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztzs__3.u023.6k",	0x040000, 0xa2854e6c, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztzs__2.u025.6l",	0x040000, 0x0985babe, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztzs__4.u026.5l",	0x040000, 0x34afb3ba, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteamzs)
+STD_ROM_FN(zteamzs)
+
+struct BurnDriver BurnDrvZteamzs = {
+	"zteamzs", "zeroteam", NULL, NULL, "2021",
+	"Zero Team USA (God of War, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamzsRomInfo, zteamzsRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (1v4, Hack)
+// GOTVG 20180220
+
+static struct BurnRomInfo zteam1v4RomDesc[] = {
+	{ "zt1v4__1.u024.5k",	0x040000, 0xc2f5bba6, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "zt1v4__3.u023.6k",	0x040000, 0xaa278057, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "seibu__2.u025.6l",	0x040000, 0x54f3d359, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "zt1v4__4.u026.5l",	0x040000, 0xae82d427, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteam1v4)
+STD_ROM_FN(zteam1v4)
+
+struct BurnDriver BurnDrvZteam1v4 = {
+	"zteam1v4", "zeroteam", NULL, NULL, "2018",
+	"Zero Team USA (1v4, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteam1v4RomInfo, zteam1v4RomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+
+// Zero Team USA (Plus, Hack)
+// Modified by iwhati
+// GOTVG 20220711
+
+static struct BurnRomInfo zteamplsRomDesc[] = {
+	{ "ztpls__1.u024.5k",	0x040000, 0xa3146641, 1 | BRF_PRG | BRF_ESS }, //  0 V30 Code
+	{ "ztpls__3.u023.6k",	0x040000, 0xdb2b9524, 1 | BRF_PRG | BRF_ESS }, //  1
+	{ "ztpls__2.u025.6l",	0x040000, 0xb2cc20a5, 1 | BRF_PRG | BRF_ESS }, //  2
+	{ "ztpls__4.u026.5l",	0x040000, 0xadf151f8, 1 | BRF_PRG | BRF_ESS }, //  3
+
+	ZEROTEAM_COMPONENTS
+};
+
+STD_ROM_PICK(zteampls)
+STD_ROM_FN(zteampls)
+
+struct BurnDriver BurnDrvZteampls = {
+	"zteampls", "zeroteam", NULL, NULL, "2022",
+	"Zero Team USA (Plus, Hack)\0", "Unemulated protection", "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 4, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, zteamplsRomInfo, zteamplsRomName, NULL, NULL, NULL, NULL, ZeroteamInputInfo, ZeroteamDIPInfo,
+	ZeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
+	320, 256, 4, 3
+};
+
+#undef ZEROTEAM_COMPONENTS
+
+
+// New Zero Team (Plus, Hack)
+// GOTVG 20180219
+
+static struct BurnRomInfo nzteampRomDesc[] = {
+	{ "nztp_1.u0224",			0x080000, 0xcc45b0c6, 1 | BRF_PRG | BRF_ESS }, //  0 V33 Code
+	{ "nztp_2.u0226",			0x080000, 0x8537b97d, 1 | BRF_PRG | BRF_ESS }, //  1
+
+	{ "copx-d3.bin",			0x020000, 0xfa2cf3ad, 2 | BRF_GRA },           //  2 Copx data
+
+	{ "seibu_3.u01019",			0x010000, 0x7ec1fbc3, 3 | BRF_PRG | BRF_ESS }, //  3 Z80 Code
+
+	{ "seibu_5.u0616",			0x010000, 0xce68ba3c, 4 | BRF_GRA },           //  4 Characters
+	{ "seibu_6.u0617",			0x010000, 0xcf44aea7, 4 | BRF_GRA },           //  5
+
+	{ "back-1",					0x100000, 0x8b7f9219, 5 | BRF_GRA },           //  6 Tiles
+	{ "back-2",					0x080000, 0xce61c952, 5 | BRF_GRA },           //  7
+
+	{ "obj-1",					0x200000, 0x45be8029, 6 | BRF_GRA },           //  8 Sprites (Encrypted)
+	{ "obj-2",					0x200000, 0xcb61c19d, 6 | BRF_GRA },           //  9
+
+	{ "seibu_4.u099",			0x040000, 0x48be32b1, 7 | BRF_SND },           // 10 OKI Samples
+
+	{ "sysv33b-2.u0227.bin",	0x000117, 0xd9f4612f, 0 | BRF_OPT },           // 11 PLDs
+	{ "sysv33b-1.u0222.bin",	0x000117, 0xf514a11f, 0 | BRF_OPT },           // 12
+};
+
+STD_ROM_PICK(nzteamp)
+STD_ROM_FN(nzteamp)
+
+struct BurnDriver BurnDrvNzteamp = {
+	"nzteamp", "zeroteam", NULL, NULL, "2018",
+	"New Zero Team (Plus, Hack)\0", NULL, "hack", "Miscellaneous",
+	NULL, NULL, NULL, NULL,
+	BDF_GAME_WORKING | BDF_CLONE | BDF_HACK | BDF_HISCORE_SUPPORTED, 2, HARDWARE_MISC_POST90S, GBF_SCRFIGHT, 0,
+	NULL, nzteampRomInfo, nzteampRomName, NULL, NULL, NULL, NULL, NzeroteaInputInfo, NzeroteaDIPInfo,
+	NzeroteamInit, DrvExit, DrvFrame, ZeroteamDraw, DrvScan, &DrvRecalc, 0x800,
 	320, 256, 4, 3
 };

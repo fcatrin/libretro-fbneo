@@ -84,7 +84,6 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 	nBurnDrvActive = nDrvNum;		// Set the driver number
 
-
 	if ((BurnDrvGetHardwareCode() & HARDWARE_PUBLIC_MASK) == HARDWARE_SNK_NEOCD) {
 		if (CDEmuInit()) {
 			printf("CD emu failed\n");
@@ -98,8 +97,10 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 	{ // Init input and audio, save blitter init for later. (reduce # of mode changes, nice for emu front-ends)
 		bVidOkay = 1;
+		bAudOkay = 1;
 		MediaInit();
 		bVidOkay = 0;
+		bAudOkay = 0;
 	}
 
 	// Define nMaxPlayers early; GameInpInit() needs it (normally defined in DoLibInit()).
@@ -108,8 +109,9 @@ int DrvInit(int nDrvNum, bool bRestore)
 
 	// if a config file was loaded, set bSaveInputs so that this config file won't be reset to default at exit
 	bSaveInputs = ConfigGameLoad(true);
-	InputMake(true);
+	if(bSaveInputs) ConfigGameLoadHardwareDefaults();
 
+	InputMake(true);
 	GameInpDefault();
 
 	if (DoLibInit())                         // Init the Burn library's driver
@@ -131,8 +133,6 @@ int DrvInit(int nDrvNum, bool bRestore)
 	ConfigCheatLoad();
 	// Reset the speed throttling code, so we don't 'jump' after the load
 	RunReset();
-	VidExit();
-	AudSoundExit();
 	return 0;
 }
 

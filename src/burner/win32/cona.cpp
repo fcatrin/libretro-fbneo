@@ -7,6 +7,8 @@
 
 int nIniVersion = 0;
 
+extern bool bBurnGunPositionalMode;
+
 struct VidPresetData VidPreset[4] = {
 	{ 640, 480},
 	{ 1024, 768},
@@ -45,11 +47,11 @@ int ConfigAppLoad()
 	}
 
 	// Go through each line of the config file
-	while (_fgetts(szLine, sizeof(szLine), h)) {
+	while (_fgetts(szLine, 1024, h)) {
 		int nLen = _tcslen(szLine);
 
 		// Get rid of the linefeed at the end
-		if (szLine[nLen - 1] == 10) {
+		if (nLen > 0 && szLine[nLen - 1] == 10) {
 			szLine[nLen - 1] = 0;
 			nLen--;
 		}
@@ -263,11 +265,17 @@ int ConfigAppLoad()
 
 		VAR(nAutoFireRate);
 
+		VAR(bRewindEnabled);
+		VAR(nRewindMemory);
+
 		VAR(EnableHiscores);
 		VAR(bBurnUseBlend);
 		VAR(BurnShiftEnabled);
 		VAR(bBurnGunDrawReticles);
+		VAR(bBurnGunPositionalMode);
 		VAR(bSkipStartupCheck);
+
+		VAR(nSlowMo);
 
 #ifdef INCLUDE_AVI_RECORDING
 		VAR(nAvi3x);
@@ -686,6 +694,12 @@ int ConfigAppSave()
 	_ftprintf(h, _T("\n// Auto-Fire Rate, non-linear - use the GUI to change this setting!\n"));
 	VAR(nAutoFireRate);
 
+	_ftprintf(h, _T("\n// Rewind, If non-zero, enable rewind feature.\n"));
+	VAR(bRewindEnabled);
+
+	_ftprintf(h, _T("\n// Memory allocated to the Rewind feature, in MegaBytes\n"));
+	VAR(nRewindMemory);
+
 	_ftprintf(h, _T("\n// If non-zero, enable high score saving support.\n"));
 	VAR(EnableHiscores);
 
@@ -698,8 +712,14 @@ int ConfigAppSave()
 	_ftprintf(h, _T("\n// If non-zero, enable lightgun reticle display support.\n"));
 	VAR(bBurnGunDrawReticles);
 
+	_ftprintf(h, _T("\n// If non-zero, enable lightgun positional mode (Sinden or real lightgun HW).\n"));
+	VAR(bBurnGunPositionalMode);
+
 	_ftprintf(h, _T("\n// If non-zero, DISABLE start-up rom scan (if needed).\n"));
 	VAR(bSkipStartupCheck);
+
+	_ftprintf(h, _T("\n// If non-zero, enable SlowMo T.A. [0 - 4]\n"));
+	VAR(nSlowMo);
 
 #ifdef INCLUDE_AVI_RECORDING
 	_ftprintf(h, _T("\n// If non-zero, enable 1x - 3x pixel output for the AVI writer.\n"));

@@ -16,6 +16,9 @@ static UINT8 *BlitRegs;
 
 INT32 i4x00_irq_enable;
 INT32 i4x00_blitter_timer = -1;
+
+static INT32 i4x00_cpu_speed; // to compute blitter delay
+
 static INT32 rombank;
 static INT32 screen_control;
 
@@ -40,6 +43,8 @@ static INT32 lastline = 0;
 static INT32 clip_min_y = 0;
 static INT32 clip_max_y = 0;
 INT32 i4x00_raster_update = 0;
+
+static INT32 is_blazing = 0;
 
 static void palette_update()
 {
@@ -382,7 +387,7 @@ void i4x00_draw_scanline(INT32 drawto)
 
 		for (INT32 pri = 3; pri >= 0; pri--)
 		{
-			if (nBurnLayer & 2) draw_layers(pri);
+			if (nBurnLayer & (1<<pri)) draw_layers(pri);
 		}
 
 		if (nSpriteEnable & 1) draw_sprites();
@@ -409,6 +414,10 @@ INT32 i4x00_draw()
 	return 0;
 }
 
+static INT32 usec_to_cycles(INT32 mhz, double usec) {
+	return ((double)((double)mhz / 1000000) * usec);
+}
+
 static void blitter_write()
 {
 	{
@@ -423,6 +432,11 @@ static void blitter_write()
 		UINT32 dst_offs = (BURN_ENDIAN_SWAP_INT16(m_blitter_regs[0x08 / 2]) << 16) + BURN_ENDIAN_SWAP_INT16(m_blitter_regs[0x0a / 2]);
 
 		UINT8 *dst = ramdst[tmap];
+
+		if (tmap == 0) {
+			bprintf(0, _T("i4x00: dma-blit to non-existant tmap 0!\n"));
+			return;
+		}
 
 		INT32 offs2 = (~dst_offs >> 7) & 1;
 		dst_offs >>=  8;
@@ -443,7 +457,8 @@ static void blitter_write()
 				{
 					if (b1 == 0)
 					{
-						i4x00_blitter_timer = 5000; // 500usec -> (10000000 / 1000000) * 500;
+						//i4x00_blitter_timer = 5000; // 500usec -> (10000000 / 1000000) * 500;
+						i4x00_blitter_timer = usec_to_cycles(i4x00_cpu_speed, 500);
 						return;
 					}
 
@@ -452,7 +467,7 @@ static void blitter_write()
 						src_offs %= src_len;
 						b2 = src[src_offs];
 						src_offs++;
-	
+
 						dst_offs &= 0xffff;
 						dst[(dst_offs*2+offs2) & 0x1ffff] = b2;
 						dst_offs = ((dst_offs + 1) & (0x100 - 1)) | (dst_offs & (~(0x100 - 1)));
@@ -565,8 +580,8 @@ static void __fastcall i4x00_write_word(UINT32 address, UINT16 data)
 	}
 
 	if ((address >= 0x78800 && address <= 0x78813) || (address >= 0x079700 && address <= 0x79713)) {
-		if (address != 0x78802) // breaks blazing tornado
-			*((UINT16*)(VideoRegs + (address & 0x1f))) = BURN_ENDIAN_SWAP_INT16(data);
+		if (is_blazing && address == 0x78802) return;
+		*((UINT16*)(VideoRegs + (address & 0x1f))) = BURN_ENDIAN_SWAP_INT16(data);
 		return;
 	}
 
@@ -748,12 +763,17 @@ void i4x00_set_offsets(INT32 layer0, INT32 layer1, INT32 layer2)
 	tilemap_scrolldx[2] = layer2;
 }
 
+void i4x00_set_blazing() // blzntrnd
+{
+	is_blazing = 1;
+}
+
 void i4x00_set_extrachip_callback(void (*callback)())
 {
 	additional_video_chips_cb = callback;
 }
 
-void i4x00_init(UINT32 address, UINT8 *gfx8, UINT8 *gfx4, UINT32 gfxlen, void (*irqcausewrite)(UINT16), UINT16 (*irqcauseread)(), void (*soundlatch)(UINT16), INT32 has_8bpp, INT32 has_16bpp)
+void i4x00_init(INT32 cpu_speed, UINT32 address, UINT8 *gfx8, UINT8 *gfx4, UINT32 gfxlen, void (*irqcausewrite)(UINT16), UINT16 (*irqcauseread)(), void (*soundlatch)(UINT16), INT32 has_8bpp, INT32 has_16bpp)
 {
 	AllRam = NULL;
 	MemIndex();
@@ -763,6 +783,8 @@ void i4x00_init(UINT32 address, UINT8 *gfx8, UINT8 *gfx4, UINT32 gfxlen, void (*
 	MemIndex();
 	
 	BurnPalette = (UINT32*)BurnMalloc(0x1000 * sizeof(UINT32));
+
+	i4x00_cpu_speed = cpu_speed;
 
 	// catch anything not mapped to ram/rom
 	SekMapHandler(5, 						0x00000 + address, 0x7ffff + address, MAP_READ | MAP_WRITE);
@@ -800,6 +822,8 @@ void i4x00_exit()
 	irq_cause_write_cb = NULL;
 	soundlatch_write_cb = NULL;
 	additional_video_chips_cb = NULL;
+
+	is_blazing = 0;
 
 	i4x00_set_offsets(0,0,0);
 }
